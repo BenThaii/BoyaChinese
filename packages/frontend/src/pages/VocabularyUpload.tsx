@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { vocabularyApi, TranslationPreview } from '../api/client';
+import { vocabularyApi } from '../api/client';
 
 export default function VocabularyUpload() {
   const { username } = useParams<{ username: string }>();
