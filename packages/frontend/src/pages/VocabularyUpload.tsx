@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { vocabularyApi, ttsApi, TranslationPreview } from '../api/client';
+import { vocabularyApi, TranslationPreview } from '../api/client';
 
 export default function VocabularyUpload() {
   const { username } = useParams<{ username: string }>();
@@ -13,7 +13,6 @@ export default function VocabularyUpload() {
     learningNote: '',
     chapter: 1,
   });
-  const [preview, setPreview] = useState<TranslationPreview | null>(null);
   const [loading, setLoading] = useState(false);
   const [audioPlaying, setAudioPlaying] = useState(false);
 
@@ -56,7 +55,6 @@ export default function VocabularyUpload() {
         form.modernVietnamese,
         form.englishMeaning
       );
-      setPreview(response.data);
       // Only fill in blank fields
       setForm({
         ...form,
@@ -88,7 +86,6 @@ export default function VocabularyUpload() {
         learningNote: '',
         chapter: 1,
       });
-      setPreview(null);
     } catch (error) {
       console.error('Failed to create entry:', error);
       alert('Failed to create entry');

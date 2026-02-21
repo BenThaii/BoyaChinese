@@ -40,7 +40,6 @@ function Navigation() {
     const value = e.target.value;
     if (value === '__new__') {
       setShowNewUserInput(true);
-      setSelectedUser('');
     } else if (value) {
       setShowNewUserInput(false);
       navigate(`/${value}/admin`);

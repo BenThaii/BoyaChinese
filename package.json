@@ -14,7 +14,7 @@
     "docker:up": "docker-compose up -d",
     "docker:down": "docker-compose down",
     "docker:logs": "docker-compose logs -f libretranslate",
-    "build": "npm run build --workspaces",
+    "build": "npm run build -w @chinese-learning-app/backend && npm run build -w @chinese-learning-app/frontend",
     "test": "npm run test --workspaces",
     "test:backend": "npm run test -w @chinese-learning-app/backend"
   },

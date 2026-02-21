@@ -162,13 +162,13 @@ Now create your sentence:`;
         // Extract numbers and reconstruct sentence
         const numbers = numbersMatch[1]
           .split(',')
-          .map(n => parseInt(n.trim()))
-          .filter(n => !isNaN(n) && n > 0 && n <= uniqueChars.length);
+          .map((n: string) => parseInt(n.trim()))
+          .filter((n: number) => !isNaN(n) && n > 0 && n <= uniqueChars.length);
 
         console.log('[AITextGenerator] Extracted numbers:', numbers);
 
         // Reconstruct sentence from numbers (without punctuation)
-        const reconstructedChars = numbers.map(num => uniqueChars[num - 1]).join('');
+        const reconstructedChars = numbers.map((num: number) => uniqueChars[num - 1]).join('');
         
         // If we have a sentence match, use it to preserve punctuation
         if (sentenceMatch && sentenceMatch[1]) {
@@ -179,7 +179,7 @@ Now create your sentence:`;
           console.log('[AITextGenerator] Using reconstructed text without punctuation:', chineseText);
         }
         
-        usedCharacters = Array.from(new Set(numbers.map(num => uniqueChars[num - 1])));
+        usedCharacters = Array.from(new Set(numbers.map((num: number) => uniqueChars[num - 1])));
 
         console.log('[AITextGenerator] Used characters:', usedCharacters);
       } else if (sentenceMatch && sentenceMatch[1]) {
