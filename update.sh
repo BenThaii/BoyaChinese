@@ -63,6 +63,9 @@ print_success "Frontend deployed"
 print_info "Checking LibreTranslate status..."
 if ! sudo docker ps | grep -q libretranslate; then
     print_info "LibreTranslate not running, starting it..."
+    # Create the directory if it doesn't exist and set proper permissions
+    sudo mkdir -p libretranslate-data
+    sudo chown -R 1032:1032 libretranslate-data
     sudo docker-compose up -d
     sleep 5
     print_success "LibreTranslate started"

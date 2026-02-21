@@ -203,6 +203,9 @@ print_success "Application built"
 
 # Step 12: Start LibreTranslate
 print_info "Starting LibreTranslate..."
+# Create the directory if it doesn't exist and set proper permissions
+sudo mkdir -p libretranslate-data
+sudo chown -R 1032:1032 libretranslate-data
 sudo docker-compose up -d
 sleep 5  # Wait for container to start
 print_success "LibreTranslate started"
