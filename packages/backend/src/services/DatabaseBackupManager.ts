@@ -14,7 +14,7 @@ import crypto from 'crypto';
 export interface BackupFile {
   version: string;
   exportedAt: Date;
-  users: string[];
+  users?: string[]; // Optional for backward compatibility
   vocabularyEntries: VocabularyEntry[];
   checksum: string;
 }
@@ -98,8 +98,17 @@ export class DatabaseBackupManager {
       await this.eraseAllUsers();
       await this.eraseAllVocabularyEntries();
 
+      // Extract users from backup (either from users field or from vocabulary entries)
+      let usersToRestore: string[];
+      if (backupFile.users && backupFile.users.length > 0) {
+        usersToRestore = backupFile.users;
+      } else {
+        // Backward compatibility: extract unique usernames from vocabulary entries
+        usersToRestore = [...new Set(backupFile.vocabularyEntries.map(entry => entry.username))];
+      }
+
       // Restore users first
-      await this.restoreUsers(backupFile.users);
+      await this.restoreUsers(usersToRestore);
       
       // Restore all entries from backup
       const restoredCount = await this.restoreVocabularyEntries(backupFile.vocabularyEntries);
@@ -134,9 +143,8 @@ export class DatabaseBackupManager {
       errors.push('Missing exportedAt field');
     }
 
-    if (!backupFile.users) {
-      errors.push('Missing users field');
-    }
+    // Users field is optional for backward compatibility with old backups
+    // If missing, we'll extract users from vocabulary entries
 
     if (!backupFile.vocabularyEntries) {
       errors.push('Missing vocabularyEntries field');
@@ -179,12 +187,16 @@ export class DatabaseBackupManager {
    */
   private calculateChecksum(backupFile: BackupFile): string {
     // Create a copy without checksum for calculation
-    const dataForChecksum = {
+    const dataForChecksum: any = {
       version: backupFile.version,
       exportedAt: backupFile.exportedAt,
-      users: backupFile.users,
       vocabularyEntries: backupFile.vocabularyEntries
     };
+
+    // Include users field only if it exists (for backward compatibility)
+    if (backupFile.users) {
+      dataForChecksum.users = backupFile.users;
+    }
 
     const dataString = JSON.stringify(dataForChecksum);
     return crypto.createHash('sha256').update(dataString).digest('hex');
