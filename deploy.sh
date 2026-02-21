@@ -133,13 +133,15 @@ print_success "MySQL database configured"
 print_info "Setting up application directory..."
 APP_DIR="/var/www/chinese-learning-app"
 sudo mkdir -p $APP_DIR
-sudo chown $USER:$USER $APP_DIR
+sudo chown -R $USER:$USER $APP_DIR
 
 # Copy files to application directory if not already there
 if [ "$PWD" != "$APP_DIR" ]; then
     print_info "Copying files to $APP_DIR..."
     sudo cp -r . $APP_DIR/
     cd $APP_DIR
+    # Fix ownership after copying
+    sudo chown -R $USER:$USER $APP_DIR
 fi
 
 print_success "Application directory ready"
