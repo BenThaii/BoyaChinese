@@ -288,6 +288,7 @@ server {
 
     # Cache static assets
     location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg)$ {
+        root /var/www/html/chinese-learning-app;
         expires 1y;
         add_header Cache-Control "public, immutable";
     }
@@ -296,6 +297,7 @@ EOF
 
 sudo ln -sf /etc/nginx/sites-available/chinese-learning-app /etc/nginx/sites-enabled/
 sudo rm -f /etc/nginx/sites-enabled/default
+sudo rm -f /etc/nginx/sites-available/default
 sudo nginx -t
 sudo systemctl reload nginx
 print_success "Nginx configured"

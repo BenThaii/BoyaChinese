@@ -14,6 +14,7 @@ import crypto from 'crypto';
 export interface BackupFile {
   version: string;
   exportedAt: Date;
+  users: string[];
   vocabularyEntries: VocabularyEntry[];
   checksum: string;
 }
@@ -56,12 +57,16 @@ export class DatabaseBackupManager {
    * @returns Backup file containing all vocabulary entries
    */
   async exportDatabase(): Promise<BackupFile> {
+    // Get all users
+    const users = await this.getAllUsers();
+    
     // Get all vocabulary entries from all users
     const entries = await this.getAllVocabularyEntries();
 
     const backupFile: BackupFile = {
       version: DatabaseBackupManager.BACKUP_VERSION,
       exportedAt: new Date(),
+      users: users,
       vocabularyEntries: entries,
       checksum: ''
     };
@@ -89,9 +94,13 @@ export class DatabaseBackupManager {
     }
 
     try {
-      // Erase all existing vocabulary entries
+      // Erase all existing data
+      await this.eraseAllUsers();
       await this.eraseAllVocabularyEntries();
 
+      // Restore users first
+      await this.restoreUsers(backupFile.users);
+      
       // Restore all entries from backup
       const restoredCount = await this.restoreVocabularyEntries(backupFile.vocabularyEntries);
 
@@ -123,6 +132,10 @@ export class DatabaseBackupManager {
 
     if (!backupFile.exportedAt) {
       errors.push('Missing exportedAt field');
+    }
+
+    if (!backupFile.users) {
+      errors.push('Missing users field');
     }
 
     if (!backupFile.vocabularyEntries) {
@@ -169,6 +182,7 @@ export class DatabaseBackupManager {
     const dataForChecksum = {
       version: backupFile.version,
       exportedAt: backupFile.exportedAt,
+      users: backupFile.users,
       vocabularyEntries: backupFile.vocabularyEntries
     };
 
@@ -209,6 +223,21 @@ export class DatabaseBackupManager {
   }
 
   /**
+   * Get all users from the database
+   * @returns Array of usernames
+   */
+  private async getAllUsers(): Promise<string[]> {
+    const { getPool } = await import('../config/database');
+    const pool = getPool();
+
+    const [rows] = await pool.query<any[]>(
+      'SELECT username FROM users ORDER BY username'
+    );
+
+    return rows.map(row => row.username);
+  }
+
+  /**
    * Get all vocabulary entries from all users
    * @returns Array of all vocabulary entries
    */
@@ -237,6 +266,16 @@ export class DatabaseBackupManager {
   }
 
   /**
+   * Erase all users from database
+   */
+  private async eraseAllUsers(): Promise<void> {
+    const { getPool } = await import('../config/database');
+    const pool = getPool();
+
+    await pool.query('DELETE FROM users');
+  }
+
+  /**
    * Erase all vocabulary entries from database
    */
   private async eraseAllVocabularyEntries(): Promise<void> {
@@ -244,6 +283,28 @@ export class DatabaseBackupManager {
     const pool = getPool();
 
     await pool.query('DELETE FROM vocabulary_entries');
+  }
+
+  /**
+   * Restore users from backup
+   * @param users - Array of usernames to restore
+   * @returns Number of users restored
+   */
+  private async restoreUsers(users: string[]): Promise<number> {
+    const { getPool } = await import('../config/database');
+    const pool = getPool();
+
+    let restoredCount = 0;
+
+    for (const username of users) {
+      await pool.query(
+        `INSERT INTO users (username) VALUES (?)`,
+        [username]
+      );
+      restoredCount++;
+    }
+
+    return restoredCount;
   }
 
   /**
