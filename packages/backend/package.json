@@ -1,0 +1,43 @@
+{
+  "name": "@chinese-learning-app/backend",
+  "version": "1.0.0",
+  "private": true,
+  "main": "dist/index.js",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "dev:full": "npm run docker:up && npm run dev",
+    "docker:up": "cd ../.. && docker-compose up -d",
+    "docker:down": "cd ../.. && docker-compose down",
+    "docker:logs": "cd ../.. && docker-compose logs -f libretranslate",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "test": "jest",
+    "populate": "tsx scripts/populate-sentences.ts",
+    "test-ai": "tsx scripts/test-google-ai.ts"
+  },
+  "dependencies": {
+    "@google-cloud/translate": "^8.0.2",
+    "@google/generative-ai": "^0.24.1",
+    "axios": "^1.6.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "mysql2": "^3.6.5",
+    "pinyin": "^4.0.0",
+    "uuid": "^9.0.1"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.17",
+    "@types/express": "^4.17.21",
+    "@types/jest": "^29.5.11",
+    "@types/node": "^20.10.5",
+    "@types/pinyin": "^2.10.2",
+    "@types/supertest": "^6.0.3",
+    "@types/uuid": "^9.0.7",
+    "jest": "^29.7.0",
+    "supertest": "^7.2.2",
+    "ts-jest": "^29.4.6",
+    "tsx": "^4.7.0",
+    "typescript": "^5.3.3"
+  }
+}
