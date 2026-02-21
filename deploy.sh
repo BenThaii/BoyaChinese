@@ -203,7 +203,7 @@ print_success "Application built"
 
 # Step 12: Start LibreTranslate
 print_info "Starting LibreTranslate..."
-docker-compose up -d
+sudo docker-compose up -d
 sleep 5  # Wait for container to start
 print_success "LibreTranslate started"
 
@@ -339,8 +339,8 @@ echo ""
 echo "Useful commands:"
 echo "  View backend logs:    pm2 logs chinese-learning-backend"
 echo "  Restart backend:      pm2 restart chinese-learning-backend"
-echo "  View Docker logs:     docker-compose logs -f"
-echo "  Restart LibreTranslate: docker-compose restart"
+echo "  View Docker logs:     sudo docker-compose logs -f"
+echo "  Restart LibreTranslate: sudo docker-compose restart"
 echo ""
 echo "IMPORTANT: You may need to log out and log back in for Docker group changes to take effect."
 echo ""
