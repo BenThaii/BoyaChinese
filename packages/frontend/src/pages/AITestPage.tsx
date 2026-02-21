@@ -1,7 +1,5 @@
 import React, { useState } from 'react';
-import axios from 'axios';
-
-const API_BASE_URL = 'http://localhost:3000/api';
+import { apiClient, vocabularyApi } from '../api/client';
 
 interface GeneratedText {
   chineseText: string;
@@ -36,7 +34,7 @@ export default function AITestPage() {
 
   const loadUsers = async () => {
     try {
-      const response = await axios.get<string[]>(`${API_BASE_URL}/vocabulary/users`);
+      const response = await vocabularyApi.getAllUsers();
       setUsers(response.data);
       if (response.data.length > 0 && !response.data.includes(username)) {
         setUsername(response.data[0]);
@@ -53,11 +51,11 @@ export default function AITestPage() {
     setCharacterDetails([]);
 
     try {
-      console.log('Sending request to:', `${API_BASE_URL}/${username}/comprehension/generate`);
+      console.log('Sending request to:', `/${username}/comprehension/generate`);
       console.log('Params:', { chapterStart, chapterEnd });
       
-      const response = await axios.get<GeneratedText>(
-        `${API_BASE_URL}/${username}/comprehension/generate`,
+      const response = await apiClient.get<GeneratedText>(
+        `/${username}/comprehension/generate`,
         {
           params: {
             chapterStart,
@@ -89,8 +87,8 @@ export default function AITestPage() {
       const details = await Promise.all(
         characters.map(async (char) => {
           try {
-            const response = await axios.get<CharacterInfo>(
-              `${API_BASE_URL}/${username}/comprehension/character-info`,
+            const response = await apiClient.get<CharacterInfo>(
+              `/${username}/comprehension/character-info`,
               { params: { character: char } }
             );
             return response.data;
