@@ -1,17 +1,15 @@
-import axios from 'axios';
+import { translate } from '@vitalets/google-translate-api';
 
 /**
- * Translation Service using LibreTranslate API with fallback to mock translations
+ * Translation Service using Google Translate API (free) with fallback to mock translations
  * Provides methods to translate Chinese text to Vietnamese and English
  */
 export class TranslationService {
-  private apiUrl: string;
   private useMock: boolean;
 
   constructor() {
-    // Use local LibreTranslate instance if available, otherwise use public API
-    this.apiUrl = process.env.LIBRETRANSLATE_URL || 'http://localhost:5000/translate';
     this.useMock = false;
+    console.log('[Translation] Google Translate (free) initialized');
   }
 
   /**
@@ -36,29 +34,14 @@ export class TranslationService {
 
     try {
       console.log(`[Translation] Translating to Vietnamese: ${chineseText}`);
-      console.log(`[Translation] Using LibreTranslate URL: ${this.apiUrl}`);
       
-      const response = await axios.post(this.apiUrl, {
-        q: chineseText,
-        source: 'zh',
-        target: 'vi',
-        format: 'text'
-      }, {
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        timeout: 30000
-      });
+      const result = await translate(chineseText, { from: 'zh-CN', to: 'vi' });
       
-      console.log(`[Translation] Vietnamese result: ${response.data.translatedText}`);
-      return response.data.translatedText;
+      console.log(`[Translation] Vietnamese result: ${result.text}`);
+      return result.text;
     } catch (error: any) {
-      console.error('[Translation] LibreTranslate API error (Vietnamese):', error.response?.data || error.message);
-      console.error('[Translation] Error details:', {
-        url: this.apiUrl,
-        status: error.response?.status,
-        statusText: error.response?.statusText
-      });
+      console.error('[Translation] Google Translate API error (Vietnamese):', error.message);
+      console.error('[Translation] Error details:', error);
       console.log('[Translation] Falling back to mock translation');
       this.useMock = true;
       return this.mockTranslate(chineseText, 'vi');
@@ -76,29 +59,14 @@ export class TranslationService {
 
     try {
       console.log(`[Translation] Translating to English: ${chineseText}`);
-      console.log(`[Translation] Using LibreTranslate URL: ${this.apiUrl}`);
       
-      const response = await axios.post(this.apiUrl, {
-        q: chineseText,
-        source: 'zh',
-        target: 'en',
-        format: 'text'
-      }, {
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        timeout: 30000
-      });
+      const result = await translate(chineseText, { from: 'zh-CN', to: 'en' });
       
-      console.log(`[Translation] English result: ${response.data.translatedText}`);
-      return response.data.translatedText;
+      console.log(`[Translation] English result: ${result.text}`);
+      return result.text;
     } catch (error: any) {
-      console.error('[Translation] LibreTranslate API error (English):', error.response?.data || error.message);
-      console.error('[Translation] Error details:', {
-        url: this.apiUrl,
-        status: error.response?.status,
-        statusText: error.response?.statusText
-      });
+      console.error('[Translation] Google Translate API error (English):', error.message);
+      console.error('[Translation] Error details:', error);
       console.log('[Translation] Falling back to mock translation');
       this.useMock = true;
       return this.mockTranslate(chineseText, 'en');

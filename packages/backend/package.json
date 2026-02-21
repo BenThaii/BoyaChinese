@@ -13,11 +13,13 @@
     "start": "node dist/index.js",
     "test": "jest",
     "populate": "tsx scripts/populate-sentences.ts",
-    "test-ai": "tsx scripts/test-google-ai.ts"
+    "test-ai": "tsx scripts/test-google-ai.ts",
+    "test-translate": "tsx scripts/test-google-translate.ts"
   },
   "dependencies": {
     "@google-cloud/translate": "^8.0.2",
     "@google/generative-ai": "^0.24.1",
+    "@vitalets/google-translate-api": "^9.2.1",
     "axios": "^1.6.0",
     "cors": "^2.8.5",
     "dotenv": "^16.3.1",

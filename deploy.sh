@@ -89,19 +89,7 @@ else
     print_success "Node.js already installed"
 fi
 
-# Step 3: Install Docker
-print_info "Installing Docker..."
-if ! command -v docker &> /dev/null; then
-    sudo apt install -y docker.io docker-compose
-    sudo systemctl enable docker
-    sudo systemctl start docker
-    sudo usermod -aG docker $USER
-    print_success "Docker installed"
-else
-    print_success "Docker already installed"
-fi
-
-# Step 4: Install MySQL
+# Step 3: Install MySQL
 print_info "Installing MySQL..."
 if ! command -v mysql &> /dev/null; then
     sudo apt install -y mysql-server
@@ -112,7 +100,7 @@ else
     print_success "MySQL already installed"
 fi
 
-# Step 5: Install Nginx
+# Step 4: Install Nginx
 print_info "Installing Nginx..."
 if ! command -v nginx &> /dev/null; then
     sudo apt install -y nginx
@@ -123,7 +111,7 @@ else
     print_success "Nginx already installed"
 fi
 
-# Step 6: Install PM2
+# Step 5: Install PM2
 print_info "Installing PM2..."
 if ! command -v pm2 &> /dev/null; then
     sudo npm install -g pm2
@@ -132,7 +120,7 @@ else
     print_success "PM2 already installed"
 fi
 
-# Step 7: Configure MySQL
+# Step 6: Configure MySQL
 print_info "Configuring MySQL database..."
 sudo mysql -e "CREATE DATABASE IF NOT EXISTS $DB_NAME;" 2>/dev/null || true
 sudo mysql -e "CREATE USER IF NOT EXISTS '$DB_USER'@'localhost' IDENTIFIED BY '$DB_PASSWORD';" 2>/dev/null || true
@@ -140,7 +128,7 @@ sudo mysql -e "GRANT ALL PRIVILEGES ON $DB_NAME.* TO '$DB_USER'@'localhost';"
 sudo mysql -e "FLUSH PRIVILEGES;"
 print_success "MySQL database configured"
 
-# Step 8: Create application directory
+# Step 7: Create application directory
 print_info "Setting up application directory..."
 APP_DIR="/var/www/chinese-learning-app"
 sudo mkdir -p $APP_DIR
@@ -157,12 +145,12 @@ fi
 
 print_success "Application directory ready"
 
-# Step 9: Install dependencies
+# Step 8: Install dependencies
 print_info "Installing dependencies..."
 npm install
 print_success "Dependencies installed"
 
-# Step 10: Configure environment variables
+# Step 9: Configure environment variables
 print_info "Configuring environment variables..."
 
 # Backend .env
@@ -176,9 +164,6 @@ DB_NAME=$DB_NAME
 
 # Google AI API Key
 GOOGLE_AI_API_KEY=$GOOGLE_AI_KEY
-
-# LibreTranslate URL
-LIBRETRANSLATE_URL=http://localhost:5000/translate
 
 # Server Port
 PORT=3000
@@ -196,28 +181,19 @@ EOF
 
 print_success "Environment variables configured"
 
-# Step 11: Build application
+# Step 10: Build application
 print_info "Building application..."
 npm run build
 print_success "Application built"
 
-# Step 12: Start LibreTranslate
-print_info "Starting LibreTranslate..."
-# Create the directory if it doesn't exist and set proper permissions
-sudo mkdir -p libretranslate-data
-sudo chown -R 1032:1032 libretranslate-data
-sudo docker-compose up -d
-sleep 5  # Wait for container to start
-print_success "LibreTranslate started"
-
-# Step 13: Initialize database
+# Step 11: Initialize database
 print_info "Initializing database..."
 cd packages/backend
 timeout 10 node dist/index.js || true
 cd ../..
 print_success "Database initialized"
 
-# Step 14: Create PM2 ecosystem file
+# Step 12: Create PM2 ecosystem file
 print_info "Creating PM2 configuration..."
 cat > ecosystem.config.js << EOF
 module.exports = {
@@ -243,14 +219,14 @@ pm2 save
 sudo env PATH=$PATH:/usr/bin pm2 startup systemd -u $USER --hp /home/$USER
 print_success "Backend started with PM2"
 
-# Step 15: Deploy frontend
+# Step 13: Deploy frontend
 print_info "Deploying frontend..."
 sudo mkdir -p /var/www/html/chinese-learning-app
 sudo cp -r packages/frontend/dist/* /var/www/html/chinese-learning-app/
 sudo chown -R www-data:www-data /var/www/html/chinese-learning-app
 print_success "Frontend deployed"
 
-# Step 16: Configure Nginx
+# Step 14: Configure Nginx
 print_info "Configuring Nginx..."
 sudo tee /etc/nginx/sites-available/chinese-learning-app > /dev/null << EOF
 server {
@@ -305,14 +281,14 @@ sudo nginx -t
 sudo systemctl reload nginx
 print_success "Nginx configured"
 
-# Step 17: Configure firewall
+# Step 15: Configure firewall
 print_info "Configuring firewall..."
 sudo ufw --force enable
 sudo ufw allow OpenSSH
 sudo ufw allow 'Nginx Full'
 print_success "Firewall configured"
 
-# Step 18: Set up SSL (if requested)
+# Step 16: Set up SSL (if requested)
 if [ "$ENABLE_SSL" = "y" ]; then
     print_info "Setting up SSL certificate..."
     sudo apt install -y certbot python3-certbot-nginx
@@ -320,7 +296,7 @@ if [ "$ENABLE_SSL" = "y" ]; then
     print_success "SSL certificate installed"
 fi
 
-# Step 19: Set up log rotation
+# Step 17: Set up log rotation
 print_info "Setting up log rotation..."
 pm2 install pm2-logrotate
 pm2 set pm2-logrotate:max_size 10M
@@ -342,8 +318,4 @@ echo ""
 echo "Useful commands:"
 echo "  View backend logs:    pm2 logs chinese-learning-backend"
 echo "  Restart backend:      pm2 restart chinese-learning-backend"
-echo "  View Docker logs:     sudo docker-compose logs -f"
-echo "  Restart LibreTranslate: sudo docker-compose restart"
-echo ""
-echo "IMPORTANT: You may need to log out and log back in for Docker group changes to take effect."
 echo ""

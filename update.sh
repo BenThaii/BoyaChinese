@@ -59,31 +59,16 @@ sudo cp -r packages/frontend/dist/* /var/www/html/chinese-learning-app/
 sudo chown -R www-data:www-data /var/www/html/chinese-learning-app
 print_success "Frontend deployed"
 
-# Step 6: Check and start LibreTranslate if needed
-print_info "Checking LibreTranslate status..."
-if ! sudo docker ps | grep -q libretranslate; then
-    print_info "LibreTranslate not running, starting it..."
-    # Create the directory if it doesn't exist and set proper permissions
-    sudo mkdir -p libretranslate-data
-    sudo chown -R 1032:1032 libretranslate-data
-    sudo docker-compose up -d
-    sleep 5
-    print_success "LibreTranslate started"
-else
-    print_success "LibreTranslate already running"
-fi
-
-# Step 7: Restart backend
+# Step 6: Restart backend
 print_info "Restarting backend..."
 pm2 restart chinese-learning-backend
 print_success "Backend restarted"
 
-# Step 8: Show status
+# Step 7: Show status
 echo ""
 print_info "Checking service status..."
 pm2 status
 echo ""
-sudo docker ps
 
 echo ""
 echo "=========================================="
