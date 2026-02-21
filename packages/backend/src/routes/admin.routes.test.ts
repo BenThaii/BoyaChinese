@@ -127,6 +127,7 @@ describe('Admin Routes', () => {
       const mockBackupFile: BackupFile = {
         version: '1.0',
         exportedAt: new Date(),
+        users: ['testuser'],
         vocabularyEntries: [
           {
             id: '1',
@@ -215,6 +216,7 @@ describe('Admin Routes', () => {
       const backupFile: BackupFile = {
         version: '1.0',
         exportedAt: new Date(),
+        users: ['testuser'],
         vocabularyEntries: [
           {
             id: '1',
@@ -287,6 +289,7 @@ describe('Admin Routes', () => {
       const backupFile: BackupFile = {
         version: '1.0',
         exportedAt: new Date(),
+        users: [],
         vocabularyEntries: [],
         checksum: 'invalid'
       };
@@ -320,6 +323,7 @@ describe('Admin Routes', () => {
       const backupFile: BackupFile = {
         version: '1.0',
         exportedAt: new Date(),
+        users: [],
         vocabularyEntries: [],
         checksum: 'abc123'
       };
@@ -353,6 +357,7 @@ describe('Admin Routes', () => {
         mockExportDatabase.mockResolvedValue({
           version: '1.0',
           exportedAt: new Date(),
+          users: [],
           vocabularyEntries: [],
           checksum: 'abc123'
         });

@@ -190,6 +190,7 @@ describe('DatabaseBackupManager', () => {
       validBackupFile = {
         version: '1.0',
         exportedAt: new Date('2024-01-01T00:00:00Z'),
+        users: ['alice', 'bob'],
         vocabularyEntries: [mockEntry1, mockEntry2],
         checksum: ''
       };
@@ -198,6 +199,7 @@ describe('DatabaseBackupManager', () => {
       const dataForChecksum = {
         version: validBackupFile.version,
         exportedAt: validBackupFile.exportedAt,
+        users: validBackupFile.users,
         vocabularyEntries: validBackupFile.vocabularyEntries
       };
       validBackupFile.checksum = crypto.createHash('sha256')
@@ -277,6 +279,7 @@ describe('DatabaseBackupManager', () => {
       const dataForChecksum = {
         version: invalidFile.version,
         exportedAt: invalidFile.exportedAt,
+        users: invalidFile.users,
         vocabularyEntries: invalidFile.vocabularyEntries
       };
       invalidFile.checksum = crypto.createHash('sha256')
@@ -306,6 +309,7 @@ describe('DatabaseBackupManager', () => {
       const dataForChecksum = {
         version: invalidFile.version,
         exportedAt: invalidFile.exportedAt,
+        users: invalidFile.users,
         vocabularyEntries: invalidFile.vocabularyEntries
       };
       invalidFile.checksum = crypto.createHash('sha256')
@@ -332,6 +336,7 @@ describe('DatabaseBackupManager', () => {
       const dataForChecksum = {
         version: emptyFile.version,
         exportedAt: emptyFile.exportedAt,
+        users: emptyFile.users,
         vocabularyEntries: emptyFile.vocabularyEntries
       };
       emptyFile.checksum = crypto.createHash('sha256')
@@ -351,6 +356,7 @@ describe('DatabaseBackupManager', () => {
       validBackupFile = {
         version: '1.0',
         exportedAt: new Date('2024-01-01T00:00:00Z'),
+        users: ['alice', 'bob'],
         vocabularyEntries: [mockEntry1, mockEntry2],
         checksum: ''
       };
@@ -359,6 +365,7 @@ describe('DatabaseBackupManager', () => {
       const dataForChecksum = {
         version: validBackupFile.version,
         exportedAt: validBackupFile.exportedAt,
+        users: validBackupFile.users,
         vocabularyEntries: validBackupFile.vocabularyEntries
       };
       validBackupFile.checksum = crypto.createHash('sha256')
@@ -458,6 +465,7 @@ describe('DatabaseBackupManager', () => {
       const dataForChecksum = {
         version: emptyFile.version,
         exportedAt: emptyFile.exportedAt,
+        users: emptyFile.users,
         vocabularyEntries: emptyFile.vocabularyEntries
       };
       emptyFile.checksum = crypto.createHash('sha256')
@@ -497,6 +505,7 @@ describe('DatabaseBackupManager', () => {
       const dataForChecksum = {
         version: backupWithSharedFrom.version,
         exportedAt: backupWithSharedFrom.exportedAt,
+        users: backupWithSharedFrom.users,
         vocabularyEntries: backupWithSharedFrom.vocabularyEntries
       };
       backupWithSharedFrom.checksum = crypto.createHash('sha256')
