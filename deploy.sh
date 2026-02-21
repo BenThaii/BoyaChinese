@@ -50,7 +50,18 @@ read -p "MySQL password for $DB_USER: " DB_PASSWORD
 
 read -p "Google AI API Key: " GOOGLE_AI_KEY
 
-read -p "Domain name or server IP: " DOMAIN
+# Auto-detect public IP address
+print_info "Detecting server IP address..."
+DOMAIN=$(curl -s http://checkip.amazonaws.com)
+if [ -z "$DOMAIN" ]; then
+    # Fallback to another service if AWS fails
+    DOMAIN=$(curl -s https://api.ipify.org)
+fi
+if [ -z "$DOMAIN" ]; then
+    # Last fallback
+    DOMAIN=$(hostname -I | awk '{print $1}')
+fi
+print_success "Detected IP address: $DOMAIN"
 
 read -p "Enable SSL with Let's Encrypt? (y/n) [n]: " ENABLE_SSL
 ENABLE_SSL=${ENABLE_SSL:-n}
