@@ -5,6 +5,7 @@ import VocabularyUpload from './pages/VocabularyUpload';
 import VocabularySharing from './pages/VocabularySharing';
 import DatabaseAdmin from './pages/DatabaseAdmin';
 import AITestPage from './pages/AITestPage';
+import PhrasesPage from './pages/PhrasesPage';
 import { vocabularyApi } from './api/client';
 
 function Navigation() {
@@ -112,6 +113,7 @@ function Navigation() {
         )}
         <li><Link to="/database-admin">Database Admin</Link></li>
         <li><Link to="/ai-test">AI Test Page</Link></li>
+        <li><Link to="/phrases">Phrases Page</Link></li>
       </ul>
     </nav>
   );
@@ -135,6 +137,7 @@ function App() {
                   <li>Import Vocabulary - Share vocabulary from other users</li>
                   <li>Database Admin - Backup and restore database</li>
                   <li>AI Test Page - Test Google AI Studio API for sentence generation</li>
+                  <li>Phrases Page - Practice with pre-generated Chinese sentences</li>
                 </ul>
               </div>
             } />
@@ -143,6 +146,7 @@ function App() {
             <Route path="/:username/share" element={<VocabularySharing />} />
             <Route path="/database-admin" element={<DatabaseAdmin />} />
             <Route path="/ai-test" element={<AITestPage />} />
+            <Route path="/phrases" element={<PhrasesPage />} />
           </Routes>
         </main>
       </div>

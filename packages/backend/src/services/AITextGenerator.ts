@@ -12,6 +12,26 @@ export interface GeneratedText {
 }
 
 /**
+ * Generated sentence for batch generation (simplified version without wordCount)
+ */
+export interface GeneratedSentence {
+  chineseText: string;
+  pinyin: string;
+  usedCharacters: string[];
+}
+
+/**
+ * AI Text Generator for Google AI Studio API integration
+ * Generates reading comprehension texts using specified Chinese characters
+ */
+export interface GeneratedSentence {
+  chineseText: string;
+  pinyin: string;
+  usedCharacters: string[];
+}
+
+
+/**
  * AI Text Generator for Google AI Studio API integration
  * Generates reading comprehension texts using specified Chinese characters
  */
@@ -35,11 +55,11 @@ export class AITextGenerator {
     
     this.genAI = new GoogleGenerativeAI(apiKey);
     // Use gemini-flash-lite-latest (confirmed working model)
-    // this.model = this.genAI.getGenerativeModel({ model: 'gemini-flash-lite-latest' });
-    // console.log('[AITextGenerator] Initialized successfully with model: gemini-flash-lite-latest');
+    this.model = this.genAI.getGenerativeModel({ model: 'gemini-flash-lite-latest' });
+    console.log('[AITextGenerator] Initialized successfully with model: gemini-flash-lite-latest');
 
-    this.model = this.genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
-    console.log('[AITextGenerator] Initialized successfully with model: Gemini 2.5 Flash');
+    // this.model = this.genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
+    // console.log('[AITextGenerator] Initialized successfully with model: Gemini 2.5 Flash');
 
     
   }
@@ -312,6 +332,200 @@ REMEMBER: Create MEANINGFUL sentences with proper grammar, NOT random word lists
   }
 
   /**
+   * Generate multiple sentences in a single API call for batch processing
+   * @param characters - Array of Chinese characters to use (max 300)
+   * @param count - Number of sentences to generate (default 30)
+   * @returns Promise resolving to array of generated sentences with pinyin and used characters
+   * @throws Error if generation fails or constraints are violated
+   */
+  async generateMultipleSentences(characters: string[], count: number = 30): Promise<GeneratedSentence[]> {
+    // Validate input constraints
+    if (characters.length === 0) {
+      throw new Error('Characters array cannot be empty');
+    }
+
+    if (characters.length > 300) {
+      throw new Error('Characters array exceeds maximum limit of 300');
+    }
+
+    if (count <= 0 || count > 50) {
+      throw new Error('count must be between 1 and 50');
+    }
+
+    // Check if we should use mock data
+    const apiKey = process.env.GOOGLE_AI_API_KEY;
+    const useMock = !apiKey || process.env.USE_MOCK_AI === 'true';
+
+    if (useMock) {
+      console.log('[AITextGenerator] Using mock data for multiple sentences (API key not available or USE_MOCK_AI=true)');
+      return this.generateMockMultipleSentences(characters, count);
+    }
+
+    // Initialize on first use
+    this.initialize();
+    
+    try {
+      // Required grammar words that should always be available
+      const requiredWords = ['是', '吗', '的', '呢', '也', '这', '去', '有'];
+      
+      // Merge user characters with required words, removing duplicates
+      const allCharacters = [...new Set([...characters, ...requiredWords])];
+      
+      // Create unique character list with enumeration
+      const uniqueChars = Array.from(new Set(allCharacters));
+      
+      // Create enumerated list for the prompt
+      const enumeratedList = uniqueChars.map((char, index) => `${index + 1}. ${char}`).join('\n');
+
+      console.log('[AITextGenerator] ===== BATCH API REQUEST =====');
+      console.log('[AITextGenerator] Number of user characters:', characters.length);
+      console.log('[AITextGenerator] Number of required words added:', requiredWords.filter(w => !characters.includes(w)).length);
+      console.log('[AITextGenerator] Total unique characters:', uniqueChars.length);
+      console.log('[AITextGenerator] Requested sentence count:', count);
+
+      // Construct prompt for AI to generate multiple sentences
+      const prompt = `You are a professional Chinese language teacher creating beginner-level reading passages.
+
+AVAILABLE CHARACTERS (YOU MUST USE ONLY THESE):
+${enumeratedList}
+
+CRITICAL RULE: You can ONLY use the exact characters listed above. DO NOT create new words by combining characters. DO NOT use any character not in this list.
+
+TASK:
+Create ${count} SHORT, NATURAL Chinese sentences.
+
+CRITICAL: DO NOT just list random words! You MUST create REAL, MEANINGFUL sentences with proper grammar!
+
+STRICT REQUIREMENTS:
+1. Generate EXACTLY ${count} sentences
+2. Each sentence should be SHORT (maximum 40 characters excluding punctuation)
+3. Each sentence should be MEANINGFUL and grammatically correct
+4. Sentences should be DIVERSE - use different characters and patterns
+5. You may use punctuation
+
+FORBIDDEN PATTERNS:
+- DO NOT combine characters to create new words not in the list
+- DO NOT use characters not in the enumerated list
+- DO NOT just list random words without grammar
+
+NATURALNESS RULES:
+1. Use simple, common sentence patterns
+2. Make sure sentences sound natural when read aloud
+3. NEVER output random word lists - always create proper sentences with meaning!
+
+OUTPUT FORMAT (CRITICAL - FOLLOW EXACTLY):
+For each sentence, output in this format:
+
+SENTENCE_1: [Chinese sentence with punctuation]
+SENTENCE_2: [Chinese sentence with punctuation]
+...
+SENTENCE_${count}: [Chinese sentence with punctuation]
+
+Example for 3 sentences:
+SENTENCE_1: 我是学生。
+SENTENCE_2: 他很好。
+SENTENCE_3: 这是我的书。
+
+REMEMBER: Create ${count} MEANINGFUL sentences with proper grammar, NOT random word lists!`;
+
+      console.log('[AITextGenerator] Prompt length:', prompt.length);
+      console.log('[AITextGenerator] Sending batch request to Gemini API...');
+      
+      const startTime = Date.now();
+      const result = await this.model!.generateContent(prompt);
+      const endTime = Date.now();
+      
+      console.log('[AITextGenerator] Batch API response received in', endTime - startTime, 'ms');
+      
+      const response = await result.response;
+      const responseText = response.text().trim();
+
+      // Log token usage if available
+      if (response.usageMetadata) {
+        console.log('[AITextGenerator] ===== TOKEN USAGE =====');
+        console.log('[AITextGenerator] Prompt tokens:', response.usageMetadata.promptTokenCount || 'N/A');
+        console.log('[AITextGenerator] Completion tokens:', response.usageMetadata.candidatesTokenCount || 'N/A');
+        console.log('[AITextGenerator] Total tokens:', response.usageMetadata.totalTokenCount || 'N/A');
+        console.log('[AITextGenerator] =======================');
+      }
+
+      console.log('[AITextGenerator] Raw batch API response:', responseText.substring(0, 500) + (responseText.length > 500 ? '...' : ''));
+
+      // Parse the response to extract sentences
+      const sentences: GeneratedSentence[] = [];
+      const sentenceRegex = /SENTENCE_\d+:\s*(.+?)(?=SENTENCE_\d+:|$)/gs;
+      const matches = [...responseText.matchAll(sentenceRegex)];
+
+      console.log('[AITextGenerator] Found', matches.length, 'sentence matches');
+
+      for (const match of matches) {
+        const chineseText = match[1].trim();
+        
+        if (!chineseText) {
+          console.warn('[AITextGenerator] Skipping empty sentence');
+          continue;
+        }
+
+        // Extract used characters from the actual Chinese text
+        const chineseCharsOnly = chineseText.replace(/[\s\p{P}]/gu, '');
+        
+        // Find all vocabulary items that appear in the text
+        const sortedUniqueChars = [...uniqueChars].sort((a, b) => b.length - a.length);
+        
+        const usedCharacters: string[] = [];
+        let remainingText = chineseCharsOnly;
+        
+        // Greedy matching: match longest words first
+        while (remainingText.length > 0) {
+          let matched = false;
+          
+          for (const char of sortedUniqueChars) {
+            if (remainingText.startsWith(char)) {
+              if (!usedCharacters.includes(char)) {
+                usedCharacters.push(char);
+              }
+              remainingText = remainingText.slice(char.length);
+              matched = true;
+              break;
+            }
+          }
+          
+          // If no match found, skip this character
+          if (!matched) {
+            remainingText = remainingText.slice(1);
+          }
+        }
+
+        const pinyinText = this.generatePinyin(chineseText);
+
+        sentences.push({
+          chineseText,
+          pinyin: pinyinText,
+          usedCharacters
+        });
+      }
+
+      console.log('[AITextGenerator] Successfully parsed', sentences.length, 'sentences');
+      console.log('[AITextGenerator] ===== END BATCH REQUEST =====');
+
+      // Validate we got the expected number of sentences
+      if (sentences.length === 0) {
+        throw new Error('No sentences were generated');
+      }
+
+      if (sentences.length < count) {
+        console.warn(`[AITextGenerator] Generated ${sentences.length} sentences, expected ${count}`);
+      }
+
+      return sentences;
+    } catch (error) {
+      console.error('[AITextGenerator] Batch API call failed, falling back to mock data:', error);
+      // Fallback to mock data if API fails
+      return this.generateMockMultipleSentences(characters, count);
+    }
+  }
+
+  /**
    * Generate mock text for testing when API is not available
    * @param characters - Array of Chinese characters to use
    * @param maxWords - Maximum number of words
@@ -331,6 +545,32 @@ REMEMBER: Create MEANINGFUL sentences with proper grammar, NOT random word lists
       wordCount: selectedChars.length,
       usedCharacters: selectedChars
     };
+  }
+
+  /**
+   * Generate mock multiple sentences for testing when API is not available
+   * @param characters - Array of Chinese characters to use
+   * @param count - Number of sentences to generate
+   * @returns Array of mock generated sentences
+   */
+  private generateMockMultipleSentences(characters: string[], count: number): GeneratedSentence[] {
+    const uniqueChars = Array.from(new Set(characters));
+    const sentences: GeneratedSentence[] = [];
+    
+    for (let i = 0; i < count; i++) {
+      // Create varied sentences by using different character subsets
+      const startIdx = (i * 5) % uniqueChars.length;
+      const selectedChars = uniqueChars.slice(startIdx, startIdx + Math.min(10, uniqueChars.length - startIdx));
+      const chineseText = selectedChars.join('') + '。';
+      
+      sentences.push({
+        chineseText,
+        pinyin: '[Mock pinyin - API not available]',
+        usedCharacters: selectedChars
+      });
+    }
+    
+    return sentences;
   }
 
   /**

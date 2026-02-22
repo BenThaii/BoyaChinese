@@ -71,6 +71,19 @@ async function createTables() {
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     `);
 
+    // Create pre_generated_sentences table
+    await connection.query(`
+      CREATE TABLE IF NOT EXISTS pre_generated_sentences (
+        id VARCHAR(36) PRIMARY KEY,
+        vocab_group_id INT NOT NULL,
+        chinese_text TEXT NOT NULL,
+        pinyin TEXT NOT NULL,
+        used_characters JSON NOT NULL,
+        generation_timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        INDEX idx_vocab_group (vocab_group_id)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `);
+
     // Migrate existing users from vocabulary_entries to users table
     await connection.query(`
       INSERT IGNORE INTO users (username)

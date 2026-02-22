@@ -24,9 +24,14 @@ import vocabularyRoutes from './routes/vocabulary.routes';
 import comprehensionRoutes from './routes/comprehension.routes';
 import ttsRoutes from './routes/tts.routes';
 import adminRoutes from './routes/admin.routes';
+import phrasesRoutes from './routes/phrases.routes';
 
 // Import config AFTER dotenv has loaded
 import { config } from './config/env';
+
+// Import scheduler and phrase generator services
+import { GenerationScheduler } from './services/GenerationScheduler';
+import { PhraseGeneratorService } from './services/PhraseGeneratorService';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -59,12 +64,26 @@ app.use('/api', vocabularyRoutes);
 app.use('/api', comprehensionRoutes);
 app.use('/api', ttsRoutes);
 app.use('/api', adminRoutes);
+app.use('/api', phrasesRoutes);
 
 // Initialize database and start server
 async function startServer() {
   try {
     await initDatabase();
     console.log('Database initialized successfully');
+    
+    // Initialize and start the generation scheduler
+    try {
+      console.log('[Scheduler] Initializing phrase generation scheduler...');
+      const phraseGenerator = new PhraseGeneratorService();
+      const scheduler = new GenerationScheduler(phraseGenerator);
+      scheduler.start();
+      console.log('[Scheduler] Phrase generation scheduler started successfully');
+    } catch (schedulerError) {
+      console.error('[Scheduler] Failed to start generation scheduler:', schedulerError);
+      console.error('[Scheduler] Application will continue without automated phrase generation');
+      // Don't exit - allow the app to run without the scheduler
+    }
     
     app.listen(PORT, () => {
       console.log(`Server is running on port ${PORT}`);
