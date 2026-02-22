@@ -74,15 +74,22 @@ export class AITextGenerator {
     this.initialize();
     
     try {
+      // Required grammar words that should always be available
+      const requiredWords = ['是', '吗', '的', '呢', '也', '这', '去', '有'];
+      
+      // Merge user characters with required words, removing duplicates
+      const allCharacters = [...new Set([...characters, ...requiredWords])];
+      
       // Create unique character list with enumeration
-      const uniqueChars = Array.from(new Set(characters));
+      const uniqueChars = Array.from(new Set(allCharacters));
       
       // Create enumerated list for the prompt
       const enumeratedList = uniqueChars.map((char, index) => `${index + 1}. ${char}`).join('\n');
 
       console.log('[AITextGenerator] ===== API REQUEST =====');
-      console.log('[AITextGenerator] Number of characters:', characters.length);
-      console.log('[AITextGenerator] Unique characters:', uniqueChars.length);
+      console.log('[AITextGenerator] Number of user characters:', characters.length);
+      console.log('[AITextGenerator] Number of required words added:', requiredWords.filter(w => !characters.includes(w)).length);
+      console.log('[AITextGenerator] Total unique characters:', uniqueChars.length);
       console.log('[AITextGenerator] Enumerated list preview:', enumeratedList.substring(0, 200) + (enumeratedList.length > 200 ? '...' : ''));
       console.log('[AITextGenerator] Max words:', maxWords);
 
