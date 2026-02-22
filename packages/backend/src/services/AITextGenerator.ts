@@ -87,44 +87,60 @@ export class AITextGenerator {
       console.log('[AITextGenerator] Max words:', maxWords);
 
       // Construct prompt for AI with enumeration
-      const prompt = `You are a Chinese language teacher creating practice sentences for students.
+      const prompt = `You are a professional Chinese language teacher creating beginner-level reading passages.
 
-Available Chinese characters (enumerated):
+AVAILABLE CHARACTERS (YOU MUST USE ONLY THESE):
 ${enumeratedList}
 
-Task: Create ONE natural, grammatically correct Chinese sentence using ONLY the characters from the list above.
+CRITICAL RULE: You can ONLY use the exact characters listed above. DO NOT create new words by combining characters. DO NOT use any character not in this list.
 
-Requirements:
-1. The sentence MUST be grammatically correct and make logical sense in Chinese
-2. Use ONLY characters from the enumerated list above (no other characters allowed)
-3. Maximum ${maxWords} characters (excluding punctuation)
-4. The sentence should be appropriate for language learners
-5. Create a complete thought or idea with proper Chinese sentence structure
-6. You MAY use punctuation marks (，。？！、) to make the sentence grammatically correct
-7. Punctuation does NOT count toward the character limit
-8. Avoid repeating the same character consecutively unless grammatically necessary
-9. Use natural Chinese word order and phrasing
 
-Examples of GOOD sentences:
-- 你好，我叫大卫。(Hello, my name is David.)
-- 她是老师吗？(Is she a teacher?)
-- 我很高兴！(I am very happy!)
+TASK:
+Create a SHORT, NATURAL Chinese reading passage.
 
-Examples of BAD sentences:
-- 你你好叫王吗 (Unnatural repetition, missing punctuation)
-- 我我我很好 (Unnecessary repetition)
+CRITICAL: DO NOT just list random words! You MUST create REAL, MEANINGFUL sentences with proper grammar!
 
-IMPORTANT OUTPUT FORMAT:
-Return your response in this EXACT format:
-NUMBERS: [comma-separated list of numbers corresponding to the characters you chose, excluding punctuation]
-SENTENCE: [the actual Chinese sentence with proper punctuation]
+STRICT REQUIREMENTS:
+
+1. The sentences should connect logically and tell a simple story.
+2. Maximum total characters: ${maxWords} (excluding punctuation).
+5. You may use punctuations
+
+
+FORBIDDEN PATTERNS:
+- DO NOT combine characters to create new words not in the list
+- DO NOT use characters not in the enumerated list (including measure words like 本, 个, 只 unless they're in the list)
+- DO NOT invent characters that are not in the numbered list above
+- DO NOT just list random words without grammar (WRONG: 十就是我们电影院早东南 ❌)
+
+NATURALNESS RULES:
+1. Every sentence needs a subject (我, 他, 她, 这, 那, etc.)
+2. Use simple, common sentence patterns
+3. Avoid complex grammar structures
+4. Make sure sentences sound natural when read aloud
+5. NEVER output random word lists - always create proper sentences with meaning!
+
+
+SELF-CHECK BEFORE SUBMITTING:
+1. Is every character in my sentence found in the numbered list above?
+2. Does every sentence have a subject?
+3. Are my sentences grammatically complete and natural?
+4. Does each sentence make sense independently?
+8. Did I create REAL sentences with meaning, NOT just a random list of words?
+
+OUTPUT FORMAT:
+
+NUMBERS: [comma-separated indices of characters used, in order, excluding punctuation]
+SENTENCE: [the Chinese passage with punctuation]
 
 Example:
-If you choose characters 1, 5, 3, 5, 2 from the list and want to add punctuation, respond:
-NUMBERS: 1,5,3,5,2
-SENTENCE: 我很好，很你
+If the list has: 1.我 2.是 3.学生 4.他 5.很 6.好
+And you write: 我是学生。他很好。
+Then output:
+NUMBERS: 1,2,3,4,5,6
+SENTENCE: 我是学生。他很好。
 
-Now create your sentence:`;
+REMEMBER: Create MEANINGFUL sentences with proper grammar, NOT random word lists!`;
 
       console.log('[AITextGenerator] Prompt length:', prompt.length);
       console.log('[AITextGenerator] Sending request to Gemini API...');
@@ -159,7 +175,7 @@ Now create your sentence:`;
       let usedCharacters: string[] = [];
 
       if (numbersMatch && numbersMatch[1]) {
-        // Extract numbers and reconstruct sentence
+        // Extract numbers for validation
         const numbers = numbersMatch[1]
           .split(',')
           .map((n: string) => parseInt(n.trim()))
@@ -167,32 +183,60 @@ Now create your sentence:`;
 
         console.log('[AITextGenerator] Extracted numbers:', numbers);
 
-        // Reconstruct sentence from numbers (without punctuation)
-        const reconstructedChars = numbers.map((num: number) => uniqueChars[num - 1]).join('');
-        
         // If we have a sentence match, use it to preserve punctuation
         if (sentenceMatch && sentenceMatch[1]) {
           chineseText = sentenceMatch[1].trim();
           console.log('[AITextGenerator] Using sentence with punctuation:', chineseText);
         } else {
-          chineseText = reconstructedChars;
+          // Reconstruct sentence from numbers (without punctuation)
+          chineseText = numbers.map((num: number) => uniqueChars[num - 1]).join('');
           console.log('[AITextGenerator] Using reconstructed text without punctuation:', chineseText);
         }
-        
-        usedCharacters = Array.from(new Set(numbers.map((num: number) => uniqueChars[num - 1])));
-
-        console.log('[AITextGenerator] Used characters:', usedCharacters);
       } else if (sentenceMatch && sentenceMatch[1]) {
         // Fallback: use the sentence directly if numbers not found
         chineseText = sentenceMatch[1].trim();
-        usedCharacters = Array.from(new Set(chineseText.split(''))).filter(char => uniqueChars.includes(char));
         console.log('[AITextGenerator] Using sentence directly (no numbers found):', chineseText);
+        console.warn('[AITextGenerator] WARNING: No NUMBERS found in response, used characters may be inaccurate');
       } else {
         // Last fallback: use entire response
         chineseText = responseText;
-        usedCharacters = Array.from(new Set(chineseText.split(''))).filter(char => uniqueChars.includes(char));
         console.log('[AITextGenerator] Using entire response as fallback:', chineseText);
+        console.warn('[AITextGenerator] WARNING: No structured response, used characters may be inaccurate');
       }
+
+      // ALWAYS extract used characters from the actual Chinese text, not from NUMBERS
+      // This ensures accuracy even if AI provides incorrect indices
+      const chineseCharsOnly = chineseText.replace(/[\s\p{P}]/gu, '');
+      
+      // Find all vocabulary items (single or multi-character) that appear in the text
+      // Sort by length (longest first) to match multi-character words before single characters
+      const sortedUniqueChars = [...uniqueChars].sort((a, b) => b.length - a.length);
+      
+      usedCharacters = [];
+      let remainingText = chineseCharsOnly;
+      
+      // Greedy matching: match longest words first
+      while (remainingText.length > 0) {
+        let matched = false;
+        
+        for (const char of sortedUniqueChars) {
+          if (remainingText.startsWith(char)) {
+            if (!usedCharacters.includes(char)) {
+              usedCharacters.push(char);
+            }
+            remainingText = remainingText.slice(char.length);
+            matched = true;
+            break;
+          }
+        }
+        
+        // If no match found, skip this character (it might be punctuation or invalid)
+        if (!matched) {
+          remainingText = remainingText.slice(1);
+        }
+      }
+      
+      console.log('[AITextGenerator] Used characters extracted from text:', usedCharacters);
 
       console.log('[AITextGenerator] ===== END REQUEST =====');
 
@@ -209,13 +253,38 @@ Now create your sentence:`;
         const truncatedText = this.truncateToMaxWords(chineseText, maxWords);
         const truncatedWordCount = this.countChineseWords(truncatedText);
         const pinyinText = this.generatePinyin(truncatedText);
-        const truncatedUsedChars = Array.from(new Set(truncatedText.split(''))).filter(char => uniqueChars.includes(char));
+        
+        // Recalculate used characters from the truncated text
+        const truncatedCharsOnly = truncatedText.replace(/[\s\p{P}]/gu, '');
+        const sortedUniqueChars = [...uniqueChars].sort((a, b) => b.length - a.length);
+        
+        const truncatedUsedCharacters: string[] = [];
+        let remainingText = truncatedCharsOnly;
+        
+        while (remainingText.length > 0) {
+          let matched = false;
+          
+          for (const char of sortedUniqueChars) {
+            if (remainingText.startsWith(char)) {
+              if (!truncatedUsedCharacters.includes(char)) {
+                truncatedUsedCharacters.push(char);
+              }
+              remainingText = remainingText.slice(char.length);
+              matched = true;
+              break;
+            }
+          }
+          
+          if (!matched) {
+            remainingText = remainingText.slice(1);
+          }
+        }
         
         return {
           chineseText: truncatedText,
           pinyin: pinyinText,
           wordCount: truncatedWordCount,
-          usedCharacters: truncatedUsedChars
+          usedCharacters: truncatedUsedCharacters
         };
       }
 
