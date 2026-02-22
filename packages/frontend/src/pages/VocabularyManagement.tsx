@@ -19,8 +19,6 @@ export default function VocabularyManagement() {
   const [selectedChapter, setSelectedChapter] = useState<number | null>(null);
   const [batchEditMode, setBatchEditMode] = useState(false);
   const [batchEditForms, setBatchEditForms] = useState<Map<string, Partial<VocabularyEntry>>>(new Map());
-  const [showBatchEdit, setShowBatchEdit] = useState(false);
-  const [batchEditForm, setBatchEditForm] = useState<Partial<VocabularyEntry>>({});
   const [showScrollTop, setShowScrollTop] = useState(false);
 
   useEffect(() => {
@@ -218,40 +216,6 @@ export default function VocabularyManagement() {
     const form = newForms.get(id) || {};
     newForms.set(id, { ...form, [field]: value });
     setBatchEditForms(newForms);
-  };
-
-  const handleBatchEdit = async () => {
-    if (!username || selectedIds.size === 0) return;
-    
-    // Filter out empty fields
-    const updates: Partial<VocabularyEntry> = {};
-    if (batchEditForm.chapter !== undefined) updates.chapter = batchEditForm.chapter;
-    if (batchEditForm.hanVietnamese?.trim()) updates.hanVietnamese = batchEditForm.hanVietnamese;
-    if (batchEditForm.modernVietnamese?.trim()) updates.modernVietnamese = batchEditForm.modernVietnamese;
-    if (batchEditForm.englishMeaning?.trim()) updates.englishMeaning = batchEditForm.englishMeaning;
-    if (batchEditForm.learningNote?.trim()) updates.learningNote = batchEditForm.learningNote;
-    
-    if (Object.keys(updates).length === 0) {
-      alert('Please fill in at least one field to update');
-      return;
-    }
-    
-    if (!confirm(`Update ${selectedIds.size} selected entries with these values?`)) return;
-    
-    try {
-      const updatePromises = Array.from(selectedIds).map(id => 
-        vocabularyApi.update(username, id, updates)
-      );
-      await Promise.all(updatePromises);
-      setSelectedIds(new Set());
-      setBatchEditForm({});
-      setShowBatchEdit(false);
-      loadEntries();
-    } catch (error) {
-      console.error('Failed to batch edit:', error);
-      alert('Some entries failed to update');
-      loadEntries();
-    }
   };
 
   const handleRowClick = (id: string, e: React.MouseEvent) => {
