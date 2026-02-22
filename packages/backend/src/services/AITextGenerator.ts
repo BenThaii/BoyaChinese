@@ -35,9 +35,13 @@ export class AITextGenerator {
     
     this.genAI = new GoogleGenerativeAI(apiKey);
     // Use gemini-flash-lite-latest (confirmed working model)
-    this.model = this.genAI.getGenerativeModel({ model: 'gemini-flash-lite-latest' });
+    // this.model = this.genAI.getGenerativeModel({ model: 'gemini-flash-lite-latest' });
+    // console.log('[AITextGenerator] Initialized successfully with model: gemini-flash-lite-latest');
+
+    this.model = this.genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
+    console.log('[AITextGenerator] Initialized successfully with model: Gemini 2.5 Flash');
+
     
-    console.log('[AITextGenerator] Initialized successfully with model: gemini-flash-lite-latest');
   }
 
   /**
@@ -109,31 +113,27 @@ CRITICAL: DO NOT just list random words! You MUST create REAL, MEANINGFUL senten
 
 STRICT REQUIREMENTS:
 
-1. The sentences should connect logically and tell a simple story.
-2. Maximum total characters: ${maxWords} (excluding punctuation).
+1. only write one sentence
+2. The sentence should connect logically and tell a simple story.
+3. Maximum total characters: ${maxWords} (excluding punctuation).
 5. You may use punctuations
 
 
 FORBIDDEN PATTERNS:
 - DO NOT combine characters to create new words not in the list
 - DO NOT use characters not in the enumerated list (including measure words like 本, 个, 只 unless they're in the list)
-- DO NOT invent characters that are not in the numbered list above
 - DO NOT just list random words without grammar (WRONG: 十就是我们电影院早东南 ❌)
 
 NATURALNESS RULES:
-1. Every sentence needs a subject (我, 他, 她, 这, 那, etc.)
-2. Use simple, common sentence patterns
-3. Avoid complex grammar structures
-4. Make sure sentences sound natural when read aloud
-5. NEVER output random word lists - always create proper sentences with meaning!
+1. Use simple, common sentence patterns, avoid complex grammar structures
+2. Make sure sentences sound natural when read aloud
+3. NEVER output random word lists - always create proper sentences with meaning!
 
 
 SELF-CHECK BEFORE SUBMITTING:
 1. Is every character in my sentence found in the numbered list above?
-2. Does every sentence have a subject?
-3. Are my sentences grammatically complete and natural?
-4. Does each sentence make sense independently?
-5. Do the meaning of the sentences make sense?
+2. Are my sentences grammatically complete and natural?
+3. Does the meaning of the sentence make sense?
 8. Did I create REAL sentences with meaning, NOT just a random list of words?
 
 OUTPUT FORMAT:
