@@ -126,6 +126,7 @@ SELF-CHECK BEFORE SUBMITTING:
 2. Does every sentence have a subject?
 3. Are my sentences grammatically complete and natural?
 4. Does each sentence make sense independently?
+5. Do the meaning of the sentences make sense?
 8. Did I create REAL sentences with meaning, NOT just a random list of words?
 
 OUTPUT FORMAT:
