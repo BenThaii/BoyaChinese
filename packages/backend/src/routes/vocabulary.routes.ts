@@ -163,33 +163,44 @@ router.post('/:username/vocabulary/batch', async (req: Request, res: Response) =
       return res.status(400).json({ error: 'Maximum 100 characters per batch' });
     }
 
+    console.log('[Batch Upload] Processing in parallel batches...');
+    
+    // Process in parallel batches of 10 to avoid overwhelming the API
+    const BATCH_SIZE = 10;
     const results = [];
 
-    for (const char of charArray) {
-      try {
-        console.log(`[Batch Upload] Processing character: ${char}`);
-        
-        // Create entry with automatic translation
-        const entry = await vocabularyManager.createEntry(username, {
-          chineseCharacter: char,
-          chapter: chapter
-        });
+    for (let i = 0; i < charArray.length; i += BATCH_SIZE) {
+      const batch = charArray.slice(i, i + BATCH_SIZE);
+      console.log(`[Batch Upload] Processing batch ${Math.floor(i / BATCH_SIZE) + 1}/${Math.ceil(charArray.length / BATCH_SIZE)}`);
+      
+      const batchPromises = batch.map(async (char) => {
+        try {
+          console.log(`[Batch Upload] Processing character: ${char}`);
+          
+          // Create entry with automatic translation
+          const entry = await vocabularyManager.createEntry(username, {
+            chineseCharacter: char,
+            chapter: chapter
+          });
 
-        results.push({
-          character: char,
-          success: true,
-          entry: entry
-        });
+          console.log(`[Batch Upload] ✓ Success: ${char}`);
+          return {
+            character: char,
+            success: true,
+            entry: entry
+          };
+        } catch (error) {
+          console.error(`[Batch Upload] ✗ Failed: ${char}`, error);
+          return {
+            character: char,
+            success: false,
+            error: error instanceof Error ? error.message : 'Unknown error'
+          };
+        }
+      });
 
-        console.log(`[Batch Upload] ✓ Success: ${char}`);
-      } catch (error) {
-        console.error(`[Batch Upload] ✗ Failed: ${char}`, error);
-        results.push({
-          character: char,
-          success: false,
-          error: error instanceof Error ? error.message : 'Unknown error'
-        });
-      }
+      const batchResults = await Promise.all(batchPromises);
+      results.push(...batchResults);
     }
 
     const successCount = results.filter(r => r.success).length;
