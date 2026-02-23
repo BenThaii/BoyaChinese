@@ -20,8 +20,10 @@ export class GenerationScheduler {
   }
 
   /**
-   * Start the scheduler with 4-hour interval
-   * Cron expression: "0 star-slash-4 star star star" means at minute 0 of every 4th hour
+   * Start the scheduler to run 4 times per day
+   * Cron expression: "0 2,8,14,20 * * *" means at minute 0 of hours 2, 8, 14, and 20 UTC
+   * Vietnam time (UTC+7): 09:00, 15:00, 21:00, 03:00
+   * Only 1 refresh during sleep hours (03:00)
    */
   start(): void {
     if (this.cronJob) {
@@ -29,13 +31,13 @@ export class GenerationScheduler {
       return;
     }
 
-    // Schedule for every 4 hours at minute 0
-    this.cronJob = cron.schedule('0 */4 * * *', async () => {
+    // Schedule for 02:00, 08:00, 14:00, 20:00 UTC (09:00, 15:00, 21:00, 03:00 Vietnam time)
+    this.cronJob = cron.schedule('0 2,8,14,20 * * *', async () => {
       console.log('[GenerationScheduler] Cron job triggered');
       await this.triggerGeneration();
     });
 
-    console.log('[GenerationScheduler] Scheduler started - will run every 4 hours');
+    console.log('[GenerationScheduler] Scheduler started - will run at 02:00, 08:00, 14:00, 20:00 UTC (09:00, 15:00, 21:00, 03:00 Vietnam time)');
   }
 
   /**
