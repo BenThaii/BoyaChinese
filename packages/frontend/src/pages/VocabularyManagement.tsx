@@ -264,17 +264,6 @@ export default function VocabularyManagement() {
     toggleSelection(id);
   };
 
-  const handleToggleFavorite = (entry: VocabularyEntry) => {
-    // Update the entry in the local state immediately
-    setEntries(prevEntries =>
-      prevEntries.map(e =>
-        e.id === entry.id
-          ? { ...e, isFavorite: !e.isFavorite }
-          : e
-      )
-    );
-  };
-
   if (loading) return <div>Loading...</div>;
 
   // Filter entries based on batch edit mode and favorites filter
