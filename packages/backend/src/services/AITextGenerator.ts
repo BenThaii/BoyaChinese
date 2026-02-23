@@ -325,7 +325,12 @@ REMEMBER: Create MEANINGFUL sentences with proper grammar, NOT random word lists
         usedCharacters
       };
     } catch (error) {
-      console.error('[AITextGenerator] API call failed, falling back to mock data:', error);
+      console.error('[AITextGenerator] API call failed:', error);
+      if (error instanceof Error) {
+        console.error('[AITextGenerator] Error message:', error.message);
+        console.error('[AITextGenerator] Error stack:', error.stack);
+      }
+      console.error('[AITextGenerator] Falling back to mock data');
       // Fallback to mock data if API fails
       return this.generateMockText(characters, maxWords);
     }
@@ -519,7 +524,12 @@ REMEMBER: Create ${count} MEANINGFUL sentences with proper grammar, NOT random w
 
       return sentences;
     } catch (error) {
-      console.error('[AITextGenerator] Batch API call failed, falling back to mock data:', error);
+      console.error('[AITextGenerator] Batch API call failed:', error);
+      if (error instanceof Error) {
+        console.error('[AITextGenerator] Error message:', error.message);
+        console.error('[AITextGenerator] Error stack:', error.stack);
+      }
+      console.error('[AITextGenerator] Falling back to mock data');
       // Fallback to mock data if API fails
       return this.generateMockMultipleSentences(characters, count);
     }
