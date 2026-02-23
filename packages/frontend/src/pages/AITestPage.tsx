@@ -12,6 +12,7 @@ interface CharacterInfo {
   pinyin: string;
   modernVietnamese?: string;
   englishMeaning?: string;
+  isFavorite?: boolean;
 }
 
 export default function AITestPage() {
@@ -137,6 +138,26 @@ export default function AITestPage() {
       window.speechSynthesis.speak(utterance);
     } else {
       alert('Text-to-speech is not supported in your browser');
+    }
+  };
+
+  const handleToggleFavorite = async (character: string, currentFavoriteStatus: boolean) => {
+    try {
+      const response = await apiClient.post(`/user1/vocabulary/toggle-favorite`, {
+        chineseCharacter: character
+      });
+
+      // Update the character details with the new favorite status
+      setCharacterDetails(prevDetails =>
+        prevDetails.map(char =>
+          char.chineseCharacter === character
+            ? { ...char, isFavorite: !currentFavoriteStatus }
+            : char
+        )
+      );
+    } catch (error) {
+      console.error('Error toggling favorite:', error);
+      alert('Failed to update favorite status');
     }
   };
 
@@ -406,6 +427,7 @@ export default function AITestPage() {
                         <th style={{ padding: '10px', border: '1px solid #dee2e6', textAlign: 'left' }}>Pinyin</th>
                         <th style={{ padding: '10px', border: '1px solid #dee2e6', textAlign: 'left' }}>English</th>
                         <th style={{ padding: '10px', border: '1px solid #dee2e6', textAlign: 'left' }}>Vietnamese</th>
+                        <th style={{ padding: '10px', border: '1px solid #dee2e6', textAlign: 'center' }}>Favorite</th>
                         <th style={{ padding: '10px', border: '1px solid #dee2e6', textAlign: 'center' }}>Pronounce</th>
                       </tr>
                     </thead>
@@ -423,6 +445,24 @@ export default function AITestPage() {
                           </td>
                           <td style={{ padding: '10px', border: '1px solid #dee2e6' }}>
                             {char.modernVietnamese || 'N/A'}
+                          </td>
+                          <td style={{ padding: '10px', border: '1px solid #dee2e6', textAlign: 'center' }}>
+                            <button
+                              onClick={() => handleToggleFavorite(char.chineseCharacter, char.isFavorite || false)}
+                              style={{
+                                padding: '5px 10px',
+                                backgroundColor: 'transparent',
+                                color: char.isFavorite ? '#ffc107' : '#ccc',
+                                border: 'none',
+                                borderRadius: '4px',
+                                cursor: 'pointer',
+                                fontSize: '20px',
+                                transition: 'color 0.2s'
+                              }}
+                              title={char.isFavorite ? 'Remove from favorites' : 'Add to favorites'}
+                            >
+                              {char.isFavorite ? '★' : '☆'}
+                            </button>
                           </td>
                           <td style={{ padding: '10px', border: '1px solid #dee2e6', textAlign: 'center' }}>
                             <button

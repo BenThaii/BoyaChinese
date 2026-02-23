@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
-import { vocabularyApi, VocabularyEntry } from '../api/client';
+import { vocabularyApi, VocabularyEntry, apiClient } from '../api/client';
 
 export default function VocabularyManagement() {
   const { username } = useParams<{ username: string }>();
@@ -20,6 +20,16 @@ export default function VocabularyManagement() {
   const [batchEditMode, setBatchEditMode] = useState(false);
   const [batchEditForms, setBatchEditForms] = useState<Map<string, Partial<VocabularyEntry>>>(new Map());
   const [showScrollTop, setShowScrollTop] = useState(false);
+  const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
+  const [columnFilters, setColumnFilters] = useState({
+    favorite: 'all', // 'all', 'favorites', 'non-favorites'
+    chinese: '',
+    pinyin: '',
+    hanVietnamese: '',
+    modernVietnamese: '',
+    english: '',
+    note: ''
+  });
 
   useEffect(() => {
     const handleScroll = () => {
@@ -71,10 +81,20 @@ export default function VocabularyManagement() {
     if (!username || !editingId) return;
     try {
       await vocabularyApi.update(username, editingId, editForm);
+      
+      // Update the local state with the saved changes
+      setEntries(prevEntries =>
+        prevEntries.map(e =>
+          e.id === editingId
+            ? { ...e, ...editForm }
+            : e
+        )
+      );
+      
       setEditingId(null);
-      loadEntries();
     } catch (error) {
       console.error('Failed to update entry:', error);
+      alert('Failed to update entry');
     }
   };
 
@@ -200,10 +220,18 @@ export default function VocabularyManagement() {
         vocabularyApi.update(username, id, form)
       );
       await Promise.all(updatePromises);
+      
+      // Update the local state with the saved changes
+      setEntries(prevEntries =>
+        prevEntries.map(entry => {
+          const updatedForm = batchEditForms.get(entry.id);
+          return updatedForm ? { ...entry, ...updatedForm } : entry;
+        })
+      );
+      
       setBatchEditMode(false);
       setBatchEditForms(new Map());
       setSelectedIds(new Set());
-      loadEntries();
     } catch (error) {
       console.error('Failed to batch update:', error);
       alert('Some entries failed to update');
@@ -218,6 +246,14 @@ export default function VocabularyManagement() {
     setBatchEditForms(newForms);
   };
 
+  const toggleBatchEditFavorite = (id: string) => {
+    const newForms = new Map(batchEditForms);
+    const form = newForms.get(id) || {};
+    const currentFavorite = form.isFavorite !== undefined ? form.isFavorite : false;
+    newForms.set(id, { ...form, isFavorite: !currentFavorite });
+    setBatchEditForms(newForms);
+  };
+
   const handleRowClick = (id: string, e: React.MouseEvent) => {
     // Don't toggle if clicking on a button or input
     const target = e.target as HTMLElement;
@@ -228,12 +264,66 @@ export default function VocabularyManagement() {
     toggleSelection(id);
   };
 
+  const handleToggleFavorite = (entry: VocabularyEntry) => {
+    // Update the entry in the local state immediately
+    setEntries(prevEntries =>
+      prevEntries.map(e =>
+        e.id === entry.id
+          ? { ...e, isFavorite: !e.isFavorite }
+          : e
+      )
+    );
+  };
+
   if (loading) return <div>Loading...</div>;
 
-  // Filter entries based on batch edit mode
-  const displayedEntries = batchEditMode 
+  // Filter entries based on batch edit mode and favorites filter
+  let displayedEntries = batchEditMode 
     ? entries.filter(e => selectedIds.has(e.id))
     : entries;
+  
+  // Apply favorites filter (from button - kept for backward compatibility)
+  if (showFavoritesOnly) {
+    displayedEntries = displayedEntries.filter(e => e.isFavorite);
+  }
+
+  // Apply column filters
+  if (columnFilters.favorite === 'favorites') {
+    displayedEntries = displayedEntries.filter(e => e.isFavorite);
+  } else if (columnFilters.favorite === 'non-favorites') {
+    displayedEntries = displayedEntries.filter(e => !e.isFavorite);
+  }
+  
+  if (columnFilters.chinese) {
+    displayedEntries = displayedEntries.filter(e => 
+      e.chineseCharacter.toLowerCase().includes(columnFilters.chinese.toLowerCase())
+    );
+  }
+  if (columnFilters.pinyin) {
+    displayedEntries = displayedEntries.filter(e => 
+      e.pinyin.toLowerCase().includes(columnFilters.pinyin.toLowerCase())
+    );
+  }
+  if (columnFilters.hanVietnamese) {
+    displayedEntries = displayedEntries.filter(e => 
+      e.hanVietnamese?.toLowerCase().includes(columnFilters.hanVietnamese.toLowerCase())
+    );
+  }
+  if (columnFilters.modernVietnamese) {
+    displayedEntries = displayedEntries.filter(e => 
+      e.modernVietnamese?.toLowerCase().includes(columnFilters.modernVietnamese.toLowerCase())
+    );
+  }
+  if (columnFilters.english) {
+    displayedEntries = displayedEntries.filter(e => 
+      e.englishMeaning?.toLowerCase().includes(columnFilters.english.toLowerCase())
+    );
+  }
+  if (columnFilters.note) {
+    displayedEntries = displayedEntries.filter(e => 
+      e.learningNote?.toLowerCase().includes(columnFilters.note.toLowerCase())
+    );
+  }
 
   return (
     <div className="vocabulary-management">
@@ -253,8 +343,45 @@ export default function VocabularyManagement() {
             ))}
           </select>
         </label>
-        <span style={{ color: '#666', fontSize: '14px' }}>
-          ({entries.length} entries)
+        <button
+          onClick={() => setShowFavoritesOnly(!showFavoritesOnly)}
+          style={{
+            marginLeft: '15px',
+            backgroundColor: showFavoritesOnly ? '#ffc107' : '#f8f9fa',
+            color: showFavoritesOnly ? 'white' : '#333',
+            border: '1px solid #dee2e6',
+            padding: '5px 15px',
+            borderRadius: '4px',
+            cursor: 'pointer'
+          }}
+        >
+          {showFavoritesOnly ? '★ Favorites Only' : '☆ Show All'}
+        </button>
+        <button
+          onClick={() => setColumnFilters({
+            favorite: 'all',
+            chinese: '',
+            pinyin: '',
+            hanVietnamese: '',
+            modernVietnamese: '',
+            english: '',
+            note: ''
+          })}
+          style={{
+            marginLeft: '15px',
+            backgroundColor: '#6c757d',
+            color: 'white',
+            border: '1px solid #dee2e6',
+            padding: '5px 15px',
+            borderRadius: '4px',
+            cursor: 'pointer'
+          }}
+          title="Clear all column filters"
+        >
+          Clear Filters
+        </button>
+        <span style={{ color: '#666', fontSize: '14px', marginLeft: '15px' }}>
+          ({displayedEntries.length} {showFavoritesOnly ? 'favorites' : 'entries'})
         </span>
       </div>
       
@@ -345,6 +472,7 @@ export default function VocabularyManagement() {
                 onChange={toggleSelectAll}
               />
             </th>
+            <th>Favorite</th>
             <th>Chinese</th>
             <th>Pinyin</th>
             <th>Han Vietnamese</th>
@@ -353,6 +481,118 @@ export default function VocabularyManagement() {
             <th>Note</th>
             <th>Chapter</th>
             <th>Actions</th>
+          </tr>
+          <tr style={{ backgroundColor: '#f8f9fa' }}>
+            <th></th>
+            <th>
+              <select
+                value={columnFilters.favorite}
+                onChange={(e) => setColumnFilters({ ...columnFilters, favorite: e.target.value })}
+                style={{
+                  width: '100%',
+                  padding: '4px',
+                  fontSize: '12px',
+                  border: '1px solid #ccc',
+                  borderRadius: '3px'
+                }}
+              >
+                <option value="all">All</option>
+                <option value="favorites">★ Only</option>
+                <option value="non-favorites">☆ Only</option>
+              </select>
+            </th>
+            <th>
+              <input
+                type="text"
+                placeholder="Filter..."
+                value={columnFilters.chinese}
+                onChange={(e) => setColumnFilters({ ...columnFilters, chinese: e.target.value })}
+                style={{
+                  width: '100%',
+                  padding: '4px',
+                  fontSize: '12px',
+                  border: '1px solid #ccc',
+                  borderRadius: '3px'
+                }}
+              />
+            </th>
+            <th>
+              <input
+                type="text"
+                placeholder="Filter..."
+                value={columnFilters.pinyin}
+                onChange={(e) => setColumnFilters({ ...columnFilters, pinyin: e.target.value })}
+                style={{
+                  width: '100%',
+                  padding: '4px',
+                  fontSize: '12px',
+                  border: '1px solid #ccc',
+                  borderRadius: '3px'
+                }}
+              />
+            </th>
+            <th>
+              <input
+                type="text"
+                placeholder="Filter..."
+                value={columnFilters.hanVietnamese}
+                onChange={(e) => setColumnFilters({ ...columnFilters, hanVietnamese: e.target.value })}
+                style={{
+                  width: '100%',
+                  padding: '4px',
+                  fontSize: '12px',
+                  border: '1px solid #ccc',
+                  borderRadius: '3px'
+                }}
+              />
+            </th>
+            <th>
+              <input
+                type="text"
+                placeholder="Filter..."
+                value={columnFilters.modernVietnamese}
+                onChange={(e) => setColumnFilters({ ...columnFilters, modernVietnamese: e.target.value })}
+                style={{
+                  width: '100%',
+                  padding: '4px',
+                  fontSize: '12px',
+                  border: '1px solid #ccc',
+                  borderRadius: '3px'
+                }}
+              />
+            </th>
+            <th>
+              <input
+                type="text"
+                placeholder="Filter..."
+                value={columnFilters.english}
+                onChange={(e) => setColumnFilters({ ...columnFilters, english: e.target.value })}
+                style={{
+                  width: '100%',
+                  padding: '4px',
+                  fontSize: '12px',
+                  border: '1px solid #ccc',
+                  borderRadius: '3px'
+                }}
+              />
+            </th>
+            <th>
+              <input
+                type="text"
+                placeholder="Filter..."
+                value={columnFilters.note}
+                onChange={(e) => setColumnFilters({ ...columnFilters, note: e.target.value })}
+                style={{
+                  width: '100%',
+                  padding: '4px',
+                  fontSize: '12px',
+                  border: '1px solid #ccc',
+                  borderRadius: '3px'
+                }}
+              />
+            </th>
+            <th></th>
+            <th></th>
           </tr>
         </thead>
         <tbody>
@@ -374,6 +614,28 @@ export default function VocabularyManagement() {
                       checked={true}
                       disabled
                     />
+                  </td>
+                  <td 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toggleBatchEditFavorite(entry.id);
+                    }}
+                    style={{ 
+                      textAlign: 'center', 
+                      fontSize: '20px', 
+                      color: (batchEditForms.get(entry.id)?.isFavorite !== undefined 
+                        ? batchEditForms.get(entry.id)?.isFavorite 
+                        : entry.isFavorite) ? '#ffc107' : '#ccc',
+                      cursor: 'pointer',
+                      userSelect: 'none'
+                    }}
+                    title={(batchEditForms.get(entry.id)?.isFavorite !== undefined 
+                      ? batchEditForms.get(entry.id)?.isFavorite 
+                      : entry.isFavorite) ? 'Click to remove from favorites' : 'Click to add to favorites'}
+                  >
+                    {(batchEditForms.get(entry.id)?.isFavorite !== undefined 
+                      ? batchEditForms.get(entry.id)?.isFavorite 
+                      : entry.isFavorite) ? '★' : '☆'}
                   </td>
                   <td>
                     <input
@@ -429,6 +691,22 @@ export default function VocabularyManagement() {
                       type="checkbox" 
                       disabled
                     />
+                  </td>
+                  <td 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setEditForm({ ...editForm, isFavorite: !editForm.isFavorite });
+                    }}
+                    style={{ 
+                      textAlign: 'center', 
+                      fontSize: '20px', 
+                      color: editForm.isFavorite ? '#ffc107' : '#ccc',
+                      cursor: 'pointer',
+                      userSelect: 'none'
+                    }}
+                    title={editForm.isFavorite ? 'Click to remove from favorites' : 'Click to add to favorites'}
+                  >
+                    {editForm.isFavorite ? '★' : '☆'}
                   </td>
                   <td>
                     <input
@@ -500,6 +778,22 @@ export default function VocabularyManagement() {
                       checked={selectedIds.has(entry.id)}
                       onChange={() => toggleSelection(entry.id)}
                     />
+                  </td>
+                  <td 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleToggleFavorite(entry);
+                    }}
+                    style={{ 
+                      textAlign: 'center', 
+                      fontSize: '20px', 
+                      color: entry.isFavorite ? '#ffc107' : '#ccc',
+                      cursor: 'pointer',
+                      userSelect: 'none'
+                    }}
+                    title={entry.isFavorite ? 'Click to remove from favorites' : 'Click to add to favorites'}
+                  >
+                    {entry.isFavorite ? '★' : '☆'}
                   </td>
                   <td>{entry.chineseCharacter}</td>
                   <td>{entry.pinyin}</td>

@@ -18,6 +18,7 @@ export interface VocabularyEntry {
   modernVietnamese?: string;
   englishMeaning?: string;
   learningNote?: string;
+  isFavorite?: boolean;
   chapter: number;
   createdAt: string;
   updatedAt: string;
