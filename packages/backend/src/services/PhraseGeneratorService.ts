@@ -227,18 +227,18 @@ export class PhraseGeneratorService {
   }
 
   /**
-   * Generate sentences for all 5 vocabulary groups with retry logic.
-   * This is the main orchestration method that processes all vocab groups.
+   * Generate sentences for all 5 vocabulary groups in a SINGLE API call.
+   * This is the main orchestration method optimized for cron job execution.
    * 
    * For each group:
-   * 1. Generates 120 sentences (4 batches × 30)
-   * 2. Deletes old sentences
-   * 3. Stores new sentences
+   * 1. Prepares 4 batches of 300 characters each
+   * 2. Sends all groups/batches in one API call
+   * 3. Stores generated sentences for each group
    * 
    * Implements retry logic with exponential backoff (3 attempts: 1s, 2s, 4s delays).
    * Logs generation status and errors for monitoring.
    * 
-   * @throws Error if all retry attempts fail for any vocab group
+   * @throws Error if all retry attempts fail
    */
   async generateAllSentences(): Promise<void> {
     console.log('[PhraseGenerator] Starting sentence generation for all vocab groups');
@@ -253,24 +253,22 @@ export class PhraseGeneratorService {
 
     console.log(`[PhraseGenerator] Found ${vocabGroups.length} vocab groups to process`);
 
-    // Process each vocab group with retry logic
-    for (const group of vocabGroups) {
-      await this.generateWithRetry(group);
-    }
+    // Prepare data for all groups in a single API call
+    await this.generateAllGroupsInSingleCall(vocabGroups);
 
     console.log('[PhraseGenerator] Successfully completed sentence generation for all vocab groups');
   }
 
   /**
-   * Generate sentences for a single vocab group with retry logic.
+   * Generate sentences for all vocab groups in a single API call with retry logic.
    * Implements exponential backoff: 1s, 2s, 4s delays between attempts.
    * 
-   * @param group - VocabGroup to generate sentences for
+   * @param vocabGroups - Array of VocabGroup to generate sentences for
    * @param maxAttempts - Maximum number of retry attempts (default: 3)
    * @throws Error if all retry attempts fail
    */
-  private async generateWithRetry(
-    group: VocabGroup,
+  private async generateAllGroupsInSingleCall(
+    vocabGroups: VocabGroup[],
     maxAttempts: number = 3
   ): Promise<void> {
     let lastError: Error | null = null;
@@ -278,23 +276,60 @@ export class PhraseGeneratorService {
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
       try {
         console.log(
-          `[PhraseGenerator] Processing vocab group ${group.id} ` +
-          `(chapters ${group.chapterStart}-${group.chapterEndpoint}) - Attempt ${attempt}/${maxAttempts}`
+          `[PhraseGenerator] Processing all ${vocabGroups.length} vocab groups in single API call - Attempt ${attempt}/${maxAttempts}`
         );
 
-        // Generate 120 sentences for the group
-        const sentences = await this.generateSentencesForGroup(group);
+        // Prepare character batches for all groups
+        const pool = getPool();
+        const vocabGroupsData: Array<{
+          vocabGroupId: number;
+          batches: string[][];
+        }> = [];
 
-        console.log(
-          `[PhraseGenerator] Generated ${sentences.length} sentences for vocab group ${group.id}`
-        );
+        for (const group of vocabGroups) {
+          // Fetch all vocabulary characters for the chapter range (1 to chapterEndpoint)
+          const [rows] = await pool.query<RowDataPacket[]>(
+            `SELECT chinese_character FROM vocabulary_entries 
+             WHERE chapter >= ? AND chapter <= ?`,
+            [group.chapterStart, group.chapterEndpoint]
+          );
 
-        // Replace old sentences with new ones (atomic transaction)
-        await this.replaceSentencesForGroup(group.id, sentences);
+          const allCharacters = rows.map(row => row.chinese_character as string);
 
-        console.log(
-          `[PhraseGenerator] Successfully stored sentences for vocab group ${group.id}`
-        );
+          if (allCharacters.length === 0) {
+            throw new Error(`No vocabulary found for vocab group ${group.id} (chapters ${group.chapterStart}-${group.chapterEndpoint})`);
+          }
+
+          // Prepare 4 batches of 300 characters each
+          const batches: string[][] = [];
+          for (let i = 0; i < 4; i++) {
+            const selectedCharacters: string[] = [];
+            for (let j = 0; j < 300; j++) {
+              const randomIndex = Math.floor(Math.random() * allCharacters.length);
+              selectedCharacters.push(allCharacters[randomIndex]);
+            }
+            batches.push(selectedCharacters);
+          }
+
+          vocabGroupsData.push({
+            vocabGroupId: group.id,
+            batches
+          });
+        }
+
+        // Generate all sentences in a single API call
+        console.log('[PhraseGenerator] Calling AI text generator for all groups (single API call)...');
+        const aiGenerator = new AITextGenerator();
+        const resultMap = await aiGenerator.generateForMultipleGroups(vocabGroupsData);
+
+        console.log(`[PhraseGenerator] Generated sentences for ${resultMap.size} vocab groups`);
+
+        // Store sentences for each group
+        for (const [vocabGroupId, sentences] of resultMap.entries()) {
+          console.log(`[PhraseGenerator] Storing ${sentences.length} sentences for vocab group ${vocabGroupId}`);
+          await this.replaceSentencesForGroup(vocabGroupId, sentences);
+          console.log(`[PhraseGenerator] Successfully stored sentences for vocab group ${vocabGroupId}`);
+        }
 
         // Success - exit retry loop
         return;
@@ -303,7 +338,7 @@ export class PhraseGeneratorService {
         lastError = error as Error;
         
         console.error(
-          `[PhraseGenerator] Error generating sentences for vocab group ${group.id} ` +
+          `[PhraseGenerator] Error generating sentences for all groups ` +
           `(attempt ${attempt}/${maxAttempts}):`,
           error
         );
@@ -316,7 +351,7 @@ export class PhraseGeneratorService {
         // Exponential backoff: 1s, 2s, 4s
         const delayMs = Math.pow(2, attempt - 1) * 1000;
         console.log(
-          `[PhraseGenerator] Retrying vocab group ${group.id} in ${delayMs}ms...`
+          `[PhraseGenerator] Retrying all groups in ${delayMs}ms...`
         );
         
         await this.sleep(delayMs);
@@ -325,7 +360,7 @@ export class PhraseGeneratorService {
 
     // All attempts failed
     const errorMessage = 
-      `Failed to generate sentences for vocab group ${group.id} after ${maxAttempts} attempts. ` +
+      `Failed to generate sentences for all groups after ${maxAttempts} attempts. ` +
       `Last error: ${lastError?.message}`;
     
     console.error(`[PhraseGenerator] ${errorMessage}`);
