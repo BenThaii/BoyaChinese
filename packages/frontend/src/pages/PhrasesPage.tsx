@@ -193,7 +193,7 @@ export default function PhrasesPage() {
 
   const handleToggleFavorite = async (character: string, currentFavoriteStatus: boolean) => {
     try {
-      const response = await apiClient.post(`/user1/vocabulary/toggle-favorite`, {
+      await apiClient.post(`/user1/vocabulary/toggle-favorite`, {
         chineseCharacter: character
       });
 
