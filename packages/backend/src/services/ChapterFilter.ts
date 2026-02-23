@@ -42,10 +42,11 @@ export class ChapterFilter {
 
   /**
    * Get random sample of characters from chapter range
+   * Prioritizes favorite words - includes ALL favorites first, then fills remaining with random words
    * @param username - Owner username
    * @param range - Chapter range (inclusive)
    * @param count - Maximum number of characters to return (up to 300)
-   * @returns Array of Chinese characters
+   * @returns Array of Chinese characters (favorites + random)
    */
   static async getRandomCharacters(username: string, range: ChapterRange, count: number): Promise<string[]> {
     const pool = getPool();
@@ -53,15 +54,43 @@ export class ChapterFilter {
     // Limit count to 300 as per requirements
     const limitedCount = Math.min(count, 300);
     
-    const [rows] = await pool.query<RowDataPacket[]>(
+    // First, get ALL favorite words from the chapter range
+    const [favoriteRows] = await pool.query<RowDataPacket[]>(
       `SELECT chinese_character FROM vocabulary_entries 
-       WHERE username = ? AND chapter >= ? AND chapter <= ?
+       WHERE username = ? AND chapter >= ? AND chapter <= ? AND is_favorite = 1
+       ORDER BY chinese_character ASC`,
+      [username, range.start, range.end]
+    );
+    
+    const favoriteCharacters = favoriteRows.map(row => row.chinese_character as string);
+    console.log(`[ChapterFilter] Found ${favoriteCharacters.length} favorite characters in range`);
+    
+    // Calculate how many more random characters we need
+    const remainingCount = limitedCount - favoriteCharacters.length;
+    
+    if (remainingCount <= 0) {
+      // We have enough favorites to fill the entire count
+      console.log(`[ChapterFilter] Using only favorite characters (${favoriteCharacters.length})`);
+      return favoriteCharacters.slice(0, limitedCount);
+    }
+    
+    // Get random non-favorite characters to fill the remaining slots
+    const [randomRows] = await pool.query<RowDataPacket[]>(
+      `SELECT chinese_character FROM vocabulary_entries 
+       WHERE username = ? AND chapter >= ? AND chapter <= ? AND is_favorite = 0
        ORDER BY RAND()
        LIMIT ?`,
-      [username, range.start, range.end, limitedCount]
+      [username, range.start, range.end, remainingCount]
     );
-
-    return rows.map(row => row.chinese_character as string);
+    
+    const randomCharacters = randomRows.map(row => row.chinese_character as string);
+    console.log(`[ChapterFilter] Added ${randomCharacters.length} random characters`);
+    
+    // Combine favorites and random characters
+    const allCharacters = [...favoriteCharacters, ...randomCharacters];
+    console.log(`[ChapterFilter] Total characters: ${allCharacters.length} (${favoriteCharacters.length} favorites + ${randomCharacters.length} random)`);
+    
+    return allCharacters;
   }
 
   /**

@@ -780,18 +780,12 @@ export default function VocabularyManagement() {
                     />
                   </td>
                   <td 
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleToggleFavorite(entry);
-                    }}
                     style={{ 
                       textAlign: 'center', 
                       fontSize: '20px', 
                       color: entry.isFavorite ? '#ffc107' : '#ccc',
-                      cursor: 'pointer',
                       userSelect: 'none'
                     }}
-                    title={entry.isFavorite ? 'Click to remove from favorites' : 'Click to add to favorites'}
                   >
                     {entry.isFavorite ? '★' : '☆'}
                   </td>
