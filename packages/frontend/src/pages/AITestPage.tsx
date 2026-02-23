@@ -1,11 +1,10 @@
 import { useState } from 'react';
 import { apiClient } from '../api/client';
 
-interface GeneratedText {
+interface GeneratedSentence {
   chineseText: string;
   pinyin: string;
-  wordCount: number;
-  usedCharacters?: string[];
+  usedCharacters: string[];
 }
 
 interface CharacterInfo {
@@ -20,43 +19,41 @@ export default function AITestPage() {
   const [chapterStart, setChapterStart] = useState(1);
   const [chapterEnd, setChapterEnd] = useState(3);
   const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<GeneratedText | null>(null);
+  const [sentences, setSentences] = useState<GeneratedSentence[]>([]);
+  const [selectedSentence, setSelectedSentence] = useState<GeneratedSentence | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [audioPlaying, setAudioPlaying] = useState(false);
   const [characterDetails, setCharacterDetails] = useState<CharacterInfo[]>([]);
   const [loadingDetails, setLoadingDetails] = useState(false);
   const [playingCharacter, setPlayingCharacter] = useState<string | null>(null);
+  const [playingSentence, setPlayingSentence] = useState<boolean>(false);
 
   const handleGenerate = async () => {
     setLoading(true);
     setError(null);
-    setResult(null);
+    setSentences([]);
+    setSelectedSentence(null);
     setCharacterDetails([]);
 
     try {
-      console.log('Sending request to:', `/${username}/comprehension/generate`);
-      console.log('Params:', { chapterStart, chapterEnd });
+      console.log('Sending batch request to:', `/${username}/comprehension/generate-batch`);
+      console.log('Params:', { chapterStart, chapterEnd, count: 30 });
       
-      const response = await apiClient.get<GeneratedText>(
-        `/${username}/comprehension/generate`,
+      const response = await apiClient.get<GeneratedSentence[]>(
+        `/${username}/comprehension/generate-batch`,
         {
           params: {
             chapterStart,
-            chapterEnd
+            chapterEnd,
+            count: 30
           }
         }
       );
 
       console.log('Response:', response.data);
-      setResult(response.data);
-
-      // Fetch character details if usedCharacters is available
-      if (response.data.usedCharacters && response.data.usedCharacters.length > 0) {
-        await fetchCharacterDetails(response.data.usedCharacters);
-      }
+      setSentences(response.data);
     } catch (err: any) {
       console.error('Error:', err);
-      const errorMessage = err.response?.data?.details || err.response?.data?.error || err.message || 'Failed to generate text';
+      const errorMessage = err.response?.data?.details || err.response?.data?.error || err.message || 'Failed to generate sentences';
       console.error('Error message:', errorMessage);
       setError(errorMessage);
     } finally {
@@ -94,20 +91,25 @@ export default function AITestPage() {
     }
   };
 
-  const handlePronounce = () => {
-    if (!result?.chineseText) return;
+  const handleSentenceClick = (sentence: GeneratedSentence) => {
+    setSelectedSentence(sentence);
+    setCharacterDetails([]);
+    fetchCharacterDetails(sentence.usedCharacters);
+  };
+
+  const handlePronounceSentence = () => {
+    if (!selectedSentence || !selectedSentence.chineseText) return;
     
-    // Use browser's Web Speech API for pronunciation
     if ('speechSynthesis' in window) {
-      setAudioPlaying(true);
-      const utterance = new SpeechSynthesisUtterance(result.chineseText);
-      utterance.lang = 'zh-CN'; // Chinese (Simplified)
-      utterance.rate = 0.5; // Slower speed for learning (0.5 = half speed)
+      setPlayingSentence(true);
+      const utterance = new SpeechSynthesisUtterance(selectedSentence.chineseText);
+      utterance.lang = 'zh-CN';
+      utterance.rate = 0.7;
       
-      utterance.onend = () => setAudioPlaying(false);
+      utterance.onend = () => setPlayingSentence(false);
       utterance.onerror = () => {
-        setAudioPlaying(false);
-        alert('Failed to play pronunciation');
+        setPlayingSentence(false);
+        alert('Failed to play sentence pronunciation');
       };
       
       window.speechSynthesis.speak(utterance);
@@ -198,7 +200,7 @@ export default function AITestPage() {
             width: '100%'
           }}
         >
-          {loading ? 'Generating...' : 'Generate Random Sentence'}
+          {loading ? 'Generating...' : 'Generate 30 Sentences'}
         </button>
       </div>
 
@@ -215,65 +217,178 @@ export default function AITestPage() {
         </div>
       )}
 
-      {result && (
+      {sentences.length > 0 && (
         <div style={{
           padding: '20px',
           backgroundColor: '#d4edda',
           border: '1px solid #c3e6cb',
           borderRadius: '8px'
         }}>
-          <h2 style={{ marginTop: 0, color: '#155724' }}>Generated Text</h2>
+          <h2 style={{ marginTop: 0, color: '#155724' }}>Generated Sentences ({sentences.length})</h2>
           
-          <div style={{ marginBottom: '15px' }}>
-            <strong>Chinese Text:</strong>
-            <div style={{
-              fontSize: '20px',
-              padding: '10px',
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
+            gap: '15px'
+          }}>
+            {sentences.map((sentence, index) => (
+              <div
+                key={index}
+                onClick={() => handleSentenceClick(sentence)}
+                style={{
+                  padding: '15px',
+                  backgroundColor: 'white',
+                  border: '2px solid #c3e6cb',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s',
+                  fontSize: '18px',
+                  textAlign: 'center',
+                  minHeight: '80px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  position: 'relative'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = '#f0f8f0';
+                  e.currentTarget.style.borderColor = '#28a745';
+                  e.currentTarget.style.transform = 'translateY(-2px)';
+                  e.currentTarget.style.boxShadow = '0 4px 8px rgba(0,0,0,0.1)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = 'white';
+                  e.currentTarget.style.borderColor = '#c3e6cb';
+                  e.currentTarget.style.transform = 'translateY(0)';
+                  e.currentTarget.style.boxShadow = 'none';
+                }}
+              >
+                <div style={{
+                  position: 'absolute',
+                  top: '5px',
+                  left: '8px',
+                  fontSize: '12px',
+                  fontWeight: 'bold',
+                  color: '#666',
+                  backgroundColor: '#f8f9fa',
+                  padding: '2px 6px',
+                  borderRadius: '4px'
+                }}>
+                  {index + 1}
+                </div>
+                {sentence.chineseText}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Character Detail Modal */}
+      {selectedSentence && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+            padding: '20px'
+          }}
+          onClick={() => setSelectedSentence(null)}
+        >
+          <div
+            style={{
               backgroundColor: 'white',
-              borderRadius: '4px',
-              marginTop: '5px',
-              lineHeight: '1.6'
-            }}>
-              {result.chineseText}
+              borderRadius: '8px',
+              padding: '30px',
+              maxWidth: '900px',
+              maxHeight: '90vh',
+              overflow: 'auto',
+              width: '100%'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+              <h2 style={{ margin: 0 }}>Sentence Details</h2>
+              <button
+                onClick={() => setSelectedSentence(null)}
+                style={{
+                  padding: '8px 16px',
+                  backgroundColor: '#dc3545',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '4px',
+                  cursor: 'pointer',
+                  fontSize: '14px'
+                }}
+              >
+                Close
+              </button>
             </div>
-            <button
-              onClick={handlePronounce}
-              disabled={audioPlaying}
-              style={{
-                marginTop: '10px',
-                padding: '8px 16px',
-                backgroundColor: audioPlaying ? '#ccc' : '#28a745',
-                color: 'white',
-                border: 'none',
+
+            <div style={{ marginBottom: '20px' }}>
+              <strong>Chinese Text:</strong>
+              <div style={{
+                fontSize: '24px',
+                padding: '15px',
+                backgroundColor: '#f8f9fa',
                 borderRadius: '4px',
-                cursor: audioPlaying ? 'not-allowed' : 'pointer',
-                fontSize: '14px'
-              }}
-            >
-              🔊 {audioPlaying ? 'Playing...' : 'Read Aloud'}
-            </button>
-          </div>
-
-          <div style={{ marginBottom: '15px' }}>
-            <strong>Pinyin:</strong>
-            <div style={{
-              fontSize: '16px',
-              padding: '10px',
-              backgroundColor: 'white',
-              borderRadius: '4px',
-              marginTop: '5px',
-              color: result.pinyin ? '#000' : '#999',
-              fontStyle: result.pinyin ? 'normal' : 'italic'
-            }}>
-              {result.pinyin || 'Not available'}
+                marginTop: '5px',
+                lineHeight: '1.6',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center'
+              }}>
+                <span>{selectedSentence.chineseText}</span>
+                <button
+                  onClick={handlePronounceSentence}
+                  disabled={playingSentence}
+                  style={{
+                    padding: '8px 16px',
+                    backgroundColor: playingSentence ? '#6c757d' : '#28a745',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '4px',
+                    cursor: playingSentence ? 'not-allowed' : 'pointer',
+                    fontSize: '16px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    minWidth: '120px',
+                    justifyContent: 'center'
+                  }}
+                >
+                  <span style={{ fontSize: '20px' }}>{playingSentence ? '🔊' : '🔉'}</span>
+                  <span>{playingSentence ? 'Playing...' : 'Pronounce'}</span>
+                </button>
+              </div>
             </div>
-          </div>
 
-          {result.usedCharacters && result.usedCharacters.length > 0 && (
-            <div style={{ marginBottom: '15px' }}>
+            <div style={{ marginBottom: '20px' }}>
+              <strong>Pinyin:</strong>
+              <div style={{
+                fontSize: '18px',
+                padding: '15px',
+                backgroundColor: '#f8f9fa',
+                borderRadius: '4px',
+                marginTop: '5px',
+                color: selectedSentence.pinyin ? '#000' : '#999',
+                fontStyle: selectedSentence.pinyin ? 'normal' : 'italic'
+              }}>
+                {selectedSentence.pinyin || 'Not available'}
+              </div>
+            </div>
+
+            <div>
               <strong>Characters Used:</strong>
               {loadingDetails ? (
-                <div style={{ padding: '10px', fontStyle: 'italic', color: '#666' }}>
+                <div style={{ padding: '20px', textAlign: 'center', color: '#666' }}>
                   Loading character details...
                 </div>
               ) : characterDetails.length > 0 ? (
@@ -332,29 +447,10 @@ export default function AITestPage() {
                   </table>
                 </div>
               ) : (
-                <div style={{
-                  fontSize: '18px',
-                  padding: '10px',
-                  backgroundColor: 'white',
-                  borderRadius: '4px',
-                  marginTop: '5px'
-                }}>
-                  {result.usedCharacters.join(', ')}
+                <div style={{ padding: '20px', textAlign: 'center', color: '#666' }}>
+                  No character details available
                 </div>
               )}
-            </div>
-          )}
-
-          <div>
-            <strong>Word Count:</strong>
-            <div style={{
-              fontSize: '16px',
-              padding: '10px',
-              backgroundColor: 'white',
-              borderRadius: '4px',
-              marginTop: '5px'
-            }}>
-              {result.wordCount} characters
             </div>
           </div>
         </div>
@@ -369,12 +465,11 @@ export default function AITestPage() {
       }}>
         <h3 style={{ marginTop: 0 }}>How it works:</h3>
         <ol style={{ marginBottom: 0 }}>
-          <li>Enter a username (default: user1)</li>
           <li>Select chapter range (default: 1-3)</li>
-          <li>Click "Generate Random Sentence"</li>
+          <li>Click "Generate 30 Sentences"</li>
           <li>The API will fetch vocabulary from the specified chapters</li>
-          <li>Google AI Studio will generate a sentence using those characters</li>
-          <li>The result will be displayed with pinyin and word count</li>
+          <li>Google AI Studio will generate 30 sentences using those characters</li>
+          <li>Click any sentence to see details, pinyin, and character information</li>
         </ol>
       </div>
 

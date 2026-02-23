@@ -296,7 +296,7 @@ export default function PhrasesPage() {
                     gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
                     gap: '15px'
                   }}>
-                    {sentences.get(group.id)!.map((sentence) => (
+                    {sentences.get(group.id)!.map((sentence, index) => (
                       <div
                         key={sentence.id}
                         onClick={() => handleSentenceClick(sentence)}
@@ -311,8 +311,10 @@ export default function PhrasesPage() {
                           textAlign: 'center',
                           minHeight: '80px',
                           display: 'flex',
+                          flexDirection: 'column',
                           alignItems: 'center',
-                          justifyContent: 'center'
+                          justifyContent: 'center',
+                          position: 'relative'
                         }}
                         onMouseEnter={(e) => {
                           e.currentTarget.style.backgroundColor = '#e9ecef';
@@ -327,6 +329,19 @@ export default function PhrasesPage() {
                           e.currentTarget.style.boxShadow = 'none';
                         }}
                       >
+                        <div style={{
+                          position: 'absolute',
+                          top: '5px',
+                          left: '8px',
+                          fontSize: '12px',
+                          fontWeight: 'bold',
+                          color: '#666',
+                          backgroundColor: 'white',
+                          padding: '2px 6px',
+                          borderRadius: '4px'
+                        }}>
+                          {index + 1}
+                        </div>
                         {sentence.chineseText}
                       </div>
                     ))}

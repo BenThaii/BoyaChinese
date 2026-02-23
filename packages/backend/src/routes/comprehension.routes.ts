@@ -243,6 +243,128 @@ router.get('/:username/comprehension/generate', async (req: Request, res: Respon
 });
 
 /**
+ * GET /api/:username/comprehension/generate-batch
+ * 
+ * Generate multiple reading comprehension sentences using vocabulary from chapter range
+ * 
+ * Query Parameters:
+ * - chapterStart: number (required)
+ * - chapterEnd: number (required)
+ * - count: number (optional, default 30, max 50)
+ * 
+ * Response:
+ * - 200: Array of generated sentences with chineseText, pinyin, usedCharacters
+ * - 400: Invalid parameters
+ * - 404: No vocabulary found
+ * - 500: Server error
+ */
+router.get('/:username/comprehension/generate-batch', async (req: Request, res: Response) => {
+  try {
+    const { username } = req.params;
+    const { chapterStart, chapterEnd, count } = req.query;
+
+    console.log(`[Comprehension Batch] Generate request for user: ${username}, chapters: ${chapterStart}-${chapterEnd}, count: ${count || 30}`);
+
+    // Validate username
+    if (!username || typeof username !== 'string') {
+      return res.status(400).json({ 
+        error: 'Invalid username' 
+      });
+    }
+
+    // Validate chapter range
+    if (!chapterStart || !chapterEnd) {
+      return res.status(400).json({ 
+        error: 'chapterStart and chapterEnd parameters are required' 
+      });
+    }
+
+    const start = parseInt(chapterStart as string, 10);
+    const end = parseInt(chapterEnd as string, 10);
+    const sentenceCount = count ? parseInt(count as string, 10) : 30;
+
+    if (isNaN(start) || isNaN(end)) {
+      return res.status(400).json({ 
+        error: 'chapterStart and chapterEnd must be valid numbers' 
+      });
+    }
+
+    if (start < 1 || end < 1) {
+      return res.status(400).json({ 
+        error: 'Chapter numbers must be positive integers' 
+      });
+    }
+
+    if (start > end) {
+      return res.status(400).json({ 
+        error: 'chapterStart must be less than or equal to chapterEnd' 
+      });
+    }
+
+    if (isNaN(sentenceCount) || sentenceCount < 1 || sentenceCount > 50) {
+      return res.status(400).json({ 
+        error: 'count must be between 1 and 50' 
+      });
+    }
+
+    const chapterRange: ChapterRange = { start, end };
+
+    // Validate chapter range has vocabulary
+    console.log('[Comprehension Batch] Validating chapter range...');
+    const isValid = await ChapterFilter.validateRange(username, chapterRange);
+    if (!isValid) {
+      console.log('[Comprehension Batch] No vocabulary found in chapter range');
+      return res.status(404).json({ 
+        error: 'No vocabulary found in specified chapter range' 
+      });
+    }
+
+    // Get random characters from chapter range (max 300)
+    console.log('[Comprehension Batch] Getting random characters...');
+    const characters = await ChapterFilter.getRandomCharacters(username, chapterRange, 300);
+    console.log(`[Comprehension Batch] Got ${characters.length} characters`);
+
+    if (characters.length === 0) {
+      return res.status(404).json({ 
+        error: 'No vocabulary found in specified chapter range' 
+      });
+    }
+
+    // Generate multiple sentences using AI
+    console.log(`[Comprehension Batch] Calling AI text generator for ${sentenceCount} sentences...`);
+    const generatedSentences = await aiTextGenerator.generateMultipleSentences(characters, sentenceCount);
+    console.log(`[Comprehension Batch] Generated ${generatedSentences.length} sentences`);
+
+    console.log('[Comprehension Batch] Success! Returning generated sentences');
+    res.json(generatedSentences);
+  } catch (error) {
+    console.error('[Comprehension Batch] Error generating comprehension sentences:', error);
+    
+    if (error instanceof Error) {
+      console.error('[Comprehension Batch] Error message:', error.message);
+      console.error('[Comprehension Batch] Error stack:', error.stack);
+      
+      if (error.message.includes('No vocabulary found') || 
+          error.message.includes('Invalid chapter range')) {
+        return res.status(404).json({ 
+          error: error.message 
+        });
+      }
+      
+      // Return more detailed error message
+      return res.status(500).json({ 
+        error: 'Failed to generate comprehension sentences',
+        details: error.message
+      });
+    }
+    
+    res.status(500).json({ 
+      error: 'Failed to generate comprehension sentences' 
+    });
+  }
+});
+
+/**
  * GET /api/:username/comprehension/character-info
  * 
  * Get detailed information for a specific Chinese character

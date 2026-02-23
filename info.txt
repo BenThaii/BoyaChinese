@@ -1,0 +1,25 @@
+-------------------------deploy new-----------------------
+sudo mkdir /var/www
+cd /var/www  # or wherever you want to deploy
+sudo git clone https://github.com/BenThaii/BoyaChinese.git
+cd BoyaChinese
+
+sudo chmod +x deploy.sh
+sudo chown -R $USER:$USER /var/www/BoyaChinese
+./deploy.sh
+
+--------------------------check batch update of phrases (cron job) ------------
+echo "Current server time: $(date)" && \
+sudo mysql -e "USE chinese_learning_app; SELECT MAX(generation_timestamp) as last_generation, TIMESTAMPDIFF(MINUTE, MAX(generation_timestamp), NOW()) as minutes_ago FROM pre_generated_sentences;"
+
+
+---------------------------check cost ----------------------------------
+	- billing: 							https://console.cloud.google.com/billing/0183D9-12E83D-E4BEC6/reports?project=chinese-learning-app-488004&authuser=1
+	- usage:
+	https://console.cloud.google.com/apis/api/generativelanguage.googleapis.com/quotas?authuser=1&project=chinese-learning-app-488004&supportedpurview=project&pageState=(%22allQuotasTable%22:(%22f%22:%22%255B%257B_22k_22_3A_22_22_2C_22t_22_3A10_2C_22v_22_3A_22_5C_22gemini-2.5_5C_22_22%257D%255D%22,%22s%22:%5B(%22i%22:%22currentPercent%22,%22s%22:%221%22),(%22i%22:%22displayDimensions%22,%22s%22:%220%22),(%22i%22:%22currentUsage%22,%22s%22:%221%22),(%22i%22:%22displayName%22,%22s%22:%220%22)%5D))
+	
+---------------------------other------------------------------------------
+GOOGLE AI API:
+	- GOOGLE_AI_API_KEY= AIzaSyBsglkQhTU14BtAJaH62kGkrgzvz3YOMfQ
+commands:
+	- npm run dev:backend:full
