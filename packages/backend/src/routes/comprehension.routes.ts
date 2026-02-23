@@ -419,6 +419,7 @@ router.get('/:username/comprehension/character-info', async (req: Request, res: 
       hanVietnamese: entry.hanVietnamese,
       modernVietnamese: entry.modernVietnamese,
       englishMeaning: entry.englishMeaning,
+      isFavorite: entry.isFavorite,
       learningNote: entry.learningNote,
       chapter: entry.chapter
     });

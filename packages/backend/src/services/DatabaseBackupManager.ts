@@ -270,6 +270,7 @@ export class DatabaseBackupManager {
       modernVietnamese: row.modern_vietnamese || undefined,
       englishMeaning: row.english_meaning || undefined,
       learningNote: row.learning_note || undefined,
+      isFavorite: row.is_favorite === 1,
       chapter: row.chapter,
       createdAt: new Date(row.created_at),
       updatedAt: new Date(row.updated_at),

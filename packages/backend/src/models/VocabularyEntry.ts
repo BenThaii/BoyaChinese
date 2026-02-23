@@ -20,6 +20,7 @@ export interface VocabularyInput {
   englishMeaning?: string;
   learningNote?: string;
   chapter: number;
+  isFavorite?: boolean;
 }
 
 /**
@@ -29,6 +30,7 @@ export interface VocabularyEntry extends VocabularyInput {
   id: string;
   username: string;
   pinyin: string; // Required in full entry
+  isFavorite?: boolean; // Optional for backward compatibility with tests
   createdAt: Date;
   updatedAt: Date;
   sharedFrom?: string;
@@ -46,6 +48,7 @@ interface VocabularyEntryRow extends RowDataPacket {
   modern_vietnamese: string | null;
   english_meaning: string | null;
   learning_note: string | null;
+  is_favorite: number; // MySQL BOOLEAN is stored as TINYINT (0 or 1)
   chapter: number;
   created_at: Date;
   updated_at: Date;
@@ -65,6 +68,7 @@ function rowToEntry(row: VocabularyEntryRow): VocabularyEntry {
     modernVietnamese: row.modern_vietnamese || undefined,
     englishMeaning: row.english_meaning || undefined,
     learningNote: row.learning_note || undefined,
+    isFavorite: row.is_favorite === 1,
     chapter: row.chapter,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
@@ -89,8 +93,8 @@ export class VocabularyEntryDAO {
     const [result] = await pool.query<ResultSetHeader>(
       `INSERT INTO vocabulary_entries 
        (id, username, chinese_character, pinyin, han_vietnamese, modern_vietnamese, 
-        english_meaning, learning_note, chapter, shared_from)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        english_meaning, learning_note, is_favorite, chapter, shared_from)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         id,
         username,
@@ -100,6 +104,7 @@ export class VocabularyEntryDAO {
         entry.modernVietnamese || null,
         entry.englishMeaning || null,
         entry.learningNote || null,
+        entry.isFavorite ? 1 : 0,
         entry.chapter,
         null
       ]
@@ -215,6 +220,10 @@ export class VocabularyEntryDAO {
       updateFields.push('chapter = ?');
       params.push(updates.chapter);
     }
+    if (updates.isFavorite !== undefined) {
+      updateFields.push('is_favorite = ?');
+      params.push(updates.isFavorite ? 1 : 0);
+    }
 
     if (updateFields.length === 0) {
       // No updates provided, return current entry
@@ -303,8 +312,8 @@ export class VocabularyEntryDAO {
     const [result] = await pool.query<ResultSetHeader>(
       `INSERT INTO vocabulary_entries 
        (id, username, chinese_character, pinyin, han_vietnamese, modern_vietnamese, 
-        english_meaning, learning_note, chapter, shared_from)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        english_meaning, learning_note, is_favorite, chapter, shared_from)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         id,
         username,
@@ -314,6 +323,7 @@ export class VocabularyEntryDAO {
         entry.modernVietnamese || null,
         entry.englishMeaning || null,
         entry.learningNote || null,
+        entry.isFavorite ? 1 : 0,
         entry.chapter,
         sharedFrom
       ]
@@ -356,5 +366,38 @@ export class VocabularyEntryDAO {
     );
 
     return rows.map(row => row.username as string);
+  }
+
+  /**
+   * Toggle favorite status for a vocabulary entry
+   * @param username - Owner username
+   * @param chineseCharacter - Chinese character to toggle
+   * @returns Updated vocabulary entry or null if not found
+   */
+  static async toggleFavorite(username: string, chineseCharacter: string): Promise<VocabularyEntry | null> {
+    const pool = getPool();
+    
+    // First, find the entry
+    const [rows] = await pool.query<VocabularyEntryRow[]>(
+      `SELECT * FROM vocabulary_entries WHERE username = ? AND chinese_character = ? LIMIT 1`,
+      [username, chineseCharacter]
+    );
+
+    if (rows.length === 0) {
+      return null;
+    }
+
+    const currentEntry = rowToEntry(rows[0]);
+    const newFavoriteStatus = !currentEntry.isFavorite;
+
+    // Update the favorite status
+    await pool.query<ResultSetHeader>(
+      `UPDATE vocabulary_entries SET is_favorite = ?, updated_at = CURRENT_TIMESTAMP 
+       WHERE username = ? AND chinese_character = ?`,
+      [newFavoriteStatus ? 1 : 0, username, chineseCharacter]
+    );
+
+    // Return the updated entry
+    return this.findById(username, currentEntry.id);
   }
 }

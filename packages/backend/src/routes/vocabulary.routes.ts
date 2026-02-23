@@ -481,4 +481,44 @@ router.delete('/:username/vocabulary/:id', async (req: Request, res: Response) =
   }
 });
 
+/**
+ * POST /api/:username/vocabulary/toggle-favorite
+ * 
+ * Toggle favorite status for a vocabulary entry
+ * 
+ * Request body:
+ * - chineseCharacter: string (required)
+ * 
+ * Response:
+ * - 200: Updated vocabulary entry
+ * - 400: Invalid parameters
+ * - 404: Entry not found
+ * - 500: Server error
+ */
+router.post('/:username/vocabulary/toggle-favorite', async (req: Request, res: Response) => {
+  try {
+    const { username } = req.params;
+    const { chineseCharacter } = req.body;
+
+    if (!username || typeof username !== 'string') {
+      return res.status(400).json({ error: 'Invalid username' });
+    }
+
+    if (!chineseCharacter || typeof chineseCharacter !== 'string') {
+      return res.status(400).json({ error: 'chineseCharacter is required' });
+    }
+
+    const updatedEntry = await vocabularyManager.toggleFavorite(username, chineseCharacter);
+
+    if (!updatedEntry) {
+      return res.status(404).json({ error: 'Vocabulary entry not found' });
+    }
+
+    res.json(updatedEntry);
+  } catch (error) {
+    console.error('Error toggling favorite:', error);
+    res.status(500).json({ error: 'Failed to toggle favorite status' });
+  }
+});
+
 export default router;

@@ -287,6 +287,16 @@ export class VocabularyManager {
 
     return result;
   }
+
+  /**
+   * Toggle favorite status for a vocabulary entry
+   * @param username - Owner username
+   * @param chineseCharacter - Chinese character to toggle
+   * @returns Updated vocabulary entry or null if not found
+   */
+  async toggleFavorite(username: string, chineseCharacter: string): Promise<VocabularyEntry | null> {
+    return await VocabularyEntryDAO.toggleFavorite(username, chineseCharacter);
+  }
 }
 
 // Export singleton instance

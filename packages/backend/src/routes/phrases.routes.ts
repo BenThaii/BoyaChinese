@@ -121,7 +121,7 @@ router.get('/phrases/sentences/:vocabGroupId', async (req: Request, res: Respons
  * - character: Chinese character to look up
  * 
  * Response:
- * - 200: Character details (chineseCharacter, pinyin, hanVietnamese, modernVietnamese, englishMeaning)
+ * - 200: Character details (chineseCharacter, pinyin, hanVietnamese, modernVietnamese, englishMeaning, isFavorite)
  * - 404: Character not found
  * - 500: Server error
  */
@@ -132,7 +132,7 @@ router.get('/phrases/character-info/:character', async (req: Request, res: Respo
     // Query vocabulary database for character details
     const pool = getPool();
     const [rows] = await pool.query<RowDataPacket[]>(
-      `SELECT chinese_character, pinyin, han_vietnamese, modern_vietnamese, english_meaning
+      `SELECT chinese_character, pinyin, han_vietnamese, modern_vietnamese, english_meaning, is_favorite
        FROM vocabulary_entries
        WHERE chinese_character = ?
        LIMIT 1`,
@@ -149,7 +149,8 @@ router.get('/phrases/character-info/:character', async (req: Request, res: Respo
       pinyin: row.pinyin,
       hanVietnamese: row.han_vietnamese,
       modernVietnamese: row.modern_vietnamese,
-      englishMeaning: row.english_meaning
+      englishMeaning: row.english_meaning,
+      isFavorite: row.is_favorite === 1
     };
     
     res.json(response);
