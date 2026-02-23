@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { apiClient, vocabularyApi } from '../api/client';
+import { apiClient } from '../api/client';
 
 interface GeneratedText {
   chineseText: string;
@@ -16,8 +16,7 @@ interface CharacterInfo {
 }
 
 export default function AITestPage() {
-  const [username, setUsername] = useState('user1');
-  const [users, setUsers] = useState<string[]>([]);
+  const username = 'user1'; // Always use user1
   const [chapterStart, setChapterStart] = useState(1);
   const [chapterEnd, setChapterEnd] = useState(3);
   const [loading, setLoading] = useState(false);
@@ -27,22 +26,6 @@ export default function AITestPage() {
   const [characterDetails, setCharacterDetails] = useState<CharacterInfo[]>([]);
   const [loadingDetails, setLoadingDetails] = useState(false);
   const [playingCharacter, setPlayingCharacter] = useState<string | null>(null);
-
-  React.useEffect(() => {
-    loadUsers();
-  }, []);
-
-  const loadUsers = async () => {
-    try {
-      const response = await vocabularyApi.getAllUsers();
-      setUsers(response.data);
-      if (response.data.length > 0 && !response.data.includes(username)) {
-        setUsername(response.data[0]);
-      }
-    } catch (error) {
-      console.error('Failed to load users:', error);
-    }
-  };
 
   const handleGenerate = async () => {
     setLoading(true);
@@ -165,27 +148,6 @@ export default function AITestPage() {
       <div style={{ marginBottom: '20px', padding: '20px', border: '1px solid #ddd', borderRadius: '8px' }}>
         <h2>Configuration</h2>
         
-        <div style={{ marginBottom: '15px' }}>
-          <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
-            Username:
-          </label>
-          <select
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            style={{
-              width: '100%',
-              padding: '8px',
-              border: '1px solid #ccc',
-              borderRadius: '4px',
-              fontSize: '14px'
-            }}
-          >
-            {users.map(user => (
-              <option key={user} value={user}>{user}</option>
-            ))}
-          </select>
-        </div>
-
         <div style={{ marginBottom: '15px' }}>
           <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
             Chapter Start:
