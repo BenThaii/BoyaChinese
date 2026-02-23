@@ -55,11 +55,11 @@ export class AITextGenerator {
     
     this.genAI = new GoogleGenerativeAI(apiKey);
     // Use gemini-flash-lite-latest (confirmed working model)
-    this.model = this.genAI.getGenerativeModel({ model: 'gemini-flash-lite-latest' });
-    console.log('[AITextGenerator] Initialized successfully with model: gemini-flash-lite-latest');
+    // this.model = this.genAI.getGenerativeModel({ model: 'gemini-flash-lite-latest' });
+    // console.log('[AITextGenerator] Initialized successfully with model: gemini-flash-lite-latest');
 
-    // this.model = this.genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
-    // console.log('[AITextGenerator] Initialized successfully with model: Gemini 2.5 Flash');
+    this.model = this.genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
+    console.log('[AITextGenerator] Initialized successfully with model: Gemini 2.5 Flash');
 
     
   }
