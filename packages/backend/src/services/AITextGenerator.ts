@@ -99,7 +99,7 @@ export class AITextGenerator {
     
     try {
       // Required grammar words that should always be available
-      const requiredWords = ['是', '吗', '的', '呢', '也', '这', '去', '有'];
+      const requiredWords = ['是', '吗', '的', '呢', '也', '这', '去', '有', '你', '我', '他'];
       
       // Merge user characters with required words, removing duplicates
       const allCharacters = [...new Set([...characters, ...requiredWords])];
