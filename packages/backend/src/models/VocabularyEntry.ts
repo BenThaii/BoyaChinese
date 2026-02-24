@@ -400,4 +400,26 @@ export class VocabularyEntryDAO {
     // Return the updated entry
     return this.findById(username, currentEntry.id);
   }
+  /**
+   * Get a random favorite vocabulary entry for a user
+   * @param username - Owner username
+   * @returns Random favorite entry or null if no favorites exist
+   */
+  static async getRandomFavorite(username: string): Promise<VocabularyEntry | null> {
+    const pool = getPool();
+
+    const [rows] = await pool.query<VocabularyEntryRow[]>(
+      `SELECT * FROM vocabulary_entries
+       WHERE username = ? AND is_favorite = 1
+       ORDER BY RAND()
+       LIMIT 1`,
+      [username]
+    );
+
+    if (rows.length === 0) {
+      return null;
+    }
+
+    return rowToEntry(rows[0]);
+  }
 }

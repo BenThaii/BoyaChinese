@@ -521,4 +521,35 @@ router.post('/:username/vocabulary/toggle-favorite', async (req: Request, res: R
   }
 });
 
+/**
+ * GET /api/:username/vocabulary/favorites/random
+ * 
+ * Get a random favorite vocabulary entry
+ * 
+ * Response:
+ * - 200: Random favorite vocabulary entry
+ * - 404: No favorite entries found
+ * - 500: Server error
+ */
+router.get('/:username/vocabulary/favorites/random', async (req: Request, res: Response) => {
+  try {
+    const { username } = req.params;
+
+    if (!username || typeof username !== 'string') {
+      return res.status(400).json({ error: 'Invalid username' });
+    }
+
+    const randomFavorite = await vocabularyManager.getRandomFavorite(username);
+
+    if (!randomFavorite) {
+      return res.status(404).json({ error: 'No favorite entries found' });
+    }
+
+    res.json(randomFavorite);
+  } catch (error) {
+    console.error('Error getting random favorite:', error);
+    res.status(500).json({ error: 'Failed to get random favorite' });
+  }
+});
+
 export default router;

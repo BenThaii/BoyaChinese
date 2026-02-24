@@ -297,6 +297,10 @@ export class VocabularyManager {
   async toggleFavorite(username: string, chineseCharacter: string): Promise<VocabularyEntry | null> {
     return await VocabularyEntryDAO.toggleFavorite(username, chineseCharacter);
   }
+
+  async getRandomFavorite(username: string): Promise<VocabularyEntry | null> {
+    return await VocabularyEntryDAO.getRandomFavorite(username);
+  }
 }
 
 // Export singleton instance

@@ -5,6 +5,7 @@ import VocabularySharing from './pages/VocabularySharing';
 import DatabaseAdmin from './pages/DatabaseAdmin';
 import AITestPage from './pages/AITestPage';
 import PhrasesPage from './pages/PhrasesPage';
+import FlashcardPage from './pages/FlashcardPage';
 
 function Navigation() {
   const username = 'user1'; // Always use user1
@@ -19,6 +20,7 @@ function Navigation() {
         <li><Link to="/database-admin">Database Admin</Link></li>
         <li><Link to="/ai-test">AI Test Page</Link></li>
         <li><Link to="/phrases">Phrases Page</Link></li>
+        <li><Link to="/flashcards">Flashcards</Link></li>
       </ul>
     </nav>
   );
@@ -41,6 +43,7 @@ function App() {
                   <li>Database Admin - Backup and restore database</li>
                   <li>AI Test Page - Test Google AI Studio API for sentence generation</li>
                   <li>Phrases Page - Practice with pre-generated Chinese sentences</li>
+                  <li>Flashcards - Practice your favorite words with flashcards</li>
                 </ul>
               </div>
             } />
@@ -50,6 +53,7 @@ function App() {
             <Route path="/database-admin" element={<DatabaseAdmin />} />
             <Route path="/ai-test" element={<AITestPage />} />
             <Route path="/phrases" element={<PhrasesPage />} />
+            <Route path="/flashcards" element={<FlashcardPage />} />
           </Routes>
         </main>
       </div>
