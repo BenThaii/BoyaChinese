@@ -379,7 +379,7 @@ REMEMBER: Create MEANINGFUL sentences with proper grammar, NOT random word lists
 
   /**
    * Generate sentences for multiple vocabulary groups in a single API call
-   * Uses rejection sampling: generates 45 sentences per batch, filters to 30 valid ones
+   * Uses rejection sampling: generates 75 sentences per batch, filters to 30 valid ones
    * This is optimized for the cron job to minimize API calls while ensuring quality
    * @param vocabGroupsData - Array of objects containing characters for each vocab group
    *                          Each group should have 4 batches of 300 characters
@@ -425,7 +425,7 @@ REMEMBER: Create MEANINGFUL sentences with proper grammar, NOT random word lists
       console.log('[AITextGenerator] Number of vocab groups:', vocabGroupsData.length);
       console.log('[AITextGenerator] Total batches:', vocabGroupsData.length * 4);
       console.log('[AITextGenerator] Target sentences (after rejection sampling):', vocabGroupsData.length * 4 * 30);
-      console.log('[AITextGenerator] Generating candidates (45 per batch):', vocabGroupsData.length * 4 * 45);
+      console.log('[AITextGenerator] Generating candidates (75 per batch):', vocabGroupsData.length * 4 * 75);
 
       // Build the mega prompt for all groups and batches
       let promptSections: string[] = [];
@@ -446,14 +446,14 @@ REMEMBER: Create MEANINGFUL sentences with proper grammar, NOT random word lists
 AVAILABLE CHARACTERS:
 ${enumeratedList}
 
-Generate 45 sentences using ONLY the characters listed above.
+Generate 75 sentences using ONLY the characters listed above.
 Output format:
 SENTENCE_${sentenceCounter}: [sentence]
 SENTENCE_${sentenceCounter + 1}: [sentence]
 ...
-SENTENCE_${sentenceCounter + 44}: [sentence]
+SENTENCE_${sentenceCounter + 74}: [sentence]
 `);
-          sentenceCounter += 45;
+          sentenceCounter += 75;
         }
       }
 
@@ -468,7 +468,7 @@ CRITICAL RULES:
 
 TASK:
 Generate sentences for ${vocabGroupsData.length} vocabulary groups, each with 4 batches.
-Total: ${vocabGroupsData.length * 4 * 45} sentences.
+Total: ${vocabGroupsData.length * 4 * 75} sentences.
 
 ${promptSections.join('\n')}
 
@@ -504,7 +504,7 @@ REMEMBER: Create MEANINGFUL sentences with proper grammar, NOT random word lists
 
       console.log('[AITextGenerator] ===== PARSING RESULTS =====');
       console.log('[AITextGenerator] Total sentence matches found:', matches.length);
-      console.log('[AITextGenerator] Expected (45 per batch × 4 batches × 5 groups):', vocabGroupsData.length * 4 * 45);
+      console.log('[AITextGenerator] Expected (75 per batch × 4 batches × 5 groups):', vocabGroupsData.length * 4 * 75);
       console.log('[AITextGenerator] Target after rejection (30 per batch):', vocabGroupsData.length * 4 * 30);
       
       // Write detailed parsing info to file for debugging
@@ -513,7 +513,7 @@ REMEMBER: Create MEANINGFUL sentences with proper grammar, NOT random word lists
       const logPath = path.join(__dirname, '../../temp/parsing-log.txt');
       let logContent = `===== PARSING RESULTS =====\n`;
       logContent += `Total sentence matches found: ${matches.length}\n`;
-      logContent += `Expected (45 per batch × 4 batches × 5 groups): ${vocabGroupsData.length * 4 * 45}\n`;
+      logContent += `Expected (75 per batch × 4 batches × 5 groups): ${vocabGroupsData.length * 4 * 75}\n`;
       logContent += `Target after rejection (30 per batch): ${vocabGroupsData.length * 4 * 30}\n\n`;
 
       // Group sentences by vocab group and batch
@@ -535,10 +535,10 @@ REMEMBER: Create MEANINGFUL sentences with proper grammar, NOT random word lists
           console.log(`[AITextGenerator]   Batch ${batchIndex + 1}: Starting at matchIndex ${matchIndex}`);
           logContent += `  Batch ${batchIndex + 1}: Starting at matchIndex ${matchIndex}\n`;
 
-          // Parse up to 45 sentences for this batch (for rejection sampling)
+          // Parse up to 75 sentences for this batch (for rejection sampling)
           const batchCandidates: Array<GeneratedSentence & { invalidCharacters: string[] }> = [];
           
-          for (let i = 0; i < 45 && matchIndex < matches.length; i++, matchIndex++) {
+          for (let i = 0; i < 75 && matchIndex < matches.length; i++, matchIndex++) {
             const chineseText = matches[matchIndex][1].trim();
 
             if (!chineseText) {

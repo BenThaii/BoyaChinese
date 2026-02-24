@@ -79,7 +79,7 @@ async function displayParsingLog() {
     console.log(`  - Match rate: ${((total / expected) * 100).toFixed(1)}%`);
     
     if (total === expected) {
-      console.log('  ✓ AI returned exactly 45 sentences per batch as requested!');
+      console.log('  ✓ AI returned exactly 75 sentences per batch as requested!');
     } else if (total < expected) {
       console.log(`  ⚠️  AI returned fewer sentences than expected (${expected - total} missing)`);
     } else {

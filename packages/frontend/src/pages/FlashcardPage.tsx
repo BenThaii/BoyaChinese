@@ -24,6 +24,7 @@ export default function FlashcardPage() {
   const [error, setError] = useState<string | null>(null);
   const [playing, setPlaying] = useState(false);
   const [noFavorites, setNoFavorites] = useState(false);
+  const [showUnfavoriteConfirm, setShowUnfavoriteConfirm] = useState(false);
 
   useEffect(() => {
     fetchRandomFavorite();
@@ -65,6 +66,9 @@ export default function FlashcardPage() {
       await apiClient.post(`/user1/vocabulary/toggle-favorite`, {
         chineseCharacter: currentWord.chineseCharacter
       });
+
+      // Close confirmation dialog
+      setShowUnfavoriteConfirm(false);
 
       // Fetch next word after unfavoriting
       fetchRandomFavorite();
@@ -236,46 +240,49 @@ export default function FlashcardPage() {
 
               <div style={{
                 display: 'flex',
-                gap: '15px',
-                marginTop: '30px',
-                justifyContent: 'center'
+                gap: '10px',
+                marginTop: '25px',
+                paddingTop: '20px',
+                borderTop: '1px solid #dee2e6'
               }}>
                 <button
                   onClick={handlePronounce}
                   disabled={playing}
                   style={{
-                    padding: '12px 24px',
+                    padding: '8px 16px',
                     backgroundColor: playing ? '#6c757d' : '#28a745',
                     color: 'white',
                     border: 'none',
-                    borderRadius: '8px',
+                    borderRadius: '6px',
                     cursor: playing ? 'not-allowed' : 'pointer',
-                    fontSize: '16px',
+                    fontSize: '14px',
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '8px'
+                    gap: '6px',
+                    flex: 1
                   }}
                 >
-                  <span style={{ fontSize: '20px' }}>{playing ? '🔊' : '🔉'}</span>
+                  <span style={{ fontSize: '16px' }}>{playing ? '🔊' : '🔉'}</span>
                   <span>{playing ? 'Playing...' : 'Pronounce'}</span>
                 </button>
 
                 <button
-                  onClick={handleUnfavorite}
+                  onClick={() => setShowUnfavoriteConfirm(true)}
                   style={{
-                    padding: '12px 24px',
+                    padding: '8px 16px',
                     backgroundColor: '#dc3545',
                     color: 'white',
                     border: 'none',
-                    borderRadius: '8px',
+                    borderRadius: '6px',
                     cursor: 'pointer',
-                    fontSize: '16px',
+                    fontSize: '14px',
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '8px'
+                    gap: '6px',
+                    flex: 1
                   }}
                 >
-                  <span style={{ fontSize: '20px' }}>★</span>
+                  <span style={{ fontSize: '16px' }}>★</span>
                   <span>Un-favorite</span>
                 </button>
               </div>
@@ -300,6 +307,108 @@ export default function FlashcardPage() {
           >
             Next Word
           </button>
+        </div>
+      )}
+
+      {/* Un-favorite Confirmation Modal */}
+      {showUnfavoriteConfirm && currentWord && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 2000,
+            padding: '20px'
+          }}
+          onClick={() => setShowUnfavoriteConfirm(false)}
+        >
+          <div
+            style={{
+              backgroundColor: 'white',
+              borderRadius: '12px',
+              padding: '30px',
+              maxWidth: '500px',
+              width: '100%',
+              boxShadow: '0 4px 20px rgba(0,0,0,0.15)'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 style={{ marginTop: 0, marginBottom: '20px', color: '#dc3545' }}>
+              Un-favorite Word?
+            </h2>
+            
+            <div style={{ marginBottom: '25px' }}>
+              <div style={{
+                fontSize: '48px',
+                textAlign: 'center',
+                marginBottom: '15px',
+                fontWeight: 'bold'
+              }}>
+                {currentWord.chineseCharacter}
+              </div>
+              
+              <p style={{ fontSize: '16px', color: '#666', lineHeight: '1.6', marginBottom: '10px' }}>
+                Are you sure you want to remove this word from your favorites?
+              </p>
+              
+              <div style={{
+                backgroundColor: '#fff3cd',
+                border: '1px solid #ffc107',
+                borderRadius: '6px',
+                padding: '12px',
+                marginTop: '15px'
+              }}>
+                <p style={{ margin: 0, fontSize: '14px', color: '#856404' }}>
+                  <strong>⚠️ Note:</strong> This word will no longer appear in your flashcard practice. 
+                  You can re-favorite it later from the Vocabulary Management or Phrases pages.
+                </p>
+              </div>
+            </div>
+
+            <div style={{
+              display: 'flex',
+              gap: '10px',
+              justifyContent: 'flex-end'
+            }}>
+              <button
+                onClick={() => setShowUnfavoriteConfirm(false)}
+                style={{
+                  padding: '10px 24px',
+                  backgroundColor: '#6c757d',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  fontSize: '16px',
+                  fontWeight: '500'
+                }}
+              >
+                Cancel
+              </button>
+              
+              <button
+                onClick={handleUnfavorite}
+                style={{
+                  padding: '10px 24px',
+                  backgroundColor: '#dc3545',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  fontSize: '16px',
+                  fontWeight: '500'
+                }}
+              >
+                Yes, Un-favorite
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
