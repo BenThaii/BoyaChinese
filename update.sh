@@ -76,11 +76,18 @@ if [ -f "packages/backend/database/add_english_meaning_column.sql" ]; then
     DB_PASSWORD=$(grep DB_PASSWORD packages/backend/.env | cut -d '=' -f2)
     DB_NAME=$(grep DB_NAME packages/backend/.env | cut -d '=' -f2)
     
+    # Build mysql command based on whether password is empty
+    if [ -z "$DB_PASSWORD" ]; then
+        MYSQL_CMD="mysql -u$DB_USER"
+    else
+        MYSQL_CMD="mysql -u$DB_USER -p$DB_PASSWORD"
+    fi
+    
     # Check if column already exists
-    COLUMN_EXISTS=$(mysql -u"$DB_USER" -p"$DB_PASSWORD" "$DB_NAME" -se "SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME='pre_generated_sentences' AND COLUMN_NAME='english_meaning'")
+    COLUMN_EXISTS=$($MYSQL_CMD "$DB_NAME" -se "SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME='pre_generated_sentences' AND COLUMN_NAME='english_meaning'" 2>/dev/null || echo "0")
     
     if [ "$COLUMN_EXISTS" -eq 0 ]; then
-        mysql -u"$DB_USER" -p"$DB_PASSWORD" "$DB_NAME" < packages/backend/database/add_english_meaning_column.sql
+        $MYSQL_CMD "$DB_NAME" < packages/backend/database/add_english_meaning_column.sql
         print_success "Database migration completed"
     else
         print_success "Database already up to date"
