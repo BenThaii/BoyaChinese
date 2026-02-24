@@ -339,8 +339,8 @@ export class DatabaseBackupManager {
       await pool.query(
         `INSERT INTO vocabulary_entries 
          (id, username, chinese_character, pinyin, han_vietnamese, modern_vietnamese, 
-          english_meaning, learning_note, chapter, created_at, updated_at, shared_from)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          english_meaning, learning_note, is_favorite, chapter, created_at, updated_at, shared_from)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           entry.id,
           entry.username,
@@ -350,6 +350,7 @@ export class DatabaseBackupManager {
           entry.modernVietnamese || null,
           entry.englishMeaning || null,
           entry.learningNote || null,
+          entry.isFavorite ? 1 : 0,
           entry.chapter,
           createdAt,
           updatedAt,
