@@ -10,6 +10,7 @@ import { Router, Request, Response } from 'express';
 import { aiTextGenerator } from '../services/AITextGenerator';
 import { ChapterFilter, ChapterRange } from '../services/ChapterFilter';
 import { VocabularyEntryDAO } from '../models/VocabularyEntry';
+import { TranslationService } from '../services/TranslationService';
 
 const router = Router();
 
@@ -334,6 +335,25 @@ router.get('/:username/comprehension/generate-batch', async (req: Request, res: 
     console.log(`[Comprehension Batch] Calling AI text generator for ${sentenceCount} sentences...`);
     const generatedSentences = await aiTextGenerator.generateMultipleSentences(characters, sentenceCount);
     console.log(`[Comprehension Batch] Generated ${generatedSentences.length} sentences`);
+
+    // Translate sentences to English
+    console.log('[Comprehension Batch] Translating sentences to English...');
+    const translationService = new TranslationService();
+    const chineseTexts = generatedSentences.map(s => s.chineseText);
+    
+    try {
+      const translations = await translationService.batchTranslate(chineseTexts, 'en');
+      
+      // Add translations to sentences
+      generatedSentences.forEach((sentence, index) => {
+        sentence.englishMeaning = translations[index];
+      });
+      
+      console.log('[Comprehension Batch] Translation completed successfully');
+    } catch (error) {
+      console.error('[Comprehension Batch] Translation failed:', error);
+      console.log('[Comprehension Batch] Continuing without translations');
+    }
 
     console.log('[Comprehension Batch] Success! Returning generated sentences');
     res.json(generatedSentences);

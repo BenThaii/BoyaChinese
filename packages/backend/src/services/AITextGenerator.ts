@@ -1,5 +1,6 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import pinyin from 'pinyin';
+import { TranslationService } from './TranslationService';
 
 /**
  * Generated text result containing Chinese text, pinyin, word count, and used characters
@@ -12,24 +13,15 @@ export interface GeneratedText {
 }
 
 /**
+/**
  * Generated sentence for batch generation (simplified version without wordCount)
  */
 export interface GeneratedSentence {
   chineseText: string;
   pinyin: string;
+  englishMeaning?: string;
   usedCharacters: string[];
 }
-
-/**
- * AI Text Generator for Google AI Studio API integration
- * Generates reading comprehension texts using specified Chinese characters
- */
-export interface GeneratedSentence {
-  chineseText: string;
-  pinyin: string;
-  usedCharacters: string[];
-}
-
 
 /**
  * AI Text Generator for Google AI Studio API integration
@@ -39,6 +31,7 @@ export class AITextGenerator {
   private genAI: GoogleGenerativeAI | null = null;
   private model: any = null;
   private currentModelName: string = '';
+  private translationService: TranslationService;
   
   // Model fallback order
   private readonly MODEL_FALLBACK_ORDER = [
@@ -47,6 +40,10 @@ export class AITextGenerator {
     'gemini-2.5-flash',
     'gemini-flash-lite-latest'
   ];
+
+  constructor(translationService?: TranslationService) {
+    this.translationService = translationService || new TranslationService();
+  }
 
   private initialize() {
     if (this.genAI) {
@@ -382,10 +379,11 @@ REMEMBER: Create MEANINGFUL sentences with proper grammar, NOT random word lists
 
   /**
    * Generate sentences for multiple vocabulary groups in a single API call
-   * This is optimized for the cron job to minimize API calls
+   * Uses rejection sampling: generates 45 sentences per batch, filters to 30 valid ones
+   * This is optimized for the cron job to minimize API calls while ensuring quality
    * @param vocabGroupsData - Array of objects containing characters for each vocab group
    *                          Each group should have 4 batches of 300 characters
-   * @returns Promise resolving to map of vocabGroupId to array of generated sentences
+   * @returns Promise resolving to map of vocabGroupId to array of generated sentences (up to 30 per batch)
    * @throws Error if generation fails
    */
   async generateForMultipleGroups(
@@ -426,7 +424,8 @@ REMEMBER: Create MEANINGFUL sentences with proper grammar, NOT random word lists
       console.log('[AITextGenerator] ===== MULTI-GROUP BATCH API REQUEST =====');
       console.log('[AITextGenerator] Number of vocab groups:', vocabGroupsData.length);
       console.log('[AITextGenerator] Total batches:', vocabGroupsData.length * 4);
-      console.log('[AITextGenerator] Expected total sentences:', vocabGroupsData.length * 4 * 30);
+      console.log('[AITextGenerator] Target sentences (after rejection sampling):', vocabGroupsData.length * 4 * 30);
+      console.log('[AITextGenerator] Generating candidates (45 per batch):', vocabGroupsData.length * 4 * 45);
 
       // Build the mega prompt for all groups and batches
       let promptSections: string[] = [];
@@ -447,14 +446,14 @@ REMEMBER: Create MEANINGFUL sentences with proper grammar, NOT random word lists
 AVAILABLE CHARACTERS:
 ${enumeratedList}
 
-Generate 30 sentences using ONLY the characters listed above.
+Generate 45 sentences using ONLY the characters listed above.
 Output format:
 SENTENCE_${sentenceCounter}: [sentence]
 SENTENCE_${sentenceCounter + 1}: [sentence]
 ...
-SENTENCE_${sentenceCounter + 29}: [sentence]
+SENTENCE_${sentenceCounter + 44}: [sentence]
 `);
-          sentenceCounter += 30;
+          sentenceCounter += 45;
         }
       }
 
@@ -469,7 +468,7 @@ CRITICAL RULES:
 
 TASK:
 Generate sentences for ${vocabGroupsData.length} vocabulary groups, each with 4 batches.
-Total: ${vocabGroupsData.length * 4 * 30} sentences.
+Total: ${vocabGroupsData.length * 4 * 45} sentences.
 
 ${promptSections.join('\n')}
 
@@ -499,10 +498,23 @@ REMEMBER: Create MEANINGFUL sentences with proper grammar, NOT random word lists
       console.log('[AITextGenerator] Raw mega batch API response length:', responseText.length);
 
       // Parse the response to extract sentences
-      const sentenceRegex = /SENTENCE_\d+:\s*(.+?)(?=SENTENCE_\d+:|$)/gs;
+      // Updated regex to stop at GROUP/BATCH markers or next SENTENCE
+      const sentenceRegex = /SENTENCE_\d+:\s*(.+?)(?=\s*(?:===\s*GROUP|SENTENCE_\d+:|$))/gs;
       const matches = [...responseText.matchAll(sentenceRegex)];
 
-      console.log('[AITextGenerator] Found', matches.length, 'sentence matches');
+      console.log('[AITextGenerator] ===== PARSING RESULTS =====');
+      console.log('[AITextGenerator] Total sentence matches found:', matches.length);
+      console.log('[AITextGenerator] Expected (45 per batch × 4 batches × 5 groups):', vocabGroupsData.length * 4 * 45);
+      console.log('[AITextGenerator] Target after rejection (30 per batch):', vocabGroupsData.length * 4 * 30);
+      
+      // Write detailed parsing info to file for debugging
+      const fs = require('fs');
+      const path = require('path');
+      const logPath = path.join(__dirname, '../../temp/parsing-log.txt');
+      let logContent = `===== PARSING RESULTS =====\n`;
+      logContent += `Total sentence matches found: ${matches.length}\n`;
+      logContent += `Expected (45 per batch × 4 batches × 5 groups): ${vocabGroupsData.length * 4 * 45}\n`;
+      logContent += `Target after rejection (30 per batch): ${vocabGroupsData.length * 4 * 30}\n\n`;
 
       // Group sentences by vocab group and batch
       const resultMap = new Map<number, GeneratedSentence[]>();
@@ -510,6 +522,8 @@ REMEMBER: Create MEANINGFUL sentences with proper grammar, NOT random word lists
 
       for (const groupData of vocabGroupsData) {
         const groupSentences: GeneratedSentence[] = [];
+        console.log(`[AITextGenerator] ----- Processing Vocab Group ${groupData.vocabGroupId} -----`);
+        logContent += `----- Processing Vocab Group ${groupData.vocabGroupId} -----\n`;
 
         for (let batchIndex = 0; batchIndex < groupData.batches.length; batchIndex++) {
           const characters = groupData.batches[batchIndex];
@@ -518,8 +532,13 @@ REMEMBER: Create MEANINGFUL sentences with proper grammar, NOT random word lists
           const uniqueChars = Array.from(new Set(allCharacters));
           const sortedUniqueChars = [...uniqueChars].sort((a, b) => b.length - a.length);
 
-          // Extract 30 sentences for this batch
-          for (let i = 0; i < 30 && matchIndex < matches.length; i++, matchIndex++) {
+          console.log(`[AITextGenerator]   Batch ${batchIndex + 1}: Starting at matchIndex ${matchIndex}`);
+          logContent += `  Batch ${batchIndex + 1}: Starting at matchIndex ${matchIndex}\n`;
+
+          // Parse up to 45 sentences for this batch (for rejection sampling)
+          const batchCandidates: Array<GeneratedSentence & { invalidCharacters: string[] }> = [];
+          
+          for (let i = 0; i < 45 && matchIndex < matches.length; i++, matchIndex++) {
             const chineseText = matches[matchIndex][1].trim();
 
             if (!chineseText) {
@@ -527,9 +546,10 @@ REMEMBER: Create MEANINGFUL sentences with proper grammar, NOT random word lists
               continue;
             }
 
-            // Extract used characters
+            // Extract used characters and detect invalid ones
             const chineseCharsOnly = chineseText.replace(/[\s\p{P}]/gu, '');
             const usedCharacters: string[] = [];
+            const invalidCharacters: string[] = [];
             let remainingText = chineseCharsOnly;
 
             while (remainingText.length > 0) {
@@ -545,25 +565,118 @@ REMEMBER: Create MEANINGFUL sentences with proper grammar, NOT random word lists
                 }
               }
               if (!matched) {
+                // Character not in available list - track it
+                const invalidChar = remainingText[0];
+                if (!invalidCharacters.includes(invalidChar)) {
+                  invalidCharacters.push(invalidChar);
+                }
                 remainingText = remainingText.slice(1);
               }
             }
 
             const pinyinText = this.generatePinyin(chineseText);
 
-            groupSentences.push({
+            batchCandidates.push({
               chineseText,
               pinyin: pinyinText,
-              usedCharacters
+              usedCharacters,
+              invalidCharacters
             });
+          }
+
+          // Rejection sampling: filter out sentences with invalid characters
+          const validSentences = batchCandidates.filter(s => s.invalidCharacters.length === 0);
+          const invalidSentences = batchCandidates.filter(s => s.invalidCharacters.length > 0);
+
+          console.log(`[AITextGenerator]   Batch ${batchIndex + 1} RESULTS:`);
+          console.log(`[AITextGenerator]     - Candidates parsed: ${batchCandidates.length}`);
+          console.log(`[AITextGenerator]     - Valid sentences: ${validSentences.length}`);
+          console.log(`[AITextGenerator]     - Invalid sentences: ${invalidSentences.length}`);
+          console.log(`[AITextGenerator]     - Ended at matchIndex: ${matchIndex}`);
+          
+          logContent += `  Batch ${batchIndex + 1} RESULTS:\n`;
+          logContent += `    - Candidates parsed: ${batchCandidates.length}\n`;
+          logContent += `    - Valid sentences: ${validSentences.length}\n`;
+          logContent += `    - Invalid sentences: ${invalidSentences.length}\n`;
+          logContent += `    - Ended at matchIndex: ${matchIndex}\n`;
+
+          // Log invalid sentences for debugging
+          if (invalidSentences.length > 0) {
+            console.warn(`[AITextGenerator]   ⚠️  Rejected ${invalidSentences.length} sentences with invalid characters:`);
+            logContent += `    ⚠️  Rejected ${invalidSentences.length} sentences:\n`;
+            invalidSentences.slice(0, 3).forEach(s => {
+              console.warn(`[AITextGenerator]       - "${s.chineseText}" [Invalid chars: ${s.invalidCharacters.join(', ')}]`);
+              logContent += `      - "${s.chineseText}" [Invalid: ${s.invalidCharacters.join(', ')}]\n`;
+            });
+            if (invalidSentences.length > 3) {
+              console.warn(`[AITextGenerator]       ... and ${invalidSentences.length - 3} more`);
+              logContent += `      ... and ${invalidSentences.length - 3} more\n`;
+            }
+          }
+
+          // Take up to 30 valid sentences
+          const selectedSentences = validSentences.slice(0, 30);
+          console.log(`[AITextGenerator]     - Selected for storage: ${selectedSentences.length}/30`);
+          
+          // Remove invalidCharacters property before adding to results
+          selectedSentences.forEach(s => {
+            delete (s as any).invalidCharacters;
+            groupSentences.push(s);
+          });
+
+          if (selectedSentences.length < 30) {
+            console.warn(`[AITextGenerator]   ⚠️  WARNING: Only ${selectedSentences.length} valid sentences for batch ${batchIndex + 1} (target: 30)`);
           }
         }
 
         resultMap.set(groupData.vocabGroupId, groupSentences);
-        console.log(`[AITextGenerator] Parsed ${groupSentences.length} sentences for vocab group ${groupData.vocabGroupId}`);
+        console.log(`[AITextGenerator] Vocab Group ${groupData.vocabGroupId} COMPLETE: ${groupSentences.length} sentences (target: ${groupData.batches.length * 30})`);
+        console.log(`[AITextGenerator] ----- End Vocab Group ${groupData.vocabGroupId} -----\n`);
+        logContent += `Vocab Group ${groupData.vocabGroupId} COMPLETE: ${groupSentences.length} sentences\n\n`;
       }
+      
+      // Write log to file
+      fs.writeFileSync(logPath, logContent);
+      console.log(`[AITextGenerator] Detailed parsing log written to: ${logPath}`);
 
       console.log('[AITextGenerator] ===== END MULTI-GROUP BATCH REQUEST =====');
+      console.log('[AITextGenerator] FINAL SUMMARY:');
+      let totalGenerated = 0;
+      for (const [groupId, sentences] of resultMap.entries()) {
+        totalGenerated += sentences.length;
+        console.log(`[AITextGenerator]   Group ${groupId}: ${sentences.length} sentences`);
+      }
+      console.log(`[AITextGenerator]   TOTAL: ${totalGenerated} sentences (target: ${vocabGroupsData.length * 4 * 30})`);
+      console.log('[AITextGenerator] =====================================\n');
+
+      // Translate all sentences to English in batch
+      console.log('[AITextGenerator] ===== TRANSLATING SENTENCES TO ENGLISH =====');
+      const allSentences: GeneratedSentence[] = [];
+      for (const sentences of resultMap.values()) {
+        allSentences.push(...sentences);
+      }
+      
+      console.log(`[AITextGenerator] Translating ${allSentences.length} sentences...`);
+      const chineseTexts = allSentences.map(s => s.chineseText);
+      
+      try {
+        const translations = await this.translationService.batchTranslate(chineseTexts, 'en');
+        
+        // Assign translations back to sentences
+        let translationIndex = 0;
+        for (const sentences of resultMap.values()) {
+          for (const sentence of sentences) {
+            sentence.englishMeaning = translations[translationIndex++];
+          }
+        }
+        
+        console.log('[AITextGenerator] Translation completed successfully');
+      } catch (error) {
+        console.error('[AITextGenerator] Translation failed:', error);
+        console.log('[AITextGenerator] Continuing without translations');
+      }
+      
+      console.log('[AITextGenerator] ===== END TRANSLATION =====');
 
       return resultMap;
     } catch (error) {

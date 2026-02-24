@@ -15,7 +15,9 @@
     "populate": "tsx scripts/populate-sentences.ts",
     "test-ai": "tsx scripts/test-google-ai.ts",
     "test-translate": "tsx scripts/test-google-translate.ts",
-    "test-prompt": "tsx scripts/test-ai-prompt.ts"
+    "test-prompt": "tsx scripts/test-ai-prompt.ts",
+    "clear-sentences": "tsx scripts/clear-sentences.ts",
+    "test-batch": "tsx scripts/test-batch-generation.ts"
   },
   "dependencies": {
     "@google-cloud/translate": "^8.0.2",

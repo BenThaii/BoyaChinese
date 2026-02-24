@@ -78,6 +78,7 @@ async function createTables() {
         vocab_group_id INT NOT NULL,
         chinese_text TEXT NOT NULL,
         pinyin TEXT NOT NULL,
+        english_meaning TEXT,
         used_characters JSON NOT NULL,
         generation_timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         INDEX idx_vocab_group (vocab_group_id)

@@ -85,7 +85,7 @@ router.get('/phrases/sentences/:vocabGroupId', async (req: Request, res: Respons
     // Query sentences from database
     const pool = getPool();
     const [rows] = await pool.query<RowDataPacket[]>(
-      `SELECT id, vocab_group_id, chinese_text, pinyin, used_characters, generation_timestamp
+      `SELECT id, vocab_group_id, chinese_text, pinyin, english_meaning, used_characters, generation_timestamp
        FROM pre_generated_sentences
        WHERE vocab_group_id = ?
        ORDER BY generation_timestamp DESC`,
@@ -98,6 +98,7 @@ router.get('/phrases/sentences/:vocabGroupId', async (req: Request, res: Respons
       vocabGroupId: row.vocab_group_id,
       chineseText: row.chinese_text,
       pinyin: row.pinyin,
+      englishMeaning: row.english_meaning,
       // MySQL2 automatically parses JSON columns, so check if it's already an array
       usedCharacters: typeof row.used_characters === 'string' 
         ? JSON.parse(row.used_characters) 

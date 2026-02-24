@@ -14,6 +14,7 @@ interface SentenceResponse {
   vocabGroupId: number;
   chineseText: string;
   pinyin: string;
+  englishMeaning?: string;
   usedCharacters: string[];
   generationTimestamp: string;
 }
@@ -484,6 +485,22 @@ export default function PhrasesPage() {
                 {selectedSentence.pinyin || 'Not available'}
               </div>
             </div>
+
+            {selectedSentence.englishMeaning && (
+              <div style={{ marginBottom: '20px' }}>
+                <strong>English Translation:</strong>
+                <div style={{
+                  fontSize: '18px',
+                  padding: '15px',
+                  backgroundColor: '#e7f3ff',
+                  borderRadius: '4px',
+                  marginTop: '5px',
+                  color: '#000'
+                }}>
+                  {selectedSentence.englishMeaning}
+                </div>
+              </div>
+            )}
 
             <div>
               <strong>Characters Used:</strong>

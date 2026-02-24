@@ -92,12 +92,13 @@ export class PhraseGeneratorService {
   }
 
   /**
-   * Generate 120 sentences for a vocabulary group (4 batches × 30 sentences).
+   * Generate up to 120 sentences for a vocabulary group (4 batches × up to 30 sentences).
+   * Uses rejection sampling: generates 45 candidates per batch, keeps up to 30 valid ones.
    * Fetches vocabulary from chapters 1 through chapterEndpoint and randomly selects
    * 300 characters for each batch.
    * 
    * @param group - VocabGroup with chapter range to generate sentences for
-   * @returns Array of 120 GeneratedSentence objects
+   * @returns Array of up to 120 GeneratedSentence objects (may be less if many invalid sentences)
    */
   async generateSentencesForGroup(group: VocabGroup): Promise<GeneratedSentence[]> {
     const pool = getPool();
@@ -174,6 +175,7 @@ export class PhraseGeneratorService {
       vocabGroupId,
       sentence.chineseText,
       sentence.pinyin,
+      sentence.englishMeaning || null,
       JSON.stringify(sentence.usedCharacters)
     ]);
 
@@ -184,7 +186,7 @@ export class PhraseGeneratorService {
     // Insert all sentences in a single query
     await conn.query(
       `INSERT INTO pre_generated_sentences 
-       (id, vocab_group_id, chinese_text, pinyin, used_characters) 
+       (id, vocab_group_id, chinese_text, pinyin, english_meaning, used_characters) 
        VALUES ?`,
       [values]
     );
