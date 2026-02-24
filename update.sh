@@ -35,8 +35,11 @@ if [ "$EUID" -eq 0 ]; then
     exit 1
 fi
 
+# Get the directory where the script is located (works if run from anywhere)
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+
 # Detect application directory
-APP_DIR="/var/www/chinese-learning-app"
+APP_DIR="${APP_DIR:-$SCRIPT_DIR}"
 if [ ! -d "$APP_DIR" ]; then
     print_error "Application directory not found at $APP_DIR"
     print_info "Please run deploy.sh first to set up the application"
