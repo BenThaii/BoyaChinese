@@ -238,13 +238,17 @@ export default function FlashcardPage() {
                 </div>
               )}
 
-              <div style={{
-                display: 'flex',
-                gap: '10px',
-                marginTop: '25px',
-                paddingTop: '20px',
-                borderTop: '1px solid #dee2e6'
-              }}>
+              <div 
+                className="flashcard-buttons"
+                style={{
+                  display: 'flex',
+                  flexDirection: 'row',
+                  gap: '10px',
+                  marginTop: '25px',
+                  paddingTop: '20px',
+                  borderTop: '1px solid #dee2e6'
+                }}
+              >
                 <button
                   onClick={handlePronounce}
                   disabled={playing}
@@ -258,6 +262,7 @@ export default function FlashcardPage() {
                     fontSize: '14px',
                     display: 'flex',
                     alignItems: 'center',
+                    justifyContent: 'center',
                     gap: '6px',
                     flex: 1
                   }}
@@ -278,6 +283,7 @@ export default function FlashcardPage() {
                     fontSize: '14px',
                     display: 'flex',
                     alignItems: 'center',
+                    justifyContent: 'center',
                     gap: '6px',
                     flex: 1
                   }}
@@ -286,6 +292,15 @@ export default function FlashcardPage() {
                   <span>Un-favorite</span>
                 </button>
               </div>
+
+              {/* Mobile responsive styles */}
+              <style>{`
+                @media (max-width: 480px) {
+                  .flashcard-buttons {
+                    flex-direction: column !important;
+                  }
+                }
+              `}</style>
             </div>
           )}
 
