@@ -12,7 +12,6 @@ function Navigation() {
 
   return (
     <nav>
-      <h1>Chinese Learning App - Admin</h1>
       <ul>
         <li><Link to="/">Home</Link></li>
         <li><Link to={`/${username}/admin`}>Vocabulary Management</Link></li>

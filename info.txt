@@ -20,7 +20,7 @@ sudo mysql -e "USE chinese_learning_app; SELECT MAX(generation_timestamp) as las
 	- usage:
 	https://console.cloud.google.com/apis/api/generativelanguage.googleapis.com/quotas?authuser=1&project=chinese-learning-app-488004&supportedpurview=project&pageState=(%22allQuotasTable%22:(%22f%22:%22%255B%257B_22k_22_3A_22_22_2C_22t_22_3A10_2C_22v_22_3A_22_5C_22gemini-2.5_5C_22_22%257D%255D%22,%22s%22:%5B(%22i%22:%22currentPercent%22,%22s%22:%221%22),(%22i%22:%22displayDimensions%22,%22s%22:%220%22),(%22i%22:%22currentUsage%22,%22s%22:%221%22),(%22i%22:%22displayName%22,%22s%22:%220%22)%5D))
 	- rate limit:
-	https://aistudio.google.com/app/rate-limit?timeRange=last-28-days
+	https://aistudio.google.com/app/rate-limit?timeRange=last-1-day&project=gen-lang-client-0125364489
 	- list of models
 	https://ai.google.dev/gemini-api/docs/models?utm_source=google&utm_medium=cpc&utm_campaign=Cloud-SS-DR-AIS-FY26-global-gsem-1713578&utm_content=text-ad&utm_term=KW_ai%20api&gad_source=1&gad_campaignid=23417416052&gbraid=0AAAAACn9t67AsWWtLEgubuhDKmMBadcJz&gclid=CjwKCAiAkvDMBhBMEiwAnUA9BUxniUPjHZgyMtN9sNcDZ3ZsynhRnw1NGCS4Y9GLZWNIhhHmndjbgBoCZf0QAvD_BwE
 
