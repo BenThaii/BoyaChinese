@@ -33,6 +33,7 @@ export default function PhrasesPage() {
   const [vocabGroups, setVocabGroups] = useState<VocabGroupResponse[]>([]);
   const [sentences, setSentences] = useState<Map<number, SentenceResponse[]>>(new Map());
   const [selectedSentence, setSelectedSentence] = useState<SentenceResponse | null>(null);
+  const [selectedSentenceNumber, setSelectedSentenceNumber] = useState<number | null>(null);
   const [characterDetails, setCharacterDetails] = useState<CharacterInfo[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -107,8 +108,9 @@ export default function PhrasesPage() {
     }
   };
 
-  const handleSentenceClick = (sentence: SentenceResponse) => {
+  const handleSentenceClick = (sentence: SentenceResponse, sentenceNumber: number) => {
     setSelectedSentence(sentence);
+    setSelectedSentenceNumber(sentenceNumber);
     setCharacterDetails([]);
     fetchCharacterDetails(sentence.usedCharacters);
   };
@@ -321,7 +323,7 @@ export default function PhrasesPage() {
                     {sentences.get(group.id)!.map((sentence, index) => (
                       <div
                         key={sentence.id}
-                        onClick={() => handleSentenceClick(sentence)}
+                        onClick={() => handleSentenceClick(sentence, index + 1)}
                         style={{
                           padding: '15px',
                           backgroundColor: '#f8f9fa',
@@ -416,7 +418,7 @@ export default function PhrasesPage() {
             onClick={(e) => e.stopPropagation()}
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-              <h2 style={{ margin: 0 }}>Sentence Details</h2>
+              <h2 style={{ margin: 0 }}>Sentence #{selectedSentenceNumber}</h2>
               <button
                 onClick={() => setSelectedSentence(null)}
                 style={{
