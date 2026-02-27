@@ -6,6 +6,7 @@ import DatabaseAdmin from './pages/DatabaseAdmin';
 import AITestPage from './pages/AITestPage';
 import PhrasesPage from './pages/PhrasesPage';
 import FlashcardPage from './pages/FlashcardPage';
+import ChapterFlashcardPage from './pages/ChapterFlashcardPage';
 
 function Navigation() {
   const username = 'user1'; // Always use user1
@@ -19,7 +20,8 @@ function Navigation() {
         <li><Link to="/database-admin">Database Admin</Link></li>
         <li><Link to="/ai-test">AI Test Page</Link></li>
         <li><Link to="/phrases">Phrases Page</Link></li>
-        <li><Link to="/flashcards">Flashcards</Link></li>
+        <li><Link to="/flashcards">Flashcards (Favorites)</Link></li>
+        <li><Link to="/chapter-flashcards">Flashcards (Chapters)</Link></li>
       </ul>
     </nav>
   );
@@ -42,7 +44,8 @@ function App() {
                   <li>Database Admin - Backup and restore database</li>
                   <li>AI Test Page - Test Google AI Studio API for sentence generation</li>
                   <li>Phrases Page - Practice with pre-generated Chinese sentences</li>
-                  <li>Flashcards - Practice your favorite words with flashcards</li>
+                  <li>Flashcards (Favorites) - Practice your favorite words with flashcards</li>
+                  <li>Flashcards (Chapters) - Practice words by chapter range</li>
                 </ul>
               </div>
             } />
@@ -53,6 +56,7 @@ function App() {
             <Route path="/ai-test" element={<AITestPage />} />
             <Route path="/phrases" element={<PhrasesPage />} />
             <Route path="/flashcards" element={<FlashcardPage />} />
+            <Route path="/chapter-flashcards" element={<ChapterFlashcardPage />} />
           </Routes>
         </main>
       </div>

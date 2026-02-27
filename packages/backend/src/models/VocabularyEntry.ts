@@ -422,4 +422,29 @@ export class VocabularyEntryDAO {
 
     return rowToEntry(rows[0]);
   }
+
+  /**
+   * Get a random vocabulary entry from specified chapters
+   * @param username - Owner username
+   * @param chapterStart - Start chapter (inclusive)
+   * @param chapterEnd - End chapter (inclusive)
+   * @returns Random entry from specified chapters or null if no entries exist
+   */
+  static async getRandomByChapters(username: string, chapterStart: number, chapterEnd: number): Promise<VocabularyEntry | null> {
+    const pool = getPool();
+
+    const [rows] = await pool.query<VocabularyEntryRow[]>(
+      `SELECT * FROM vocabulary_entries
+       WHERE username = ? AND chapter >= ? AND chapter <= ?
+       ORDER BY RAND()
+       LIMIT 1`,
+      [username, chapterStart, chapterEnd]
+    );
+
+    if (rows.length === 0) {
+      return null;
+    }
+
+    return rowToEntry(rows[0]);
+  }
 }

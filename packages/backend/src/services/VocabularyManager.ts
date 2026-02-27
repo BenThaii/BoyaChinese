@@ -301,6 +301,10 @@ export class VocabularyManager {
   async getRandomFavorite(username: string): Promise<VocabularyEntry | null> {
     return await VocabularyEntryDAO.getRandomFavorite(username);
   }
+
+  async getRandomByChapters(username: string, chapterStart: number, chapterEnd: number): Promise<VocabularyEntry | null> {
+    return await VocabularyEntryDAO.getRandomByChapters(username, chapterStart, chapterEnd);
+  }
 }
 
 // Export singleton instance
