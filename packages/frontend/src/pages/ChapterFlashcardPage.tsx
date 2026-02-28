@@ -28,6 +28,8 @@ export default function ChapterFlashcardPage() {
   const [playing, setPlaying] = useState(false);
   const [noWords, setNoWords] = useState(false);
   const [showSettings, setShowSettings] = useState(true);
+  const [showFavoriteConfirm, setShowFavoriteConfirm] = useState(false);
+  const [favoriteAction, setFavoriteAction] = useState<'favorite' | 'unfavorite'>('favorite');
 
   useEffect(() => {
     fetchAvailableChapters();
@@ -111,6 +113,34 @@ export default function ChapterFlashcardPage() {
     setShowSettings(true);
     setCurrentWord(null);
     setError(null);
+  };
+
+  const handleToggleFavorite = async () => {
+    if (!currentWord) return;
+
+    try {
+      await apiClient.post(`/user1/vocabulary/toggle-favorite`, {
+        chineseCharacter: currentWord.chineseCharacter
+      });
+
+      // Close confirmation dialog
+      setShowFavoriteConfirm(false);
+
+      // Update current word's favorite status
+      setCurrentWord({
+        ...currentWord,
+        isFavorite: !currentWord.isFavorite
+      });
+    } catch (error) {
+      console.error('Error toggling favorite:', error);
+      alert('Failed to update favorite status');
+    }
+  };
+
+  const handleFavoriteClick = () => {
+    if (!currentWord) return;
+    setFavoriteAction(currentWord.isFavorite ? 'unfavorite' : 'favorite');
+    setShowFavoriteConfirm(true);
   };
 
   return (
@@ -294,8 +324,20 @@ export default function ChapterFlashcardPage() {
               border: '3px solid #007bff',
               borderRadius: '16px',
               marginBottom: '20px',
-              boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
+              boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+              position: 'relative'
             }}>
+              {currentWord.isFavorite && (
+                <div style={{
+                  position: 'absolute',
+                  top: '15px',
+                  right: '15px',
+                  fontSize: '32px',
+                  color: '#ffc107'
+                }}>
+                  ★
+                </div>
+              )}
               <div style={{
                 fontSize: '80px',
                 fontWeight: 'bold',
@@ -409,6 +451,27 @@ export default function ChapterFlashcardPage() {
                     <span style={{ fontSize: '16px' }}>{playing ? '🔊' : '🔉'}</span>
                     <span>{playing ? 'Playing...' : 'Pronounce'}</span>
                   </button>
+
+                  <button
+                    onClick={handleFavoriteClick}
+                    style={{
+                      padding: '8px 16px',
+                      backgroundColor: currentWord.isFavorite ? '#dc3545' : '#ffc107',
+                      color: currentWord.isFavorite ? 'white' : '#000',
+                      border: 'none',
+                      borderRadius: '6px',
+                      cursor: 'pointer',
+                      fontSize: '14px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '6px',
+                      flex: 1
+                    }}
+                  >
+                    <span style={{ fontSize: '16px' }}>{currentWord.isFavorite ? '★' : '☆'}</span>
+                    <span>{currentWord.isFavorite ? 'Un-favorite' : 'Favorite'}</span>
+                  </button>
                 </div>
 
                 {/* Mobile responsive styles */}
@@ -442,6 +505,127 @@ export default function ChapterFlashcardPage() {
             >
               Next Word
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Favorite/Un-favorite Confirmation Modal */}
+      {showFavoriteConfirm && currentWord && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 2000,
+            padding: '20px'
+          }}
+          onClick={() => setShowFavoriteConfirm(false)}
+        >
+          <div
+            style={{
+              backgroundColor: 'white',
+              borderRadius: '12px',
+              padding: '30px',
+              maxWidth: '500px',
+              width: '100%',
+              boxShadow: '0 4px 20px rgba(0,0,0,0.15)'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 style={{ 
+              marginTop: 0, 
+              marginBottom: '20px', 
+              color: favoriteAction === 'unfavorite' ? '#dc3545' : '#ffc107' 
+            }}>
+              {favoriteAction === 'unfavorite' ? 'Un-favorite Word?' : 'Favorite Word?'}
+            </h2>
+            
+            <div style={{ marginBottom: '25px' }}>
+              <div style={{
+                fontSize: '48px',
+                textAlign: 'center',
+                marginBottom: '15px',
+                fontWeight: 'bold'
+              }}>
+                {currentWord.chineseCharacter}
+              </div>
+              
+              <p style={{ fontSize: '16px', color: '#666', lineHeight: '1.6', marginBottom: '10px' }}>
+                {favoriteAction === 'unfavorite' 
+                  ? 'Are you sure you want to remove this word from your favorites?'
+                  : 'Add this word to your favorites for quick practice?'}
+              </p>
+              
+              <div style={{
+                backgroundColor: favoriteAction === 'unfavorite' ? '#fff3cd' : '#d1ecf1',
+                border: `1px solid ${favoriteAction === 'unfavorite' ? '#ffc107' : '#bee5eb'}`,
+                borderRadius: '6px',
+                padding: '12px',
+                marginTop: '15px'
+              }}>
+                <p style={{ 
+                  margin: 0, 
+                  fontSize: '14px', 
+                  color: favoriteAction === 'unfavorite' ? '#856404' : '#0c5460' 
+                }}>
+                  {favoriteAction === 'unfavorite' ? (
+                    <>
+                      <strong>⚠️ Note:</strong> This word will no longer appear in your favorite flashcard practice. 
+                      You can re-favorite it later from the Vocabulary Management or Phrases pages.
+                    </>
+                  ) : (
+                    <>
+                      <strong>ℹ️ Note:</strong> Favorited words will appear in your favorite flashcard practice 
+                      for focused review.
+                    </>
+                  )}
+                </p>
+              </div>
+            </div>
+
+            <div style={{
+              display: 'flex',
+              gap: '10px',
+              justifyContent: 'flex-end'
+            }}>
+              <button
+                onClick={() => setShowFavoriteConfirm(false)}
+                style={{
+                  padding: '10px 24px',
+                  backgroundColor: '#6c757d',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  fontSize: '16px',
+                  fontWeight: '500'
+                }}
+              >
+                Cancel
+              </button>
+              
+              <button
+                onClick={handleToggleFavorite}
+                style={{
+                  padding: '10px 24px',
+                  backgroundColor: favoriteAction === 'unfavorite' ? '#dc3545' : '#ffc107',
+                  color: favoriteAction === 'unfavorite' ? 'white' : '#000',
+                  border: 'none',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  fontSize: '16px',
+                  fontWeight: '500'
+                }}
+              >
+                {favoriteAction === 'unfavorite' ? 'Yes, Un-favorite' : 'Yes, Favorite'}
+              </button>
+            </div>
           </div>
         </div>
       )}

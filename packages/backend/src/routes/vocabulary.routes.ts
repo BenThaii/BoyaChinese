@@ -293,10 +293,67 @@ router.get('/:username/vocabulary', async (req: Request, res: Response) => {
 });
 
 /**
+ * GET /api/:username/vocabulary/chapters/random
+ * 
+ * Get a random vocabulary entry from specified chapters
+ * Note: This must come BEFORE /:username/vocabulary/chapters to avoid route conflict
+ * 
+ * Query parameters:
+ * - chapterStart: number (required)
+ * - chapterEnd: number (required)
+ * 
+ * Response:
+ * - 200: Random vocabulary entry from specified chapters
+ * - 400: Invalid parameters
+ * - 404: No entries found in specified chapters
+ * - 500: Server error
+ */
+router.get('/:username/vocabulary/chapters/random', async (req: Request, res: Response) => {
+  try {
+    const { username } = req.params;
+    const { chapterStart, chapterEnd } = req.query;
+
+    if (!username || typeof username !== 'string') {
+      return res.status(400).json({ error: 'Invalid username' });
+    }
+
+    if (!chapterStart || !chapterEnd) {
+      return res.status(400).json({ error: 'chapterStart and chapterEnd are required' });
+    }
+
+    const start = parseInt(chapterStart as string, 10);
+    const end = parseInt(chapterEnd as string, 10);
+
+    if (isNaN(start) || isNaN(end)) {
+      return res.status(400).json({ error: 'chapterStart and chapterEnd must be valid numbers' });
+    }
+
+    if (start < 1 || end < 1) {
+      return res.status(400).json({ error: 'Chapter numbers must be positive integers' });
+    }
+
+    if (start > end) {
+      return res.status(400).json({ error: 'chapterStart must be less than or equal to chapterEnd' });
+    }
+
+    const randomEntry = await vocabularyManager.getRandomByChapters(username, start, end);
+
+    if (!randomEntry) {
+      return res.status(404).json({ error: 'No entries found in specified chapters' });
+    }
+
+    res.json(randomEntry);
+  } catch (error) {
+    console.error('Error getting random entry by chapters:', error);
+    res.status(500).json({ error: 'Failed to get random entry by chapters' });
+  }
+});
+
+/**
  * GET /api/:username/vocabulary/chapters
  * 
  * Get available chapters for a user
- * Note: This must come before /:id route to avoid matching "chapters" as an ID
+ * Note: This must come AFTER /chapters/random but before /:id route
  */
 router.get('/:username/vocabulary/chapters', async (req: Request, res: Response) => {
   try {
@@ -549,62 +606,6 @@ router.get('/:username/vocabulary/favorites/random', async (req: Request, res: R
   } catch (error) {
     console.error('Error getting random favorite:', error);
     res.status(500).json({ error: 'Failed to get random favorite' });
-  }
-});
-
-/**
- * GET /api/:username/vocabulary/chapters/random
- * 
- * Get a random vocabulary entry from specified chapters
- * 
- * Query parameters:
- * - chapterStart: number (required)
- * - chapterEnd: number (required)
- * 
- * Response:
- * - 200: Random vocabulary entry from specified chapters
- * - 400: Invalid parameters
- * - 404: No entries found in specified chapters
- * - 500: Server error
- */
-router.get('/:username/vocabulary/chapters/random', async (req: Request, res: Response) => {
-  try {
-    const { username } = req.params;
-    const { chapterStart, chapterEnd } = req.query;
-
-    if (!username || typeof username !== 'string') {
-      return res.status(400).json({ error: 'Invalid username' });
-    }
-
-    if (!chapterStart || !chapterEnd) {
-      return res.status(400).json({ error: 'chapterStart and chapterEnd are required' });
-    }
-
-    const start = parseInt(chapterStart as string, 10);
-    const end = parseInt(chapterEnd as string, 10);
-
-    if (isNaN(start) || isNaN(end)) {
-      return res.status(400).json({ error: 'chapterStart and chapterEnd must be valid numbers' });
-    }
-
-    if (start < 1 || end < 1) {
-      return res.status(400).json({ error: 'Chapter numbers must be positive integers' });
-    }
-
-    if (start > end) {
-      return res.status(400).json({ error: 'chapterStart must be less than or equal to chapterEnd' });
-    }
-
-    const randomEntry = await vocabularyManager.getRandomByChapters(username, start, end);
-
-    if (!randomEntry) {
-      return res.status(404).json({ error: 'No entries found in specified chapters' });
-    }
-
-    res.json(randomEntry);
-  } catch (error) {
-    console.error('Error getting random entry by chapters:', error);
-    res.status(500).json({ error: 'Failed to get random entry by chapters' });
   }
 });
 

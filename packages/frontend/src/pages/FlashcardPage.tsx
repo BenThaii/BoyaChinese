@@ -168,8 +168,20 @@ export default function FlashcardPage() {
             border: '3px solid #007bff',
             borderRadius: '16px',
             marginBottom: '20px',
-            boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
+            boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+            position: 'relative'
           }}>
+            {currentWord.isFavorite && (
+              <div style={{
+                position: 'absolute',
+                top: '15px',
+                right: '15px',
+                fontSize: '32px',
+                color: '#ffc107'
+              }}>
+                ★
+              </div>
+            )}
             <div style={{
               fontSize: '80px',
               fontWeight: 'bold',
