@@ -93,17 +93,47 @@ export default function ChapterFlashcardPage() {
 
     if ('speechSynthesis' in window) {
       setPlaying(true);
-      const utterance = new SpeechSynthesisUtterance(currentWord.chineseCharacter);
-      utterance.lang = 'zh-CN';
-      utterance.rate = 0.5;
+      
+      // Cancel any ongoing speech
+      window.speechSynthesis.cancel();
+      
+      // Small delay to ensure cancellation is complete (helps with mobile)
+      setTimeout(() => {
+        const utterance = new SpeechSynthesisUtterance(currentWord.chineseCharacter);
+        utterance.lang = 'zh-CN';
+        utterance.rate = 0.8;
+        utterance.pitch = 1.0;
+        utterance.volume = 1.0;
 
-      utterance.onend = () => setPlaying(false);
-      utterance.onerror = () => {
-        setPlaying(false);
-        alert('Failed to play pronunciation');
-      };
+        utterance.onend = () => {
+          setPlaying(false);
+        };
+        
+        utterance.onerror = (event) => {
+          console.error('Speech synthesis error:', event);
+          setPlaying(false);
+          
+          // More specific error messages
+          if (event.error === 'network') {
+            alert('Network error. Please check your connection.');
+          } else if (event.error === 'synthesis-unavailable') {
+            alert('Chinese voice not available on this device.');
+          } else if (event.error === 'not-allowed') {
+            alert('Speech permission denied. Please enable it in browser settings.');
+          } else {
+            alert('Failed to play pronunciation. Try again.');
+          }
+        };
 
-      window.speechSynthesis.speak(utterance);
+        // For mobile browsers, especially Chrome on Android
+        try {
+          window.speechSynthesis.speak(utterance);
+        } catch (error) {
+          console.error('Error speaking:', error);
+          setPlaying(false);
+          alert('Failed to play pronunciation. Your browser may not support Chinese speech.');
+        }
+      }, 100);
     } else {
       alert('Text-to-speech is not supported in your browser');
     }
