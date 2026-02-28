@@ -302,6 +302,10 @@ export class VocabularyManager {
     return await VocabularyEntryDAO.getRandomFavorite(username);
   }
 
+  async getRandomFavoriteByChapters(username: string, chapterStart?: number, chapterEnd?: number): Promise<VocabularyEntry | null> {
+    return await VocabularyEntryDAO.getRandomFavoriteByChapters(username, chapterStart, chapterEnd);
+  }
+
   async getRandomByChapters(username: string, chapterStart: number, chapterEnd: number): Promise<VocabularyEntry | null> {
     return await VocabularyEntryDAO.getRandomByChapters(username, chapterStart, chapterEnd);
   }

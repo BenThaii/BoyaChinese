@@ -25,10 +25,24 @@ export default function FlashcardPage() {
   const [playing, setPlaying] = useState(false);
   const [noFavorites, setNoFavorites] = useState(false);
   const [showUnfavoriteConfirm, setShowUnfavoriteConfirm] = useState(false);
+  const [showChapterFilter, setShowChapterFilter] = useState(false);
+  const [chapterStart, setChapterStart] = useState<number | null>(null);
+  const [chapterEnd, setChapterEnd] = useState<number | null>(null);
+  const [availableChapters, setAvailableChapters] = useState<number[]>([]);
 
   useEffect(() => {
+    fetchAvailableChapters();
     fetchRandomFavorite();
   }, []);
+
+  const fetchAvailableChapters = async () => {
+    try {
+      const response = await apiClient.get<number[]>('/user1/vocabulary/chapters');
+      setAvailableChapters(response.data);
+    } catch (error) {
+      console.error('Error fetching chapters:', error);
+    }
+  };
 
   const fetchRandomFavorite = async () => {
     setLoading(true);
@@ -37,12 +51,21 @@ export default function FlashcardPage() {
     setNoFavorites(false);
     
     try {
-      const response = await apiClient.get<VocabularyEntry>('/user1/vocabulary/favorites/random');
+      let url = '/user1/vocabulary/favorites/random';
+      if (chapterStart !== null && chapterEnd !== null) {
+        url += `?chapterStart=${chapterStart}&chapterEnd=${chapterEnd}`;
+      }
+      
+      const response = await apiClient.get<VocabularyEntry>(url);
       setCurrentWord(response.data);
     } catch (err: any) {
       if (err.response?.status === 404) {
         setNoFavorites(true);
-        setError('No favorite words found. Please mark some words as favorites first.');
+        if (chapterStart !== null && chapterEnd !== null) {
+          setError(`No favorite words found in chapters ${chapterStart}-${chapterEnd}. Try different chapters or remove the filter.`);
+        } else {
+          setError('No favorite words found. Please mark some words as favorites first.');
+        }
       } else {
         setError(err.response?.data?.error || err.message || 'Failed to load favorite word');
       }
@@ -57,6 +80,23 @@ export default function FlashcardPage() {
 
   const handleNext = () => {
     fetchRandomFavorite();
+  };
+
+  const handleApplyFilter = () => {
+    if (chapterStart !== null && chapterEnd !== null && chapterStart > chapterEnd) {
+      alert('Start chapter must be less than or equal to end chapter');
+      return;
+    }
+    setShowChapterFilter(false);
+    fetchRandomFavorite();
+  };
+
+  const handleClearFilter = () => {
+    setChapterStart(null);
+    setChapterEnd(null);
+    setShowChapterFilter(false);
+    // Trigger fetch after state updates
+    setTimeout(() => fetchRandomFavorite(), 0);
   };
 
   const handleUnfavorite = async () => {
@@ -141,7 +181,34 @@ export default function FlashcardPage() {
       justifyContent: 'space-between',
       boxSizing: 'border-box'
     }}>
-      <h1 style={{ marginBottom: '20px', marginTop: '0', textAlign: 'center', fontSize: '24px' }}>Flashcard Practice</h1>
+      <h1 style={{ marginBottom: '20px', marginTop: '0', textAlign: 'center', fontSize: '24px' }}>
+        Flashcard Practice
+        {chapterStart !== null && chapterEnd !== null && (
+          <div style={{ fontSize: '14px', color: '#666', marginTop: '5px' }}>
+            Chapters {chapterStart}-{chapterEnd}
+          </div>
+        )}
+      </h1>
+
+      {/* Chapter Filter Button */}
+      {!loading && !error && (
+        <div style={{ marginBottom: '15px' }}>
+          <button
+            onClick={() => setShowChapterFilter(true)}
+            style={{
+              padding: '8px 16px',
+              backgroundColor: chapterStart !== null ? '#28a745' : '#6c757d',
+              color: 'white',
+              border: 'none',
+              borderRadius: '6px',
+              cursor: 'pointer',
+              fontSize: '14px'
+            }}
+          >
+            {chapterStart !== null ? '📚 Filter Active' : '📚 Filter by Chapter'}
+          </button>
+        </div>
+      )}
 
       {loading && (
         <div style={{ textAlign: 'center', padding: '20px', flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -473,6 +540,142 @@ export default function FlashcardPage() {
                 }}
               >
                 Yes, Un-favorite
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Chapter Filter Modal */}
+      {showChapterFilter && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 2000,
+            padding: '20px'
+          }}
+          onClick={() => setShowChapterFilter(false)}
+        >
+          <div
+            style={{
+              backgroundColor: 'white',
+              borderRadius: '12px',
+              padding: '30px',
+              maxWidth: '500px',
+              width: '100%',
+              boxShadow: '0 4px 20px rgba(0,0,0,0.15)'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 style={{ marginTop: 0, marginBottom: '20px', color: '#007bff' }}>
+              Filter by Chapter
+            </h2>
+            
+            <div style={{ marginBottom: '20px' }}>
+              <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
+                Start Chapter:
+              </label>
+              <select
+                value={chapterStart ?? ''}
+                onChange={(e) => setChapterStart(e.target.value ? parseInt(e.target.value) : null)}
+                style={{
+                  width: '100%',
+                  padding: '10px',
+                  fontSize: '16px',
+                  borderRadius: '6px',
+                  border: '1px solid #dee2e6'
+                }}
+              >
+                <option value="">All Chapters</option>
+                {availableChapters.map(chapter => (
+                  <option key={chapter} value={chapter}>Chapter {chapter}</option>
+                ))}
+              </select>
+            </div>
+
+            <div style={{ marginBottom: '25px' }}>
+              <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
+                End Chapter:
+              </label>
+              <select
+                value={chapterEnd ?? ''}
+                onChange={(e) => setChapterEnd(e.target.value ? parseInt(e.target.value) : null)}
+                style={{
+                  width: '100%',
+                  padding: '10px',
+                  fontSize: '16px',
+                  borderRadius: '6px',
+                  border: '1px solid #dee2e6'
+                }}
+              >
+                <option value="">All Chapters</option>
+                {availableChapters.map(chapter => (
+                  <option key={chapter} value={chapter}>Chapter {chapter}</option>
+                ))}
+              </select>
+            </div>
+
+            <div style={{
+              display: 'flex',
+              gap: '10px',
+              justifyContent: 'flex-end'
+            }}>
+              {chapterStart !== null && (
+                <button
+                  onClick={handleClearFilter}
+                  style={{
+                    padding: '10px 24px',
+                    backgroundColor: '#dc3545',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    fontSize: '16px',
+                    fontWeight: '500'
+                  }}
+                >
+                  Clear Filter
+                </button>
+              )}
+              
+              <button
+                onClick={() => setShowChapterFilter(false)}
+                style={{
+                  padding: '10px 24px',
+                  backgroundColor: '#6c757d',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  fontSize: '16px',
+                  fontWeight: '500'
+                }}
+              >
+                Cancel
+              </button>
+              
+              <button
+                onClick={handleApplyFilter}
+                style={{
+                  padding: '10px 24px',
+                  backgroundColor: '#007bff',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  fontSize: '16px',
+                  fontWeight: '500'
+                }}
+              >
+                Apply Filter
               </button>
             </div>
           </div>

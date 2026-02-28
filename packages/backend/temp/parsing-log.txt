@@ -1,249 +1,99 @@
 ===== PARSING RESULTS =====
-Total sentence matches found: 1518
-Expected (75 per batch × 4 batches × 5 groups): 1500
-Target after rejection (30 per batch): 600
+Total sentence matches found: 600
+Expected (75 per batch × 4 batches × 5 groups): 600
+Target after rejection (30 per batch): 240
 
 ----- Processing Vocab Group 1 -----
   Batch 1: Starting at matchIndex 0
   Batch 1 RESULTS:
     - Candidates parsed: 75
-    - Valid sentences: 61
-    - Invalid sentences: 14
+    - Valid sentences: 42
+    - Invalid sentences: 33
     - Ended at matchIndex: 75
-    ⚠️  Rejected 14 sentences:
-      - "他是哪国人？" [Invalid: 国]
-      - "认识你很高兴。" [Invalid: 认, 识]
-      - "认识您我也很高兴。" [Invalid: 认, 识]
-      ... and 11 more
+    ⚠️  Rejected 33 sentences:
+      - "他是我的朋友。" [Invalid: 他]
+      - "讲座在什么时候？" [Invalid: 时, 候]
+      - "下课了。" [Invalid: 了]
+      ... and 30 more
   Batch 2: Starting at matchIndex 75
   Batch 2 RESULTS:
     - Candidates parsed: 75
-    - Valid sentences: 43
-    - Invalid sentences: 32
+    - Valid sentences: 41
+    - Invalid sentences: 34
     - Ended at matchIndex: 150
-    ⚠️  Rejected 32 sentences:
-      - "认识你很高兴，中村。" [Invalid: 你]
-      - "请问，你姓什么？" [Invalid: 你]
-      - "我姓王，叫王明。" [Invalid: 明]
-      ... and 29 more
+    ⚠️  Rejected 34 sentences:
+      - "老师好，认识您很高兴。" [Invalid: 高, 兴]
+      - "请问，您贵姓？" [Invalid: 贵]
+      - "宿舍在教学楼北边。" [Invalid: 教, 学]
+      ... and 31 more
   Batch 3: Starting at matchIndex 150
   Batch 3 RESULTS:
     - Candidates parsed: 75
-    - Valid sentences: 54
-    - Invalid sentences: 21
+    - Valid sentences: 35
+    - Invalid sentences: 40
     - Ended at matchIndex: 225
-    ⚠️  Rejected 21 sentences:
-      - "她姓王，叫王小美。" [Invalid: 小, 美]
-      - "那是谁的日语词典？" [Invalid: 谁]
-      - "卫生间在几楼？" [Invalid: 几]
-      ... and 18 more
+    ⚠️  Rejected 40 sentences:
+      - "你是美国人吗？" [Invalid: 人]
+      - "我不是美国人，我是加拿大人。" [Invalid: 人]
+      - "认识你很高兴。" [Invalid: 高, 兴]
+      ... and 37 more
   Batch 4: Starting at matchIndex 225
   Batch 4 RESULTS:
     - Candidates parsed: 75
-    - Valid sentences: 43
-    - Invalid sentences: 32
+    - Valid sentences: 28
+    - Invalid sentences: 47
     - Ended at matchIndex: 300
-    ⚠️  Rejected 32 sentences:
-      - "请问，图书馆在哪儿？" [Invalid: 请, 问]
-      - "卫生间在楼下。" [Invalid: 下]
-      - "你的宿舍在哪儿？" [Invalid: 宿, 舍]
-      ... and 29 more
-Vocab Group 1 COMPLETE: 120 sentences
+    ⚠️  Rejected 47 sentences:
+      - "认识你很高兴。" [Invalid: 很]
+      - "我也很高兴。" [Invalid: 很]
+      - "我叫中村。" [Invalid: 中, 村]
+      ... and 44 more
+Vocab Group 1 COMPLETE: 118 sentences
 
 ----- Processing Vocab Group 2 -----
   Batch 1: Starting at matchIndex 300
   Batch 1 RESULTS:
     - Candidates parsed: 75
-    - Valid sentences: 54
-    - Invalid sentences: 21
+    - Valid sentences: 31
+    - Invalid sentences: 44
     - Ended at matchIndex: 375
-    ⚠️  Rejected 21 sentences:
-      - "差五分八点。" [Invalid: 五, 点]
-      - "老师来了。" [Invalid: 了]
-      - "十点半下课。" [Invalid: 点]
-      ... and 18 more
+    ⚠️  Rejected 44 sentences:
+      - "我家有五口人。" [Invalid: 五]
+      - "我有哥哥和姐姐。" [Invalid: 和]
+      - "我没有弟弟，我有妹妹。" [Invalid: 没, 妹]
+      ... and 41 more
   Batch 2: Starting at matchIndex 375
   Batch 2 RESULTS:
     - Candidates parsed: 75
-    - Valid sentences: 43
-    - Invalid sentences: 32
+    - Valid sentences: 29
+    - Invalid sentences: 46
     - Ended at matchIndex: 450
-    ⚠️  Rejected 32 sentences:
-      - "我们都是中国留学生。
-
-### GROUP 2, BATCH 2
-AVAILABLE CHARACTERS: 专业, 课本, 北边, 李军, 同学, 教室, 讲座, 我们, 见, 们, 杂志, 好, 呢, 很, 一会儿, 音乐, 美国, 老师, 同屋, 留学生, 开始, 是, 大卫, 上课, 学生, 宿舍, 我, 点, 人, 叫, 不, 五十, 中国, 中村, 吗, 对不起, 九, 太。。。了, 那儿, 她, 刻, 早上, 大部分, 你好, 哪儿, 六, 西边, 学校, 没关系, 就是, 这, 有, 姓, 朋友, 欢迎, 汉语, 中文, 大学, 半, 名字, 那, 什么, 认识, 旁边, 教学, 国, 文学, 差, 时候, 系, 谢谢, 对, 早, 刘明, 也, 日本, 不用, 几, 八, 的, 哪, 不客气, 现代, 王, 关系, 不用谢, 分, 一下儿, 右边, 你, 一, 日语, 下课, 加拿大, 国际, 玩儿, 空儿, 书, 图书馆, 十, 高兴, 个, 这儿, 在, 词典, 介绍, 楼, 来, 左边, 去" [Invalid: 都, G, R, O, U, P, 2, B, A, T, C, H, V, I, L, E, S, 太, 了]
-      - "现在几点？" [Invalid: 现]
-      - "现在八点。" [Invalid: 现]
-      ... and 29 more
+    ⚠️  Rejected 46 sentences:
+      - "您好，请进。" [Invalid: 请, 进]
+      - "认识您很高兴。" [Invalid: 认, 识]
+      - "我也一样，请坐。" [Invalid: 样, 请, 坐]
+      ... and 43 more
   Batch 3: Starting at matchIndex 450
   Batch 3 RESULTS:
     - Candidates parsed: 75
-    - Valid sentences: 46
-    - Invalid sentences: 29
+    - Valid sentences: 18
+    - Invalid sentences: 57
     - Ended at matchIndex: 525
-    ⚠️  Rejected 29 sentences:
-      - "下课了，我们去玩儿吧。
-
-### GROUP 2, BATCH 3
-AVAILABLE CHARACTERS: 对, 他, 您, 大部分, 空儿, 没关系, 老师, 不, 学生, 这, 右边, 名字, 呢, 专业, 中文, 现代, 吗, 见, 分, 一, 去, 词典, 留学生, 部分, 玩儿, 半, 请问, 不客气, 大卫, 我, 你好, 就是, 王, 国, 时候, 哪儿, 是, 那儿, 我们, 几, 中国, 李军, 这儿, 差, 太。。。了, 的, 音乐, 西边, 她, 课本, 日语, 有, 刘明, 东边, 汉语, 日语词典, 加拿大, 对不起, 一下儿, 人, 很, 卫生间, 左边, 六, 刻, 下课, 上课, 学校, 日本, 五十, 杂志, 国际, 谢谢, 大学, 宿舍, 开始, 书, 你, 们, 早, 讲座, 那, 叫, 来, 好, 也, 教学, 认识, 早上, 关系, 楼, 同屋, 同学, 现在, 高兴, 姓, 什么, 知道, 在, 介绍, 系, 谁, 八, 旁边, 点, 图书馆, 欢迎, 不用, 美国" [Invalid: 了, 吧, G, R, O, U, P, 2, B, A, T, C, H, 3, V, I, L, E, S, 太]
-      - "现在九点一刻。" [Invalid: 九]
-      - "差十分十点。" [Invalid: 十]
-      ... and 26 more
+    ⚠️  Rejected 57 sentences:
+      - "我叫李军，认识你很高兴。" [Invalid: 你]
+      - "你是哪国人？" [Invalid: 你]
+      - "你的专业是什么？" [Invalid: 你]
+      ... and 54 more
   Batch 4: Starting at matchIndex 525
   Batch 4 RESULTS:
     - Candidates parsed: 75
-    - Valid sentences: 45
-    - Invalid sentences: 30
+    - Valid sentences: 14
+    - Invalid sentences: 61
     - Ended at matchIndex: 600
-    ⚠️  Rejected 30 sentences:
-      - "认识你们很高兴。" [Invalid: 们]
-      - "老师早。
-
-### GROUP 2, BATCH 4
-AVAILABLE CHARACTERS: 名字, 我们, 教室, 右边, 早上, 日本, 也, 她, 六, 教学, 好, 那, 你好, 见, 大部分, 是, 大学, 现代, 部分, 在, 太。。。了, 李军, 国, 八, 王, 谢谢, 留学生, 西边, 学生, 朋友, 什么, 对不起, 我, 欢迎, 美国, 分, 来, 现在, 哪, 图书馆, 一, 旁边, 那儿, 国际, 高兴, 日语, 没关系, 学校, 点, 五十, 大卫, 系, 很, 东边, 的, 认识, 杂志, 不客气, 几, 研究生, 刻, 有, 玩儿, 这, 姓, 吗, 不用, 半, 你, 同屋, 宿舍, 日语词典, 音乐, 同学, 他, 开始, 叫, 课本, 左边, 专业, 不, 刘明, 您, 加拿大, 时候, 空儿, 不用谢, 汉语, 下课, 中村, 十, 哪儿, 卫生间, 个, 一会儿, 就是, 知道, 上课, 对, 中文, 差, 这儿, 谁, 北边, 文学, 早, 呢, 去" [Invalid: 老, 师, G, R, O, U, P, 2, B, A, T, C, H, 4, V, I, L, E, S, 太, 了]
-      - "现在九点十分。" [Invalid: 九]
-      ... and 27 more
-Vocab Group 2 COMPLETE: 120 sentences
-
------ Processing Vocab Group 3 -----
-  Batch 1: Starting at matchIndex 600
-  Batch 1 RESULTS:
-    - Candidates parsed: 75
-    - Valid sentences: 35
-    - Invalid sentences: 40
-    - Ended at matchIndex: 675
-    ⚠️  Rejected 40 sentences:
-      - "现在几点几分？" [Invalid: 分]
-      - "现在十点五十分。" [Invalid: 十, 分]
-      - "再见。(Again not in list, using 一会儿见)" [Invalid: 再, A, g, a, i, n, o, t, l, s, u]
-      ... and 37 more
-  Batch 2: Starting at matchIndex 675
-  Batch 2 RESULTS:
-    - Candidates parsed: 75
-    - Valid sentences: 55
-    - Invalid sentences: 20
-    - Ended at matchIndex: 750
-    ⚠️  Rejected 20 sentences:
-      - "教室在三楼。(Three not in list, revised)" [Invalid: 三, T, h, r, e, n, o, t, i, l, s, v, d]
-      - "教室在二楼。" [Invalid: 二]
-      - "车棚在那儿。" [Invalid: 儿]
-      ... and 17 more
-  Batch 3: Starting at matchIndex 750
-  Batch 3 RESULTS:
-    - Candidates parsed: 75
-    - Valid sentences: 45
-    - Invalid sentences: 30
-    - Ended at matchIndex: 825
-    ⚠️  Rejected 30 sentences:
-      - "还有十分钟下课。" [Invalid: 还, 钟]
-      - "我们都是留学生。" [Invalid: 都]
-      - "他的汉语太好了。" [Invalid: 太, 了]
-      ... and 27 more
-  Batch 4: Starting at matchIndex 825
-  Batch 4 RESULTS:
-    - Candidates parsed: 75
-    - Valid sentences: 46
-    - Invalid sentences: 29
-    - Ended at matchIndex: 900
-    ⚠️  Rejected 29 sentences:
-      - "你的汉语太好了。" [Invalid: 太, 了]
-      - "这个音乐很好听。" [Invalid: 音, 乐, 听]
-      - "他是中文系的学生。" [Invalid: 他, 中, 文]
-      ... and 26 more
-Vocab Group 3 COMPLETE: 120 sentences
-
------ Processing Vocab Group 4 -----
-  Batch 1: Starting at matchIndex 900
-  Batch 1 RESULTS:
-    - Candidates parsed: 75
-    - Valid sentences: 47
-    - Invalid sentences: 28
-    - Ended at matchIndex: 975
-    ⚠️  Rejected 28 sentences:
-      - "留学生宿舍在哪儿？" [Invalid: 儿]
-      - "老师在介绍什么？" [Invalid: 介, 绍]
-      - "老师在介绍国际关系。" [Invalid: 介, 绍]
-      ... and 25 more
-  Batch 2: Starting at matchIndex 975
-  Batch 2 RESULTS:
-    - Candidates parsed: 75
-    - Valid sentences: 43
-    - Invalid sentences: 32
-    - Ended at matchIndex: 1050
-    ⚠️  Rejected 32 sentences:
-      - "谁在图书馆看书？" [Invalid: 看]
-      - "很多学生在图书馆。" [Invalid: 多]
-      - "你知道他在哪儿吗？" [Invalid: 你]
-      ... and 29 more
-  Batch 3: Starting at matchIndex 1050
-  Batch 3 RESULTS:
-    - Candidates parsed: 75
-    - Valid sentences: 31
-    - Invalid sentences: 44
-    - Ended at matchIndex: 1125
-    ⚠️  Rejected 44 sentences:
-      - "我去上课。" [Invalid: 我]
-      - "卫生间在楼上。" [Invalid: 上]
-      - "我的同屋是大卫。" [Invalid: 我]
-      ... and 41 more
-  Batch 4: Starting at matchIndex 1125
-  Batch 4 RESULTS:
-    - Candidates parsed: 75
-    - Valid sentences: 43
-    - Invalid sentences: 32
-    - Ended at matchIndex: 1200
-    ⚠️  Rejected 32 sentences:
-      - "你们学习什么？" [Invalid: 学, 习]
-      - "我们学习国际关系。" [Invalid: 学, 习]
-      - "认识你们很高兴。" [Invalid: 很]
-      ... and 29 more
-Vocab Group 4 COMPLETE: 120 sentences
-
------ Processing Vocab Group 5 -----
-  Batch 1: Starting at matchIndex 1200
-  Batch 1 RESULTS:
-    - Candidates parsed: 75
-    - Valid sentences: 22
-    - Invalid sentences: 53
-    - Ended at matchIndex: 1275
-    ⚠️  Rejected 53 sentences:
-      - "这儿没有杂志。" [Invalid: 没]
-      - "认识你们很高兴。" [Invalid: 你, 们, 高, 兴]
-      - "很高兴见到你。" [Invalid: 高, 兴, 你]
-      ... and 50 more
-  Batch 2: Starting at matchIndex 1275
-  Batch 2 RESULTS:
-    - Candidates parsed: 75
-    - Valid sentences: 24
-    - Invalid sentences: 51
-    - Ended at matchIndex: 1350
-    ⚠️  Rejected 51 sentences:
-      - "你的名字很好听。" [Invalid: 很, 听]
-      - "谢谢你的介绍。" [Invalid: 介, 绍]
-      - "你想喝什么？" [Invalid: 想]
-      ... and 48 more
-  Batch 3: Starting at matchIndex 1350
-  Batch 3 RESULTS:
-    - Candidates parsed: 75
-    - Valid sentences: 22
-    - Invalid sentences: 53
-    - Ended at matchIndex: 1425
-    ⚠️  Rejected 53 sentences:
-      - "给你钱。" [Invalid: 钱]
-      - "你的自行车在哪儿？" [Invalid: 自, 行]
-      - "我的自行车在车棚里。" [Invalid: 自, 行]
-      ... and 50 more
-  Batch 4: Starting at matchIndex 1425
-  Batch 4 RESULTS:
-    - Candidates parsed: 75
-    - Valid sentences: 23
-    - Invalid sentences: 52
-    - Ended at matchIndex: 1500
-    ⚠️  Rejected 52 sentences:
-      - "骑车去很快。" [Invalid: 快]
-      - "也可以坐车去。" [Invalid: 可, 以, 坐]
-      - "学校在路北边。" [Invalid: 在]
-      ... and 49 more
-Vocab Group 5 COMPLETE: 91 sentences
+    ⚠️  Rejected 61 sentences:
+      - "我也很高兴，你是哪国人？" [Invalid: 人]
+      - "我是美国人，现在在大学学习。" [Invalid: 人, 现, 在, 学, 习]
+      - "你的专业是什么？" [Invalid: 专, 业]
+      ... and 58 more
+Vocab Group 2 COMPLETE: 91 sentences
 

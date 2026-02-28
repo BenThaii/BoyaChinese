@@ -42,11 +42,68 @@ export default function PhrasesPage() {
   const [playingCharacter, setPlayingCharacter] = useState<string | null>(null);
   const [loadingSentences, setLoadingSentences] = useState<Set<number>>(new Set());
   const [playingSentence, setPlayingSentence] = useState<boolean>(false);
+  const [refreshing, setRefreshing] = useState(() => {
+    // Check if generation is in progress from localStorage
+    const inProgress = localStorage.getItem('phraseGenerationInProgress');
+    return inProgress === 'true';
+  });
+  const [generationStartTime, setGenerationStartTime] = useState<number | null>(() => {
+    const startTime = localStorage.getItem('phraseGenerationStartTime');
+    return startTime ? parseInt(startTime) : null;
+  });
 
   // Fetch vocab groups on mount
   useEffect(() => {
     fetchVocabGroups();
   }, []);
+
+  // Poll for generation completion when refreshing
+  useEffect(() => {
+    if (!refreshing || !generationStartTime) return;
+
+    const pollInterval = setInterval(async () => {
+      try {
+        // Check if generation has been running for more than 10 minutes
+        const elapsed = Date.now() - generationStartTime;
+        if (elapsed > 10 * 60 * 1000) {
+          // Auto-clear after 10 minutes
+          console.log('Generation timeout - auto-clearing status');
+          localStorage.removeItem('phraseGenerationInProgress');
+          localStorage.removeItem('phraseGenerationStartTime');
+          setRefreshing(false);
+          setGenerationStartTime(null);
+          clearInterval(pollInterval);
+          return;
+        }
+
+        // Try to fetch vocab groups to see if new data is available
+        const response = await apiClient.get<VocabGroupResponse[]>('/phrases/vocab-groups');
+        const newGroups = response.data;
+        
+        // Check if the sentence count has changed (indicating new generation)
+        const oldTotalCount = vocabGroups.reduce((sum, g) => sum + g.sentenceCount, 0);
+        const newTotalCount = newGroups.reduce((sum, g) => sum + g.sentenceCount, 0);
+        
+        if (newTotalCount !== oldTotalCount && newTotalCount > 0) {
+          // Generation completed - clear the flag
+          console.log('Generation detected as complete - clearing status');
+          localStorage.removeItem('phraseGenerationInProgress');
+          localStorage.removeItem('phraseGenerationStartTime');
+          setRefreshing(false);
+          setGenerationStartTime(null);
+          setVocabGroups(newGroups);
+          clearInterval(pollInterval);
+          
+          // Show success message
+          alert('Phrase generation completed successfully!');
+        }
+      } catch (error) {
+        console.error('Error polling for generation status:', error);
+      }
+    }, 5000); // Poll every 5 seconds
+
+    return () => clearInterval(pollInterval);
+  }, [refreshing, generationStartTime, vocabGroups]);
 
   const fetchVocabGroups = async (retryCount = 0) => {
     setLoading(true);
@@ -214,9 +271,116 @@ export default function PhrasesPage() {
     }
   };
 
+  const handleRefreshPhrases = async () => {
+    if (refreshing) return;
+    
+    // Password protection
+    const password = window.prompt('Enter password to refresh phrases:');
+    if (password !== 'BoyaChineseNgoc') {
+      alert('Incorrect password');
+      return;
+    }
+    
+    const confirmed = window.confirm(
+      'This will generate new phrases for all vocabulary groups. This may take several minutes. Continue?'
+    );
+    
+    if (!confirmed) return;
+    
+    const startTime = Date.now();
+    setRefreshing(true);
+    setGenerationStartTime(startTime);
+    localStorage.setItem('phraseGenerationInProgress', 'true');
+    localStorage.setItem('phraseGenerationStartTime', startTime.toString());
+    setError(null);
+    
+    try {
+      await apiClient.post('/phrases/generate', {}, {
+        timeout: 300000 // 5 minute timeout
+      });
+      
+      // Generation completed successfully - clear the flag
+      localStorage.removeItem('phraseGenerationInProgress');
+      localStorage.removeItem('phraseGenerationStartTime');
+      setRefreshing(false);
+      setGenerationStartTime(null);
+      alert('Phrases generated successfully! Refreshing the page...');
+      
+      // Clear sentences cache and reload vocab groups
+      setSentences(new Map());
+      setExpandedGroup(null);
+      await fetchVocabGroups();
+    } catch (err: any) {
+      console.error('Error generating phrases:', err);
+      
+      const errorMessage = err.response?.data?.error || err.message || 'Failed to generate phrases';
+      setError(errorMessage);
+      
+      if (err.response?.status === 503) {
+        // Generation is already in progress on server - keep polling
+        alert('Generation is already in progress. The page will update automatically when complete.');
+      } else {
+        // Other errors - clear the flag since generation failed
+        localStorage.removeItem('phraseGenerationInProgress');
+        localStorage.removeItem('phraseGenerationStartTime');
+        setRefreshing(false);
+        setGenerationStartTime(null);
+        alert(`Failed to generate phrases: ${errorMessage}`);
+      }
+    }
+  };
+
   return (
     <div style={{ padding: '20px', maxWidth: '1200px', margin: '0 auto' }}>
-      <h1>Pre-Generated Phrases</h1>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+        <h1 style={{ margin: 0 }}>Pre-Generated Phrases</h1>
+        <div style={{ display: 'flex', gap: '10px' }}>
+          {refreshing && (
+            <button
+              onClick={() => {
+                if (window.confirm('Are you sure you want to cancel the generation status? This will not stop the actual generation on the server.')) {
+                  localStorage.removeItem('phraseGenerationInProgress');
+                  localStorage.removeItem('phraseGenerationStartTime');
+                  setRefreshing(false);
+                  setGenerationStartTime(null);
+                }
+              }}
+              style={{
+                padding: '10px 20px',
+                backgroundColor: '#dc3545',
+                color: 'white',
+                border: 'none',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                fontSize: '14px',
+                fontWeight: 'bold'
+              }}
+            >
+              Cancel Status
+            </button>
+          )}
+          <button
+            onClick={handleRefreshPhrases}
+            disabled={refreshing}
+            style={{
+              padding: '10px 20px',
+              backgroundColor: refreshing ? '#6c757d' : '#28a745',
+              color: 'white',
+              border: 'none',
+              borderRadius: '6px',
+              cursor: refreshing ? 'not-allowed' : 'pointer',
+              fontSize: '14px',
+              fontWeight: 'bold',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px'
+            }}
+          >
+            <span style={{ fontSize: '16px' }}>{refreshing ? '⏳' : '🔄'}</span>
+            <span>{refreshing ? 'Generating...' : 'Refresh Phrases'}</span>
+          </button>
+        </div>
+      </div>
       <p style={{ color: '#666', marginBottom: '30px' }}>
         Practice Chinese sentences organized by vocabulary groups. Click any sentence to see character details.
       </p>

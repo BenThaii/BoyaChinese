@@ -581,7 +581,11 @@ router.post('/:username/vocabulary/toggle-favorite', async (req: Request, res: R
 /**
  * GET /api/:username/vocabulary/favorites/random
  * 
- * Get a random favorite vocabulary entry
+ * Get a random favorite vocabulary entry with optional chapter filtering
+ * 
+ * Query parameters:
+ * - chapterStart: number (optional)
+ * - chapterEnd: number (optional)
  * 
  * Response:
  * - 200: Random favorite vocabulary entry
@@ -591,12 +595,34 @@ router.post('/:username/vocabulary/toggle-favorite', async (req: Request, res: R
 router.get('/:username/vocabulary/favorites/random', async (req: Request, res: Response) => {
   try {
     const { username } = req.params;
+    const { chapterStart, chapterEnd } = req.query;
 
     if (!username || typeof username !== 'string') {
       return res.status(400).json({ error: 'Invalid username' });
     }
 
-    const randomFavorite = await vocabularyManager.getRandomFavorite(username);
+    let randomFavorite;
+
+    if (chapterStart && chapterEnd) {
+      const start = parseInt(chapterStart as string, 10);
+      const end = parseInt(chapterEnd as string, 10);
+
+      if (isNaN(start) || isNaN(end)) {
+        return res.status(400).json({ error: 'chapterStart and chapterEnd must be valid numbers' });
+      }
+
+      if (start < 1 || end < 1) {
+        return res.status(400).json({ error: 'Chapter numbers must be positive integers' });
+      }
+
+      if (start > end) {
+        return res.status(400).json({ error: 'chapterStart must be less than or equal to chapterEnd' });
+      }
+
+      randomFavorite = await vocabularyManager.getRandomFavoriteByChapters(username, start, end);
+    } else {
+      randomFavorite = await vocabularyManager.getRandomFavorite(username);
+    }
 
     if (!randomFavorite) {
       return res.status(404).json({ error: 'No favorite entries found' });

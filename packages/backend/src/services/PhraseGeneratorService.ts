@@ -45,18 +45,18 @@ export class PhraseGeneratorService {
   async getVocabGroups(): Promise<VocabGroup[]> {
     const pool = getPool();
     
-    // Query for 5 most recent distinct chapters, ordered descending
+    // Query for 2 most recent distinct chapters, ordered descending
     const [rows] = await pool.query<RowDataPacket[]>(
       `SELECT DISTINCT chapter 
        FROM vocabulary_entries 
        ORDER BY chapter DESC 
-       LIMIT 5`
+       LIMIT 2`
     );
 
     // Extract chapter numbers
     const chapters = rows.map(row => row.chapter as number);
     
-    // If we have fewer than 5 chapters, return what we have
+    // If we have fewer than 2 chapters, return what we have
     if (chapters.length === 0) {
       return [];
     }

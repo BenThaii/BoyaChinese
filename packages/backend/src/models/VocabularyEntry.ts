@@ -424,6 +424,31 @@ export class VocabularyEntryDAO {
   }
 
   /**
+   * Get a random favorite vocabulary entry with optional chapter filtering
+   */
+  static async getRandomFavoriteByChapters(username: string, chapterStart?: number, chapterEnd?: number): Promise<VocabularyEntry | null> {
+    const pool = getPool();
+
+    let query = `SELECT * FROM vocabulary_entries WHERE username = ? AND is_favorite = 1`;
+    const params: any[] = [username];
+
+    if (chapterStart !== undefined && chapterEnd !== undefined) {
+      query += ` AND chapter >= ? AND chapter <= ?`;
+      params.push(chapterStart, chapterEnd);
+    }
+
+    query += ` ORDER BY RAND() LIMIT 1`;
+
+    const [rows] = await pool.query<VocabularyEntryRow[]>(query, params);
+
+    if (rows.length === 0) {
+      return null;
+    }
+
+    return rowToEntry(rows[0]);
+  }
+
+  /**
    * Get a random vocabulary entry from specified chapters
    * @param username - Owner username
    * @param chapterStart - Start chapter (inclusive)
