@@ -175,7 +175,7 @@ export default function ChapterFlashcardPage() {
 
   return (
     <div style={{
-      padding: '20px',
+      padding: '10px',
       maxWidth: '800px',
       margin: '0 auto',
       minHeight: '100vh',
@@ -185,7 +185,7 @@ export default function ChapterFlashcardPage() {
       justifyContent: 'space-between',
       boxSizing: 'border-box'
     }}>
-      <h1 style={{ marginBottom: '20px', marginTop: '0', textAlign: 'center', fontSize: '24px' }}>
+      <h1 style={{ marginBottom: '10px', marginTop: '0', textAlign: 'center', fontSize: '20px' }}>
         Chapter Flashcards
       </h1>
 
@@ -320,15 +320,16 @@ export default function ChapterFlashcardPage() {
           display: 'flex',
           flexDirection: 'column',
           justifyContent: 'space-between',
-          overflow: 'auto'
+          overflow: 'hidden'
         }}>
           <div>
             <div style={{
-              marginBottom: '15px',
-              padding: '8px 16px',
+              marginBottom: '10px',
+              padding: '6px 12px',
               backgroundColor: '#e7f3ff',
               borderRadius: '6px',
-              display: 'inline-block'
+              display: 'inline-block',
+              fontSize: '13px'
             }}>
               <strong>Chapters {chapterStart}-{chapterEnd}</strong>
               {' | '}
@@ -340,7 +341,7 @@ export default function ChapterFlashcardPage() {
                   color: '#007bff',
                   cursor: 'pointer',
                   textDecoration: 'underline',
-                  fontSize: '14px'
+                  fontSize: '13px'
                 }}
               >
                 Change
@@ -349,30 +350,30 @@ export default function ChapterFlashcardPage() {
 
             {/* Chinese Character Card */}
             <div style={{
-              padding: '40px 20px',
+              padding: '20px 15px',
               backgroundColor: '#f8f9fa',
               border: '3px solid #007bff',
               borderRadius: '16px',
-              marginBottom: '20px',
+              marginBottom: '10px',
               boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
               position: 'relative'
             }}>
               {currentWord.isFavorite && (
                 <div style={{
                   position: 'absolute',
-                  top: '15px',
-                  right: '15px',
-                  fontSize: '32px',
+                  top: '10px',
+                  right: '10px',
+                  fontSize: '24px',
                   color: '#ffc107'
                 }}>
                   ★
                 </div>
               )}
               <div style={{
-                fontSize: '80px',
+                fontSize: '60px',
                 fontWeight: 'bold',
                 color: '#333',
-                marginBottom: '15px'
+                marginBottom: '10px'
               }}>
                 {currentWord.chineseCharacter}
               </div>
@@ -381,15 +382,15 @@ export default function ChapterFlashcardPage() {
                 <button
                   onClick={handleShowDetails}
                   style={{
-                    padding: '12px 30px',
+                    padding: '10px 24px',
                     backgroundColor: '#007bff',
                     color: 'white',
                     border: 'none',
                     borderRadius: '8px',
                     cursor: 'pointer',
-                    fontSize: '16px',
+                    fontSize: '14px',
                     fontWeight: 'bold',
-                    marginTop: '10px'
+                    marginTop: '5px'
                   }}
                 >
                   Show Details
@@ -400,50 +401,51 @@ export default function ChapterFlashcardPage() {
             {/* Details Section */}
             {showDetails && (
               <div style={{
-                padding: '20px',
+                padding: '12px',
                 backgroundColor: 'white',
                 border: '2px solid #dee2e6',
                 borderRadius: '12px',
-                marginBottom: '20px',
+                marginBottom: '10px',
                 textAlign: 'left',
-                maxHeight: '50vh',
-                overflow: 'auto'
+                maxHeight: '35vh',
+                overflow: 'auto',
+                fontSize: '14px'
               }}>
-                <div style={{ marginBottom: '15px' }}>
-                  <strong style={{ fontSize: '14px', color: '#666' }}>Chapter:</strong>
-                  <div style={{ fontSize: '18px', marginTop: '5px' }}>{currentWord.chapter}</div>
+                <div style={{ marginBottom: '10px' }}>
+                  <strong style={{ fontSize: '12px', color: '#666' }}>Chapter:</strong>
+                  <div style={{ fontSize: '14px', marginTop: '3px' }}>{currentWord.chapter}</div>
                 </div>
 
-                <div style={{ marginBottom: '15px' }}>
-                  <strong style={{ fontSize: '14px', color: '#666' }}>Pinyin:</strong>
-                  <div style={{ fontSize: '20px', marginTop: '5px' }}>{currentWord.pinyin}</div>
+                <div style={{ marginBottom: '10px' }}>
+                  <strong style={{ fontSize: '12px', color: '#666' }}>Pinyin:</strong>
+                  <div style={{ fontSize: '16px', marginTop: '3px' }}>{currentWord.pinyin}</div>
                 </div>
 
                 {currentWord.hanVietnamese && (
-                  <div style={{ marginBottom: '15px' }}>
-                    <strong style={{ fontSize: '14px', color: '#666' }}>Han Vietnamese:</strong>
-                    <div style={{ fontSize: '18px', marginTop: '5px' }}>{currentWord.hanVietnamese}</div>
+                  <div style={{ marginBottom: '10px' }}>
+                    <strong style={{ fontSize: '12px', color: '#666' }}>Han Vietnamese:</strong>
+                    <div style={{ fontSize: '14px', marginTop: '3px' }}>{currentWord.hanVietnamese}</div>
                   </div>
                 )}
 
                 {currentWord.modernVietnamese && (
-                  <div style={{ marginBottom: '15px' }}>
-                    <strong style={{ fontSize: '14px', color: '#666' }}>Modern Vietnamese:</strong>
-                    <div style={{ fontSize: '18px', marginTop: '5px' }}>{currentWord.modernVietnamese}</div>
+                  <div style={{ marginBottom: '10px' }}>
+                    <strong style={{ fontSize: '12px', color: '#666' }}>Modern Vietnamese:</strong>
+                    <div style={{ fontSize: '14px', marginTop: '3px' }}>{currentWord.modernVietnamese}</div>
                   </div>
                 )}
 
                 {currentWord.englishMeaning && (
-                  <div style={{ marginBottom: '15px' }}>
-                    <strong style={{ fontSize: '14px', color: '#666' }}>English Meaning:</strong>
-                    <div style={{ fontSize: '18px', marginTop: '5px' }}>{currentWord.englishMeaning}</div>
+                  <div style={{ marginBottom: '10px' }}>
+                    <strong style={{ fontSize: '12px', color: '#666' }}>English Meaning:</strong>
+                    <div style={{ fontSize: '14px', marginTop: '3px' }}>{currentWord.englishMeaning}</div>
                   </div>
                 )}
 
                 {currentWord.learningNote && (
-                  <div style={{ marginBottom: '15px' }}>
-                    <strong style={{ fontSize: '14px', color: '#666' }}>Learning Note:</strong>
-                    <div style={{ fontSize: '16px', marginTop: '5px', fontStyle: 'italic' }}>
+                  <div style={{ marginBottom: '10px' }}>
+                    <strong style={{ fontSize: '12px', color: '#666' }}>Learning Note:</strong>
+                    <div style={{ fontSize: '13px', marginTop: '3px', fontStyle: 'italic' }}>
                       {currentWord.learningNote}
                     </div>
                   </div>
@@ -454,9 +456,9 @@ export default function ChapterFlashcardPage() {
                   style={{
                     display: 'flex',
                     flexDirection: 'row',
-                    gap: '10px',
-                    marginTop: '15px',
-                    paddingTop: '15px',
+                    gap: '8px',
+                    marginTop: '10px',
+                    paddingTop: '10px',
                     borderTop: '1px solid #dee2e6'
                   }}
                 >
@@ -464,42 +466,42 @@ export default function ChapterFlashcardPage() {
                     onClick={handlePronounce}
                     disabled={playing}
                     style={{
-                      padding: '8px 16px',
+                      padding: '8px 12px',
                       backgroundColor: playing ? '#6c757d' : '#28a745',
                       color: 'white',
                       border: 'none',
                       borderRadius: '6px',
                       cursor: playing ? 'not-allowed' : 'pointer',
-                      fontSize: '14px',
+                      fontSize: '13px',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      gap: '6px',
+                      gap: '4px',
                       flex: 1
                     }}
                   >
-                    <span style={{ fontSize: '16px' }}>{playing ? '🔊' : '🔉'}</span>
+                    <span style={{ fontSize: '14px' }}>{playing ? '🔊' : '🔉'}</span>
                     <span>{playing ? 'Playing...' : 'Pronounce'}</span>
                   </button>
 
                   <button
                     onClick={handleFavoriteClick}
                     style={{
-                      padding: '8px 16px',
+                      padding: '8px 12px',
                       backgroundColor: currentWord.isFavorite ? '#dc3545' : '#ffc107',
                       color: currentWord.isFavorite ? 'white' : '#000',
                       border: 'none',
                       borderRadius: '6px',
                       cursor: 'pointer',
-                      fontSize: '14px',
+                      fontSize: '13px',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      gap: '6px',
+                      gap: '4px',
                       flex: 1
                     }}
                   >
-                    <span style={{ fontSize: '16px' }}>{currentWord.isFavorite ? '★' : '☆'}</span>
+                    <span style={{ fontSize: '14px' }}>{currentWord.isFavorite ? '★' : '☆'}</span>
                     <span>{currentWord.isFavorite ? 'Un-favorite' : 'Favorite'}</span>
                   </button>
                 </div>
@@ -517,20 +519,19 @@ export default function ChapterFlashcardPage() {
           </div>
 
           {/* Next Button */}
-          <div style={{ display: 'flex', justifyContent: 'center', width: '100%' }}>
+          <div style={{ display: 'flex', justifyContent: 'center', width: '100%', marginTop: '10px' }}>
             <button
               onClick={handleNext}
               style={{
-                padding: '12px 40px',
+                padding: '10px 30px',
                 backgroundColor: '#17a2b8',
                 color: 'white',
                 border: 'none',
                 borderRadius: '8px',
                 cursor: 'pointer',
-                fontSize: '18px',
+                fontSize: '16px',
                 fontWeight: 'bold',
-                maxWidth: '300px',
-                marginTop: '10px'
+                maxWidth: '300px'
               }}
             >
               Next Word
