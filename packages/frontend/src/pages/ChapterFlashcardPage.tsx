@@ -406,14 +406,14 @@ export default function ChapterFlashcardPage() {
                 </div>
               )}
               
-              {/* Pronounce button on card */}
+              {/* Pronounce button on card - bottom right */}
               <button
                 onClick={handlePronounce}
                 disabled={playing}
                 style={{
                   position: 'absolute',
-                  top: '10px',
-                  left: '10px',
+                  bottom: '10px',
+                  right: '10px',
                   padding: '6px 10px',
                   backgroundColor: playing ? '#6c757d' : '#28a745',
                   color: 'white',

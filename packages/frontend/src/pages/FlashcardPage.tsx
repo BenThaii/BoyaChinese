@@ -316,14 +316,14 @@ export default function FlashcardPage() {
               </div>
             )}
             
-            {/* Pronounce button on card */}
+            {/* Pronounce button on card - bottom right */}
             <button
               onClick={handlePronounce}
               disabled={playing}
               style={{
                 position: 'absolute',
-                top: '15px',
-                left: '15px',
+                bottom: '15px',
+                right: '15px',
                 padding: '8px 12px',
                 backgroundColor: playing ? '#6c757d' : '#28a745',
                 color: 'white',
