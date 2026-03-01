@@ -369,6 +369,30 @@ export default function ChapterFlashcardPage() {
                   ★
                 </div>
               )}
+              
+              {/* Pronounce button on card */}
+              <button
+                onClick={handlePronounce}
+                disabled={playing}
+                style={{
+                  position: 'absolute',
+                  top: '10px',
+                  left: '10px',
+                  padding: '6px 10px',
+                  backgroundColor: playing ? '#6c757d' : '#28a745',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '6px',
+                  cursor: playing ? 'not-allowed' : 'pointer',
+                  fontSize: '18px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}
+              >
+                {playing ? '🔊' : '🔉'}
+              </button>
+              
               <div style={{
                 fontSize: '60px',
                 fontWeight: 'bold',

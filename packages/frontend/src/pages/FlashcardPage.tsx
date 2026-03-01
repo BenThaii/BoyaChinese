@@ -260,11 +260,11 @@ export default function FlashcardPage() {
         }}>
           {/* Chinese Character Card */}
           <div style={{
-            padding: '40px 20px',
+            padding: '30px 20px',
             backgroundColor: '#f8f9fa',
             border: '3px solid #007bff',
             borderRadius: '16px',
-            marginBottom: '20px',
+            marginBottom: '15px',
             boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
             position: 'relative'
           }}>
@@ -279,8 +279,32 @@ export default function FlashcardPage() {
                 ★
               </div>
             )}
+            
+            {/* Pronounce button on card */}
+            <button
+              onClick={handlePronounce}
+              disabled={playing}
+              style={{
+                position: 'absolute',
+                top: '15px',
+                left: '15px',
+                padding: '8px 12px',
+                backgroundColor: playing ? '#6c757d' : '#28a745',
+                color: 'white',
+                border: 'none',
+                borderRadius: '6px',
+                cursor: playing ? 'not-allowed' : 'pointer',
+                fontSize: '20px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}
+            >
+              {playing ? '🔊' : '🔉'}
+            </button>
+            
             <div style={{
-              fontSize: '80px',
+              fontSize: '60px',
               fontWeight: 'bold',
               color: '#333',
               marginBottom: '15px'
@@ -317,7 +341,7 @@ export default function FlashcardPage() {
               borderRadius: '12px',
               marginBottom: '20px',
               textAlign: 'left',
-              maxHeight: '50vh',
+              maxHeight: '30vh',
               overflow: 'auto'
             }}>
               <div style={{ marginBottom: '15px' }}>

@@ -7,93 +7,93 @@ Target after rejection (30 per batch): 240
   Batch 1: Starting at matchIndex 0
   Batch 1 RESULTS:
     - Candidates parsed: 75
-    - Valid sentences: 42
-    - Invalid sentences: 33
+    - Valid sentences: 68
+    - Invalid sentences: 7
     - Ended at matchIndex: 75
-    ⚠️  Rejected 33 sentences:
-      - "他是我的朋友。" [Invalid: 他]
-      - "讲座在什么时候？" [Invalid: 时, 候]
-      - "下课了。" [Invalid: 了]
-      ... and 30 more
+    ⚠️  Rejected 7 sentences:
+      - "那些是什么？" [Invalid: 些]
+      - "九点十分。" [Invalid: 分]
+      - "差五分六点。" [Invalid: 五, 分]
+      ... and 4 more
   Batch 2: Starting at matchIndex 75
   Batch 2 RESULTS:
     - Candidates parsed: 75
-    - Valid sentences: 41
-    - Invalid sentences: 34
+    - Valid sentences: 42
+    - Invalid sentences: 33
     - Ended at matchIndex: 150
-    ⚠️  Rejected 34 sentences:
-      - "老师好，认识您很高兴。" [Invalid: 高, 兴]
-      - "请问，您贵姓？" [Invalid: 贵]
-      - "宿舍在教学楼北边。" [Invalid: 教, 学]
-      ... and 31 more
+    ⚠️  Rejected 33 sentences:
+      - "认识你很高兴。" [Invalid: 很]
+      - "他是王老师。" [Invalid: 他]
+      - "他在教室里。" [Invalid: 他]
+      ... and 30 more
   Batch 3: Starting at matchIndex 150
   Batch 3 RESULTS:
     - Candidates parsed: 75
-    - Valid sentences: 35
-    - Invalid sentences: 40
+    - Valid sentences: 45
+    - Invalid sentences: 30
     - Ended at matchIndex: 225
-    ⚠️  Rejected 40 sentences:
-      - "你是美国人吗？" [Invalid: 人]
-      - "我不是美国人，我是加拿大人。" [Invalid: 人]
-      - "认识你很高兴。" [Invalid: 高, 兴]
-      ... and 37 more
+    ⚠️  Rejected 30 sentences:
+      - "认识你很高兴。" [Invalid: 你]
+      - "我姓李，叫李军。" [Invalid: 李]
+      - "她是王小姐。" [Invalid: 王]
+      ... and 27 more
   Batch 4: Starting at matchIndex 225
   Batch 4 RESULTS:
     - Candidates parsed: 75
-    - Valid sentences: 28
-    - Invalid sentences: 47
+    - Valid sentences: 45
+    - Invalid sentences: 30
     - Ended at matchIndex: 300
-    ⚠️  Rejected 47 sentences:
-      - "认识你很高兴。" [Invalid: 很]
-      - "我也很高兴。" [Invalid: 很]
-      - "我叫中村。" [Invalid: 中, 村]
-      ... and 44 more
-Vocab Group 1 COMPLETE: 118 sentences
+    ⚠️  Rejected 30 sentences:
+      - "我姓王，叫刘明。" [Invalid: 我]
+      - "他是加拿大人。" [Invalid: 加, 拿, 大]
+      - "那个日本人是谁？" [Invalid: 日]
+      ... and 27 more
+Vocab Group 1 COMPLETE: 120 sentences
 
 ----- Processing Vocab Group 2 -----
   Batch 1: Starting at matchIndex 300
   Batch 1 RESULTS:
     - Candidates parsed: 75
-    - Valid sentences: 31
-    - Invalid sentences: 44
+    - Valid sentences: 30
+    - Invalid sentences: 45
     - Ended at matchIndex: 375
-    ⚠️  Rejected 44 sentences:
-      - "我家有五口人。" [Invalid: 五]
-      - "我有哥哥和姐姐。" [Invalid: 和]
-      - "我没有弟弟，我有妹妹。" [Invalid: 没, 妹]
-      ... and 41 more
+    ⚠️  Rejected 45 sentences:
+      - "认识你很高兴。" [Invalid: 认, 识]
+      - "我介绍一下儿。" [Invalid: 一, 下, 儿]
+      - "这是我妈妈。" [Invalid: 妈]
+      ... and 42 more
   Batch 2: Starting at matchIndex 375
   Batch 2 RESULTS:
     - Candidates parsed: 75
-    - Valid sentences: 29
-    - Invalid sentences: 46
+    - Valid sentences: 34
+    - Invalid sentences: 41
     - Ended at matchIndex: 450
-    ⚠️  Rejected 46 sentences:
-      - "您好，请进。" [Invalid: 请, 进]
-      - "认识您很高兴。" [Invalid: 认, 识]
-      - "我也一样，请坐。" [Invalid: 样, 请, 坐]
-      ... and 43 more
+    ⚠️  Rejected 41 sentences:
+      - "对不起。" [Invalid: 起]
+      - "我想买书。" [Invalid: 书]
+      - "这里有很多书。" [Invalid: 多, 书]
+      ... and 38 more
   Batch 3: Starting at matchIndex 450
   Batch 3 RESULTS:
     - Candidates parsed: 75
-    - Valid sentences: 18
-    - Invalid sentences: 57
+    - Valid sentences: 37
+    - Invalid sentences: 38
     - Ended at matchIndex: 525
-    ⚠️  Rejected 57 sentences:
-      - "我叫李军，认识你很高兴。" [Invalid: 你]
-      - "你是哪国人？" [Invalid: 你]
-      - "你的专业是什么？" [Invalid: 你]
-      ... and 54 more
+    ⚠️  Rejected 38 sentences:
+      - "认识你很高兴。" [Invalid: 高, 兴]
+      - "我姓王，是大卫的朋友。" [Invalid: 姓, 朋, 友]
+      - "欢迎你。" [Invalid: 欢, 迎]
+      ... and 35 more
   Batch 4: Starting at matchIndex 525
   Batch 4 RESULTS:
     - Candidates parsed: 75
-    - Valid sentences: 14
-    - Invalid sentences: 61
+    - Valid sentences: 35
+    - Invalid sentences: 40
     - Ended at matchIndex: 600
-    ⚠️  Rejected 61 sentences:
-      - "我也很高兴，你是哪国人？" [Invalid: 人]
-      - "我是美国人，现在在大学学习。" [Invalid: 人, 现, 在, 学, 习]
-      - "你的专业是什么？" [Invalid: 专, 业]
-      ... and 58 more
-Vocab Group 2 COMPLETE: 91 sentences
+    ⚠️  Rejected 40 sentences:
+      - "认识你很高兴." [Invalid: 你]
+      - "谢谢您。" [Invalid: 谢]
+      - "没关系。" [Invalid: 没]
+      ... and 37 more
+Vocab Group 2 COMPLETE: 120 sentences
 
