@@ -30,6 +30,8 @@ export default function ChapterFlashcardPage() {
   const [showSettings, setShowSettings] = useState(true);
   const [showFavoriteConfirm, setShowFavoriteConfirm] = useState(false);
   const [favoriteAction, setFavoriteAction] = useState<'favorite' | 'unfavorite'>('favorite');
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedWord, setEditedWord] = useState<VocabularyEntry | null>(null);
 
   useEffect(() => {
     fetchAvailableChapters();
@@ -171,6 +173,40 @@ export default function ChapterFlashcardPage() {
     if (!currentWord) return;
     setFavoriteAction(currentWord.isFavorite ? 'unfavorite' : 'favorite');
     setShowFavoriteConfirm(true);
+  };
+
+  const handleEdit = () => {
+    if (currentWord) {
+      setEditedWord({ ...currentWord });
+      setIsEditing(true);
+    }
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editedWord || !currentWord) return;
+
+    try {
+      const response = await apiClient.put(`/user1/vocabulary/${currentWord.id}`, {
+        pinyin: editedWord.pinyin,
+        hanVietnamese: editedWord.hanVietnamese,
+        modernVietnamese: editedWord.modernVietnamese,
+        englishMeaning: editedWord.englishMeaning,
+        learningNote: editedWord.learningNote
+      });
+
+      setCurrentWord(response.data);
+      setIsEditing(false);
+      setEditedWord(null);
+      alert('Word updated successfully!');
+    } catch (error) {
+      console.error('Error updating word:', error);
+      alert('Failed to update word');
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setIsEditing(false);
+    setEditedWord(null);
   };
 
   return (
@@ -435,100 +471,262 @@ export default function ChapterFlashcardPage() {
                 overflow: 'auto',
                 fontSize: '14px'
               }}>
-                <div style={{ marginBottom: '10px' }}>
-                  <strong style={{ fontSize: '12px', color: '#666' }}>Chapter:</strong>
-                  <div style={{ fontSize: '14px', marginTop: '3px' }}>{currentWord.chapter}</div>
-                </div>
-
-                <div style={{ marginBottom: '10px' }}>
-                  <strong style={{ fontSize: '12px', color: '#666' }}>Pinyin:</strong>
-                  <div style={{ fontSize: '16px', marginTop: '3px' }}>{currentWord.pinyin}</div>
-                </div>
-
-                {currentWord.hanVietnamese && (
-                  <div style={{ marginBottom: '10px' }}>
-                    <strong style={{ fontSize: '12px', color: '#666' }}>Han Vietnamese:</strong>
-                    <div style={{ fontSize: '14px', marginTop: '3px' }}>{currentWord.hanVietnamese}</div>
-                  </div>
-                )}
-
-                {currentWord.modernVietnamese && (
-                  <div style={{ marginBottom: '10px' }}>
-                    <strong style={{ fontSize: '12px', color: '#666' }}>Modern Vietnamese:</strong>
-                    <div style={{ fontSize: '14px', marginTop: '3px' }}>{currentWord.modernVietnamese}</div>
-                  </div>
-                )}
-
-                {currentWord.englishMeaning && (
-                  <div style={{ marginBottom: '10px' }}>
-                    <strong style={{ fontSize: '12px', color: '#666' }}>English Meaning:</strong>
-                    <div style={{ fontSize: '14px', marginTop: '3px' }}>{currentWord.englishMeaning}</div>
-                  </div>
-                )}
-
-                {currentWord.learningNote && (
-                  <div style={{ marginBottom: '10px' }}>
-                    <strong style={{ fontSize: '12px', color: '#666' }}>Learning Note:</strong>
-                    <div style={{ fontSize: '13px', marginTop: '3px', fontStyle: 'italic' }}>
-                      {currentWord.learningNote}
+                {!isEditing ? (
+                  <>
+                    <div style={{ marginBottom: '10px' }}>
+                      <strong style={{ fontSize: '12px', color: '#666' }}>Pinyin:</strong>
+                      <div style={{ fontSize: '16px', marginTop: '3px' }}>{currentWord.pinyin}</div>
                     </div>
-                  </div>
+
+                    {currentWord.hanVietnamese && (
+                      <div style={{ marginBottom: '10px' }}>
+                        <strong style={{ fontSize: '12px', color: '#666' }}>Han Vietnamese:</strong>
+                        <div style={{ fontSize: '14px', marginTop: '3px' }}>{currentWord.hanVietnamese}</div>
+                      </div>
+                    )}
+
+                    {currentWord.modernVietnamese && (
+                      <div style={{ marginBottom: '10px' }}>
+                        <strong style={{ fontSize: '12px', color: '#666' }}>Modern Vietnamese:</strong>
+                        <div style={{ fontSize: '14px', marginTop: '3px' }}>{currentWord.modernVietnamese}</div>
+                      </div>
+                    )}
+
+                    {currentWord.englishMeaning && (
+                      <div style={{ marginBottom: '10px' }}>
+                        <strong style={{ fontSize: '12px', color: '#666' }}>English Meaning:</strong>
+                        <div style={{ fontSize: '14px', marginTop: '3px' }}>{currentWord.englishMeaning}</div>
+                      </div>
+                    )}
+
+                    {currentWord.learningNote && (
+                      <div style={{ marginBottom: '10px' }}>
+                        <strong style={{ fontSize: '12px', color: '#666' }}>Learning Note:</strong>
+                        <div style={{ fontSize: '13px', marginTop: '3px', fontStyle: 'italic' }}>
+                          {currentWord.learningNote}
+                        </div>
+                      </div>
+                    )}
+
+                    <div style={{ marginBottom: '10px', paddingTop: '8px', borderTop: '1px solid #dee2e6' }}>
+                      <strong style={{ fontSize: '12px', color: '#666' }}>Chapter:</strong>
+                      <div style={{ fontSize: '14px', marginTop: '3px' }}>{currentWord.chapter}</div>
+                    </div>
+
+                    <div 
+                      className="flashcard-buttons"
+                      style={{
+                        display: 'flex',
+                        flexDirection: 'row',
+                        gap: '8px',
+                        marginTop: '10px',
+                        paddingTop: '10px',
+                        borderTop: '1px solid #dee2e6'
+                      }}
+                    >
+                      <button
+                        onClick={handlePronounce}
+                        disabled={playing}
+                        style={{
+                          padding: '8px 12px',
+                          backgroundColor: playing ? '#6c757d' : '#28a745',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '6px',
+                          cursor: playing ? 'not-allowed' : 'pointer',
+                          fontSize: '13px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '4px',
+                          flex: 1
+                        }}
+                      >
+                        <span style={{ fontSize: '14px' }}>{playing ? '🔊' : '🔉'}</span>
+                        <span>{playing ? 'Playing...' : 'Pronounce'}</span>
+                      </button>
+
+                      <button
+                        onClick={handleEdit}
+                        style={{
+                          padding: '8px 12px',
+                          backgroundColor: '#007bff',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '6px',
+                          cursor: 'pointer',
+                          fontSize: '13px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '4px',
+                          flex: 1
+                        }}
+                      >
+                        <span style={{ fontSize: '14px' }}>✏️</span>
+                        <span>Edit</span>
+                      </button>
+
+                      <button
+                        onClick={handleFavoriteClick}
+                        style={{
+                          padding: '8px 12px',
+                          backgroundColor: currentWord.isFavorite ? '#dc3545' : '#ffc107',
+                          color: currentWord.isFavorite ? 'white' : '#000',
+                          border: 'none',
+                          borderRadius: '6px',
+                          cursor: 'pointer',
+                          fontSize: '13px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '4px',
+                          flex: 1
+                        }}
+                      >
+                        <span style={{ fontSize: '14px' }}>{currentWord.isFavorite ? '★' : '☆'}</span>
+                        <span>{currentWord.isFavorite ? 'Un-fav' : 'Favorite'}</span>
+                      </button>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div style={{ marginBottom: '10px' }}>
+                      <label style={{ fontSize: '12px', color: '#666', fontWeight: 'bold', display: 'block', marginBottom: '3px' }}>
+                        Pinyin:
+                      </label>
+                      <input
+                        type="text"
+                        value={editedWord?.pinyin || ''}
+                        onChange={(e) => setEditedWord(editedWord ? { ...editedWord, pinyin: e.target.value } : null)}
+                        style={{
+                          width: '100%',
+                          padding: '6px',
+                          fontSize: '14px',
+                          borderRadius: '4px',
+                          border: '1px solid #dee2e6'
+                        }}
+                      />
+                    </div>
+
+                    <div style={{ marginBottom: '10px' }}>
+                      <label style={{ fontSize: '12px', color: '#666', fontWeight: 'bold', display: 'block', marginBottom: '3px' }}>
+                        Han Vietnamese:
+                      </label>
+                      <input
+                        type="text"
+                        value={editedWord?.hanVietnamese || ''}
+                        onChange={(e) => setEditedWord(editedWord ? { ...editedWord, hanVietnamese: e.target.value } : null)}
+                        style={{
+                          width: '100%',
+                          padding: '6px',
+                          fontSize: '14px',
+                          borderRadius: '4px',
+                          border: '1px solid #dee2e6'
+                        }}
+                      />
+                    </div>
+
+                    <div style={{ marginBottom: '10px' }}>
+                      <label style={{ fontSize: '12px', color: '#666', fontWeight: 'bold', display: 'block', marginBottom: '3px' }}>
+                        Modern Vietnamese:
+                      </label>
+                      <input
+                        type="text"
+                        value={editedWord?.modernVietnamese || ''}
+                        onChange={(e) => setEditedWord(editedWord ? { ...editedWord, modernVietnamese: e.target.value } : null)}
+                        style={{
+                          width: '100%',
+                          padding: '6px',
+                          fontSize: '14px',
+                          borderRadius: '4px',
+                          border: '1px solid #dee2e6'
+                        }}
+                      />
+                    </div>
+
+                    <div style={{ marginBottom: '10px' }}>
+                      <label style={{ fontSize: '12px', color: '#666', fontWeight: 'bold', display: 'block', marginBottom: '3px' }}>
+                        English Meaning:
+                      </label>
+                      <input
+                        type="text"
+                        value={editedWord?.englishMeaning || ''}
+                        onChange={(e) => setEditedWord(editedWord ? { ...editedWord, englishMeaning: e.target.value } : null)}
+                        style={{
+                          width: '100%',
+                          padding: '6px',
+                          fontSize: '14px',
+                          borderRadius: '4px',
+                          border: '1px solid #dee2e6'
+                        }}
+                      />
+                    </div>
+
+                    <div style={{ marginBottom: '10px' }}>
+                      <label style={{ fontSize: '12px', color: '#666', fontWeight: 'bold', display: 'block', marginBottom: '3px' }}>
+                        Learning Note:
+                      </label>
+                      <textarea
+                        value={editedWord?.learningNote || ''}
+                        onChange={(e) => setEditedWord(editedWord ? { ...editedWord, learningNote: e.target.value } : null)}
+                        rows={2}
+                        style={{
+                          width: '100%',
+                          padding: '6px',
+                          fontSize: '14px',
+                          borderRadius: '4px',
+                          border: '1px solid #dee2e6',
+                          resize: 'vertical'
+                        }}
+                      />
+                    </div>
+
+                    <div 
+                      className="flashcard-buttons"
+                      style={{
+                        display: 'flex',
+                        flexDirection: 'row',
+                        gap: '8px',
+                        marginTop: '10px',
+                        paddingTop: '10px',
+                        borderTop: '1px solid #dee2e6'
+                      }}
+                    >
+                      <button
+                        onClick={handleCancelEdit}
+                        style={{
+                          padding: '8px 12px',
+                          backgroundColor: '#6c757d',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '6px',
+                          cursor: 'pointer',
+                          fontSize: '13px',
+                          flex: 1
+                        }}
+                      >
+                        Cancel
+                      </button>
+
+                      <button
+                        onClick={handleSaveEdit}
+                        style={{
+                          padding: '8px 12px',
+                          backgroundColor: '#28a745',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '6px',
+                          cursor: 'pointer',
+                          fontSize: '13px',
+                          flex: 1
+                        }}
+                      >
+                        Save
+                      </button>
+                    </div>
+                  </>
                 )}
-
-                <div 
-                  className="flashcard-buttons"
-                  style={{
-                    display: 'flex',
-                    flexDirection: 'row',
-                    gap: '8px',
-                    marginTop: '10px',
-                    paddingTop: '10px',
-                    borderTop: '1px solid #dee2e6'
-                  }}
-                >
-                  <button
-                    onClick={handlePronounce}
-                    disabled={playing}
-                    style={{
-                      padding: '8px 12px',
-                      backgroundColor: playing ? '#6c757d' : '#28a745',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '6px',
-                      cursor: playing ? 'not-allowed' : 'pointer',
-                      fontSize: '13px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '4px',
-                      flex: 1
-                    }}
-                  >
-                    <span style={{ fontSize: '14px' }}>{playing ? '🔊' : '🔉'}</span>
-                    <span>{playing ? 'Playing...' : 'Pronounce'}</span>
-                  </button>
-
-                  <button
-                    onClick={handleFavoriteClick}
-                    style={{
-                      padding: '8px 12px',
-                      backgroundColor: currentWord.isFavorite ? '#dc3545' : '#ffc107',
-                      color: currentWord.isFavorite ? 'white' : '#000',
-                      border: 'none',
-                      borderRadius: '6px',
-                      cursor: 'pointer',
-                      fontSize: '13px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '4px',
-                      flex: 1
-                    }}
-                  >
-                    <span style={{ fontSize: '14px' }}>{currentWord.isFavorite ? '★' : '☆'}</span>
-                    <span>{currentWord.isFavorite ? 'Un-favorite' : 'Favorite'}</span>
-                  </button>
-                </div>
 
                 {/* Mobile responsive styles */}
                 <style>{`
