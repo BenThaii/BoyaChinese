@@ -10,7 +10,7 @@ export default function VocabularyManagement() {
   const [loading, setLoading] = useState(false);
   const [showBatchUpload, setShowBatchUpload] = useState(false);
   const [batchText, setBatchText] = useState('');
-  const [batchChapter, setBatchChapter] = useState(1);
+  const [batchChapter, setBatchChapter] = useState<string>('1');
   const [batchUploading, setBatchUploading] = useState(false);
   const [batchResult, setBatchResult] = useState<{ success: number; failed: number; total: number } | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -110,11 +110,19 @@ export default function VocabularyManagement() {
 
   const handleBatchUpload = async () => {
     if (!username || !batchText.trim()) return;
+    
+    // Validate chapter input
+    const chapterNum = parseInt(batchChapter);
+    if (!batchChapter.trim() || isNaN(chapterNum) || chapterNum < 1) {
+      alert('Please enter a valid chapter number (must be 1 or greater)');
+      return;
+    }
+    
     setBatchUploading(true);
     setBatchResult(null);
     try {
-      console.log('Sending batch upload request:', { username, batchText, batchChapter });
-      const response = await vocabularyApi.batchUpload(username, batchText, batchChapter);
+      console.log('Sending batch upload request:', { username, batchText, batchChapter: chapterNum });
+      const response = await vocabularyApi.batchUpload(username, batchText, chapterNum);
       console.log('Batch upload response:', response.data);
       setBatchResult({
         success: response.data.success,
@@ -347,27 +355,33 @@ export default function VocabularyManagement() {
           {showFavoritesOnly ? '★ Favorites Only' : '☆ Show All'}
         </button>
         <button
-          onClick={() => setColumnFilters({
-            favorite: 'all',
-            chinese: '',
-            pinyin: '',
-            hanVietnamese: '',
-            modernVietnamese: '',
-            english: '',
-            note: ''
-          })}
+          onClick={() => {
+            // Clear all filters
+            setSelectedChapter(null);
+            setShowFavoritesOnly(false);
+            setColumnFilters({
+              favorite: 'all',
+              chinese: '',
+              pinyin: '',
+              hanVietnamese: '',
+              modernVietnamese: '',
+              english: '',
+              note: ''
+            });
+          }}
           style={{
             marginLeft: '15px',
-            backgroundColor: '#6c757d',
+            backgroundColor: '#dc3545',
             color: 'white',
-            border: '1px solid #dee2e6',
+            border: '1px solid #dc3545',
             padding: '5px 15px',
             borderRadius: '4px',
-            cursor: 'pointer'
+            cursor: 'pointer',
+            fontWeight: 'bold'
           }}
-          title="Clear all column filters"
+          title="Clear all filters (chapter, favorites, and column filters)"
         >
-          Clear Filters
+          🗑️ Clear All Filters
         </button>
         <span style={{ color: '#666', fontSize: '14px', marginLeft: '15px' }}>
           ({displayedEntries.length} {showFavoritesOnly ? 'favorites' : 'entries'})
@@ -430,10 +444,11 @@ export default function VocabularyManagement() {
               <input
                 type="number"
                 value={batchChapter}
-                onChange={(e) => setBatchChapter(parseInt(e.target.value) || 1)}
+                onChange={(e) => setBatchChapter(e.target.value)}
                 min="1"
                 style={{ marginLeft: '10px', width: '80px' }}
                 disabled={batchUploading}
+                placeholder="Chapter"
               />
             </label>
           </div>
