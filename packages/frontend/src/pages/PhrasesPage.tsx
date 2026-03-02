@@ -51,6 +51,8 @@ export default function PhrasesPage() {
     const startTime = localStorage.getItem('phraseGenerationStartTime');
     return startTime ? parseInt(startTime) : null;
   });
+  const [editingCharacter, setEditingCharacter] = useState<string | null>(null);
+  const [editedCharacterData, setEditedCharacterData] = useState<CharacterInfo | null>(null);
 
   // Fetch vocab groups on mount
   useEffect(() => {
@@ -269,6 +271,59 @@ export default function PhrasesPage() {
       console.error('Error toggling favorite:', error);
       alert('Failed to update favorite status');
     }
+  };
+
+  const handleEditCharacter = (char: CharacterInfo) => {
+    setEditingCharacter(char.chineseCharacter);
+    setEditedCharacterData({ ...char });
+  };
+
+  const handleSaveCharacter = async () => {
+    if (!editedCharacterData || !editingCharacter) return;
+
+    try {
+      // Get the vocabulary entry by character to find the ID
+      const entriesResponse = await apiClient.get(`/user1/vocabulary`);
+      const entry = entriesResponse.data.find((e: any) => e.chineseCharacter === editingCharacter);
+      
+      if (!entry) {
+        alert('Character not found in vocabulary');
+        return;
+      }
+
+      // Update using the actual ID
+      await apiClient.put(`/user1/vocabulary/${entry.id}`, {
+        pinyin: editedCharacterData.pinyin,
+        hanVietnamese: editedCharacterData.hanVietnamese,
+        modernVietnamese: editedCharacterData.modernVietnamese,
+        englishMeaning: editedCharacterData.englishMeaning
+      });
+
+      // Update local state
+      setCharacterDetails(prevDetails =>
+        prevDetails.map(char =>
+          char.chineseCharacter === editingCharacter
+            ? editedCharacterData
+            : char
+        )
+      );
+
+      setEditingCharacter(null);
+      setEditedCharacterData(null);
+      alert('Character updated successfully!');
+    } catch (error) {
+      console.error('Error updating character:', error);
+      alert('Failed to update character');
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setEditingCharacter(null);
+    setEditedCharacterData(null);
+  };
+
+  const scrollToTop = () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleRefreshPhrases = async () => {
@@ -692,6 +747,7 @@ export default function PhrasesPage() {
                         <th style={{ padding: '10px', border: '1px solid #dee2e6', textAlign: 'left' }}>English</th>
                         <th style={{ padding: '10px', border: '1px solid #dee2e6', textAlign: 'center' }}>Favorite</th>
                         <th style={{ padding: '10px', border: '1px solid #dee2e6', textAlign: 'center' }}>Pronounce</th>
+                        <th style={{ padding: '10px', border: '1px solid #dee2e6', textAlign: 'center' }}>Edit</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -700,30 +756,71 @@ export default function PhrasesPage() {
                           <td style={{ padding: '10px', border: '1px solid #dee2e6', fontSize: '20px' }}>
                             {char.chineseCharacter}
                           </td>
-                          <td style={{ padding: '10px', border: '1px solid #dee2e6' }}>
-                            {char.pinyin || 'N/A'}
-                          </td>
-                          <td style={{ padding: '10px', border: '1px solid #dee2e6' }}>
-                            {char.hanVietnamese || 'N/A'}
-                          </td>
-                          <td style={{ padding: '10px', border: '1px solid #dee2e6' }}>
-                            {char.modernVietnamese || 'N/A'}
-                          </td>
-                          <td style={{ padding: '10px', border: '1px solid #dee2e6' }}>
-                            {char.englishMeaning || 'N/A'}
-                          </td>
+                          {editingCharacter === char.chineseCharacter ? (
+                            <>
+                              <td style={{ padding: '10px', border: '1px solid #dee2e6' }}>
+                                <input
+                                  type="text"
+                                  value={editedCharacterData?.pinyin || ''}
+                                  onChange={(e) => setEditedCharacterData(editedCharacterData ? { ...editedCharacterData, pinyin: e.target.value } : null)}
+                                  style={{ width: '100%', padding: '4px', fontSize: '14px', border: '1px solid #dee2e6', borderRadius: '4px' }}
+                                />
+                              </td>
+                              <td style={{ padding: '10px', border: '1px solid #dee2e6' }}>
+                                <input
+                                  type="text"
+                                  value={editedCharacterData?.hanVietnamese || ''}
+                                  onChange={(e) => setEditedCharacterData(editedCharacterData ? { ...editedCharacterData, hanVietnamese: e.target.value } : null)}
+                                  style={{ width: '100%', padding: '4px', fontSize: '14px', border: '1px solid #dee2e6', borderRadius: '4px' }}
+                                />
+                              </td>
+                              <td style={{ padding: '10px', border: '1px solid #dee2e6' }}>
+                                <input
+                                  type="text"
+                                  value={editedCharacterData?.modernVietnamese || ''}
+                                  onChange={(e) => setEditedCharacterData(editedCharacterData ? { ...editedCharacterData, modernVietnamese: e.target.value } : null)}
+                                  style={{ width: '100%', padding: '4px', fontSize: '14px', border: '1px solid #dee2e6', borderRadius: '4px' }}
+                                />
+                              </td>
+                              <td style={{ padding: '10px', border: '1px solid #dee2e6' }}>
+                                <input
+                                  type="text"
+                                  value={editedCharacterData?.englishMeaning || ''}
+                                  onChange={(e) => setEditedCharacterData(editedCharacterData ? { ...editedCharacterData, englishMeaning: e.target.value } : null)}
+                                  style={{ width: '100%', padding: '4px', fontSize: '14px', border: '1px solid #dee2e6', borderRadius: '4px' }}
+                                />
+                              </td>
+                            </>
+                          ) : (
+                            <>
+                              <td style={{ padding: '10px', border: '1px solid #dee2e6' }}>
+                                {char.pinyin || 'N/A'}
+                              </td>
+                              <td style={{ padding: '10px', border: '1px solid #dee2e6' }}>
+                                {char.hanVietnamese || 'N/A'}
+                              </td>
+                              <td style={{ padding: '10px', border: '1px solid #dee2e6' }}>
+                                {char.modernVietnamese || 'N/A'}
+                              </td>
+                              <td style={{ padding: '10px', border: '1px solid #dee2e6' }}>
+                                {char.englishMeaning || 'N/A'}
+                              </td>
+                            </>
+                          )}
                           <td style={{ padding: '10px', border: '1px solid #dee2e6', textAlign: 'center' }}>
                             <button
                               onClick={() => handleToggleFavorite(char.chineseCharacter, char.isFavorite || false)}
+                              disabled={editingCharacter === char.chineseCharacter}
                               style={{
                                 padding: '5px 10px',
                                 backgroundColor: 'transparent',
                                 color: char.isFavorite ? '#ffc107' : '#ccc',
                                 border: 'none',
                                 borderRadius: '4px',
-                                cursor: 'pointer',
+                                cursor: editingCharacter === char.chineseCharacter ? 'not-allowed' : 'pointer',
                                 fontSize: '20px',
-                                transition: 'color 0.2s'
+                                transition: 'color 0.2s',
+                                opacity: editingCharacter === char.chineseCharacter ? 0.5 : 1
                               }}
                               title={char.isFavorite ? 'Remove from favorites' : 'Add to favorites'}
                             >
@@ -733,19 +830,69 @@ export default function PhrasesPage() {
                           <td style={{ padding: '10px', border: '1px solid #dee2e6', textAlign: 'center' }}>
                             <button
                               onClick={() => handlePronounceCharacter(char.chineseCharacter)}
-                              disabled={playingCharacter === char.chineseCharacter}
+                              disabled={playingCharacter === char.chineseCharacter || editingCharacter === char.chineseCharacter}
                               style={{
                                 padding: '5px 10px',
                                 backgroundColor: playingCharacter === char.chineseCharacter ? '#ccc' : '#007bff',
                                 color: 'white',
                                 border: 'none',
                                 borderRadius: '4px',
-                                cursor: playingCharacter === char.chineseCharacter ? 'not-allowed' : 'pointer',
-                                fontSize: '14px'
+                                cursor: (playingCharacter === char.chineseCharacter || editingCharacter === char.chineseCharacter) ? 'not-allowed' : 'pointer',
+                                fontSize: '14px',
+                                opacity: editingCharacter === char.chineseCharacter ? 0.5 : 1
                               }}
                             >
                               {playingCharacter === char.chineseCharacter ? '🔊' : '🔉'}
                             </button>
+                          </td>
+                          <td style={{ padding: '10px', border: '1px solid #dee2e6', textAlign: 'center' }}>
+                            {editingCharacter === char.chineseCharacter ? (
+                              <div style={{ display: 'flex', gap: '5px', justifyContent: 'center' }}>
+                                <button
+                                  onClick={handleSaveCharacter}
+                                  style={{
+                                    padding: '5px 10px',
+                                    backgroundColor: '#28a745',
+                                    color: 'white',
+                                    border: 'none',
+                                    borderRadius: '4px',
+                                    cursor: 'pointer',
+                                    fontSize: '12px'
+                                  }}
+                                >
+                                  Save
+                                </button>
+                                <button
+                                  onClick={handleCancelEdit}
+                                  style={{
+                                    padding: '5px 10px',
+                                    backgroundColor: '#6c757d',
+                                    color: 'white',
+                                    border: 'none',
+                                    borderRadius: '4px',
+                                    cursor: 'pointer',
+                                    fontSize: '12px'
+                                  }}
+                                >
+                                  Cancel
+                                </button>
+                              </div>
+                            ) : (
+                              <button
+                                onClick={() => handleEditCharacter(char)}
+                                style={{
+                                  padding: '5px 10px',
+                                  backgroundColor: '#007bff',
+                                  color: 'white',
+                                  border: 'none',
+                                  borderRadius: '4px',
+                                  cursor: 'pointer',
+                                  fontSize: '14px'
+                                }}
+                              >
+                                ✏️
+                              </button>
+                            )}
                           </td>
                         </tr>
                       ))}
@@ -761,6 +908,33 @@ export default function PhrasesPage() {
           </div>
         </div>
       )}
+
+      {/* Go to Top Button */}
+      <button
+        onClick={scrollToTop}
+        style={{
+          position: 'fixed',
+          bottom: '30px',
+          right: '30px',
+          padding: '12px 16px',
+          backgroundColor: '#007bff',
+          color: 'white',
+          border: 'none',
+          borderRadius: '50%',
+          cursor: 'pointer',
+          fontSize: '24px',
+          boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
+          zIndex: 1000,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          width: '50px',
+          height: '50px'
+        }}
+        title="Go to top"
+      >
+        ↑
+      </button>
     </div>
   );
 }
