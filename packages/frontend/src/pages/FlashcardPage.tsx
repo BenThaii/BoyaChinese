@@ -652,20 +652,22 @@ export default function FlashcardPage() {
           <div style={{ display: 'flex', justifyContent: 'center', width: '100%' }}>
             <button
               onClick={handleNext}
+              disabled={isEditing}
               style={{
                 padding: '12px 40px',
-                backgroundColor: '#17a2b8',
+                backgroundColor: isEditing ? '#6c757d' : '#17a2b8',
                 color: 'white',
                 border: 'none',
                 borderRadius: '8px',
-                cursor: 'pointer',
+                cursor: isEditing ? 'not-allowed' : 'pointer',
                 fontSize: '18px',
                 fontWeight: 'bold',
                 maxWidth: '300px',
-                marginTop: '10px'
+                marginTop: '10px',
+                opacity: isEditing ? 0.6 : 1
               }}
             >
-              Next Word
+              {isEditing ? 'Save or Cancel Edit First' : 'Next Word'}
             </button>
           </div>
         </div>

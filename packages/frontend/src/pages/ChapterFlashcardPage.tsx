@@ -744,19 +744,21 @@ export default function ChapterFlashcardPage() {
           <div style={{ display: 'flex', justifyContent: 'center', width: '100%', marginTop: '10px' }}>
             <button
               onClick={handleNext}
+              disabled={isEditing}
               style={{
                 padding: '10px 30px',
-                backgroundColor: '#17a2b8',
+                backgroundColor: isEditing ? '#6c757d' : '#17a2b8',
                 color: 'white',
                 border: 'none',
                 borderRadius: '8px',
-                cursor: 'pointer',
+                cursor: isEditing ? 'not-allowed' : 'pointer',
                 fontSize: '16px',
                 fontWeight: 'bold',
-                maxWidth: '300px'
+                maxWidth: '300px',
+                opacity: isEditing ? 0.6 : 1
               }}
             >
-              Next Word
+              {isEditing ? 'Save or Cancel Edit First' : 'Next Word'}
             </button>
           </div>
         </div>
