@@ -579,6 +579,57 @@ router.post('/:username/vocabulary/toggle-favorite', async (req: Request, res: R
 });
 
 /**
+ * GET /api/:username/vocabulary/favorites
+ * 
+ * Get all favorite vocabulary entries with optional chapter filtering
+ * Query parameters:
+ * - chapterStart: number (optional)
+ * - chapterEnd: number (optional)
+ * 
+ * Response:
+ * - 200: Array of favorite entries
+ * - 400: Invalid parameters
+ * - 500: Server error
+ */
+router.get('/:username/vocabulary/favorites', async (req: Request, res: Response) => {
+  try {
+    const { username } = req.params;
+    const { chapterStart, chapterEnd } = req.query;
+
+    if (!username || typeof username !== 'string') {
+      return res.status(400).json({ error: 'Invalid username' });
+    }
+
+    let chapterRange;
+    if (chapterStart && chapterEnd) {
+      const start = parseInt(chapterStart as string, 10);
+      const end = parseInt(chapterEnd as string, 10);
+
+      if (isNaN(start) || isNaN(end)) {
+        return res.status(400).json({ error: 'chapterStart and chapterEnd must be valid numbers' });
+      }
+
+      if (start < 1 || end < 1) {
+        return res.status(400).json({ error: 'Chapter numbers must be positive integers' });
+      }
+
+      if (start > end) {
+        return res.status(400).json({ error: 'chapterStart must be less than or equal to chapterEnd' });
+      }
+
+      chapterRange = { start, end };
+    }
+
+    const entries = await vocabularyManager.getEntries(username, chapterRange);
+    const favorites = entries.filter(entry => entry.isFavorite);
+    res.json(favorites);
+  } catch (error) {
+    console.error('Error getting favorite entries:', error);
+    res.status(500).json({ error: 'Failed to get favorite entries' });
+  }
+});
+
+/**
  * GET /api/:username/vocabulary/favorites/random
  * 
  * Get a random favorite vocabulary entry with optional chapter filtering

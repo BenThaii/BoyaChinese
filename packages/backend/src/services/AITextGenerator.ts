@@ -465,6 +465,11 @@ CRITICAL RULES:
 3. Create REAL, MEANINGFUL sentences with proper grammar
 4. Each sentence should be SHORT (maximum 40 characters excluding punctuation)
 5. Use simple, common sentence patterns
+6. SPECIAL HANDLING FOR PLACEHOLDERS: If a character contains "。。。" (three dots), you can fill in appropriate content:
+   - Example: "太。。。了" → "太冷了", "太热了", "太好了", etc.
+   - Example: "很。。。" → "很好", "很冷", "很热", etc.
+   - The filled content should use characters from the available list when possible
+   - This allows creating natural sentences with common patterns
 
 TASK:
 Generate sentences for ${vocabGroupsData.length} vocabulary groups, each with 4 batches.

@@ -32,6 +32,9 @@ export default function ChapterFlashcardPage() {
   const [favoriteAction, setFavoriteAction] = useState<'favorite' | 'unfavorite'>('favorite');
   const [isEditing, setIsEditing] = useState(false);
   const [editedWord, setEditedWord] = useState<VocabularyEntry | null>(null);
+  const [algorithm, setAlgorithm] = useState<'random' | 'shuffled'>('random');
+  const [shuffledWords, setShuffledWords] = useState<VocabularyEntry[]>([]);
+  const [currentIndex, setCurrentIndex] = useState(0);
 
   useEffect(() => {
     fetchAvailableChapters();
@@ -57,11 +60,40 @@ export default function ChapterFlashcardPage() {
     setNoWords(false);
     
     try {
-      const response = await apiClient.get<VocabularyEntry>(
-        `/user1/vocabulary/chapters/random?chapterStart=${chapterStart}&chapterEnd=${chapterEnd}`
-      );
-      setCurrentWord(response.data);
-      setShowSettings(false);
+      if (algorithm === 'shuffled') {
+        // Shuffled algorithm: fetch all words once and serve in order
+        if (shuffledWords.length === 0 || currentIndex >= shuffledWords.length) {
+          // Fetch all words in chapter range
+          const response = await apiClient.get<VocabularyEntry[]>(
+            `/user1/vocabulary?chapterStart=${chapterStart}&chapterEnd=${chapterEnd}`
+          );
+          
+          if (response.data.length === 0) {
+            setNoWords(true);
+            setError(`No words found in chapters ${chapterStart}-${chapterEnd}. Please select different chapters.`);
+            setLoading(false);
+            return;
+          }
+          
+          // Shuffle the array
+          const shuffled = [...response.data].sort(() => Math.random() - 0.5);
+          setShuffledWords(shuffled);
+          setCurrentIndex(0);
+          setCurrentWord(shuffled[0]);
+          setShowSettings(false);
+        } else {
+          // Serve next word from shuffled list
+          setCurrentWord(shuffledWords[currentIndex]);
+          setCurrentIndex(currentIndex + 1);
+        }
+      } else {
+        // Random algorithm: fetch random word each time
+        const response = await apiClient.get<VocabularyEntry>(
+          `/user1/vocabulary/chapters/random?chapterStart=${chapterStart}&chapterEnd=${chapterEnd}`
+        );
+        setCurrentWord(response.data);
+        setShowSettings(false);
+      }
     } catch (err: any) {
       if (err.response?.status === 404) {
         setNoWords(true);
@@ -79,6 +111,9 @@ export default function ChapterFlashcardPage() {
       setError('Start chapter must be less than or equal to end chapter');
       return;
     }
+    // Reset shuffled state when starting
+    setShuffledWords([]);
+    setCurrentIndex(0);
     fetchRandomWord();
   };
 
@@ -145,6 +180,9 @@ export default function ChapterFlashcardPage() {
     setShowSettings(true);
     setCurrentWord(null);
     setError(null);
+    // Reset shuffled state when changing settings
+    setShuffledWords([]);
+    setCurrentIndex(0);
   };
 
   const handleToggleFavorite = async () => {
@@ -279,6 +317,31 @@ export default function ChapterFlashcardPage() {
             </select>
           </div>
 
+          <div style={{ marginBottom: '25px' }}>
+            <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
+              Algorithm:
+            </label>
+            <select
+              value={algorithm}
+              onChange={(e) => setAlgorithm(e.target.value as 'random' | 'shuffled')}
+              style={{
+                width: '100%',
+                padding: '10px',
+                fontSize: '16px',
+                borderRadius: '6px',
+                border: '1px solid #dee2e6'
+              }}
+            >
+              <option value="random">🎲 Random (may repeat)</option>
+              <option value="shuffled">🔀 Shuffled Order (covers all)</option>
+            </select>
+            <div style={{ fontSize: '13px', color: '#666', marginTop: '5px' }}>
+              {algorithm === 'random' 
+                ? 'Each word is randomly selected - words may repeat before all are seen'
+                : 'All words shuffled once - each word shown exactly once per pass'}
+            </div>
+          </div>
+
           {error && (
             <div style={{
               padding: '12px',
@@ -368,6 +431,11 @@ export default function ChapterFlashcardPage() {
               fontSize: '13px'
             }}>
               <strong>Chapters {chapterStart}-{chapterEnd}</strong>
+              {algorithm === 'shuffled' && shuffledWords.length > 0 && (
+                <span style={{ marginLeft: '8px', color: '#666' }}>
+                  • {currentIndex}/{shuffledWords.length} words
+                </span>
+              )}
               {' | '}
               <button
                 onClick={handleChangeSettings}

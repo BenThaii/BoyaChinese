@@ -31,6 +31,9 @@ export default function FlashcardPage() {
   const [availableChapters, setAvailableChapters] = useState<number[]>([]);
   const [isEditing, setIsEditing] = useState(false);
   const [editedWord, setEditedWord] = useState<VocabularyEntry | null>(null);
+  const [algorithm, setAlgorithm] = useState<'random' | 'shuffled'>('random');
+  const [shuffledWords, setShuffledWords] = useState<VocabularyEntry[]>([]);
+  const [currentIndex, setCurrentIndex] = useState(0);
 
   useEffect(() => {
     fetchAvailableChapters();
@@ -53,13 +56,48 @@ export default function FlashcardPage() {
     setNoFavorites(false);
     
     try {
-      let url = '/user1/vocabulary/favorites/random';
-      if (chapterStart !== null && chapterEnd !== null) {
-        url += `?chapterStart=${chapterStart}&chapterEnd=${chapterEnd}`;
+      if (algorithm === 'shuffled') {
+        // Shuffled algorithm: fetch all words once and serve in order
+        if (shuffledWords.length === 0 || currentIndex >= shuffledWords.length) {
+          // Fetch all favorites
+          let url = '/user1/vocabulary/favorites';
+          if (chapterStart !== null && chapterEnd !== null) {
+            url += `?chapterStart=${chapterStart}&chapterEnd=${chapterEnd}`;
+          }
+          
+          const response = await apiClient.get<VocabularyEntry[]>(url);
+          
+          if (response.data.length === 0) {
+            setNoFavorites(true);
+            if (chapterStart !== null && chapterEnd !== null) {
+              setError(`No favorite words found in chapters ${chapterStart}-${chapterEnd}. Try different chapters or remove the filter.`);
+            } else {
+              setError('No favorite words found. Please mark some words as favorites first.');
+            }
+            setLoading(false);
+            return;
+          }
+          
+          // Shuffle the array
+          const shuffled = [...response.data].sort(() => Math.random() - 0.5);
+          setShuffledWords(shuffled);
+          setCurrentIndex(0);
+          setCurrentWord(shuffled[0]);
+        } else {
+          // Serve next word from shuffled list
+          setCurrentWord(shuffledWords[currentIndex]);
+          setCurrentIndex(currentIndex + 1);
+        }
+      } else {
+        // Random algorithm: fetch random word each time
+        let url = '/user1/vocabulary/favorites/random';
+        if (chapterStart !== null && chapterEnd !== null) {
+          url += `?chapterStart=${chapterStart}&chapterEnd=${chapterEnd}`;
+        }
+        
+        const response = await apiClient.get<VocabularyEntry>(url);
+        setCurrentWord(response.data);
       }
-      
-      const response = await apiClient.get<VocabularyEntry>(url);
-      setCurrentWord(response.data);
     } catch (err: any) {
       if (err.response?.status === 404) {
         setNoFavorites(true);
@@ -124,6 +162,9 @@ export default function FlashcardPage() {
       return;
     }
     setShowChapterFilter(false);
+    // Reset shuffled list when filter changes
+    setShuffledWords([]);
+    setCurrentIndex(0);
     fetchRandomFavorite();
   };
 
@@ -131,6 +172,9 @@ export default function FlashcardPage() {
     setChapterStart(null);
     setChapterEnd(null);
     setShowChapterFilter(false);
+    // Reset shuffled list when filter changes
+    setShuffledWords([]);
+    setCurrentIndex(0);
     // Trigger fetch after state updates
     setTimeout(() => fetchRandomFavorite(), 0);
   };
@@ -228,7 +272,7 @@ export default function FlashcardPage() {
 
       {/* Chapter Filter Button */}
       {!loading && !error && (
-        <div style={{ marginBottom: '15px' }}>
+        <div style={{ marginBottom: '15px', display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap', justifyContent: 'center' }}>
           <button
             onClick={() => setShowChapterFilter(true)}
             style={{
@@ -243,6 +287,36 @@ export default function FlashcardPage() {
           >
             {chapterStart !== null ? '📚 Filter Active' : '📚 Filter by Chapter'}
           </button>
+          
+          <select
+            value={algorithm}
+            onChange={(e) => {
+              const newAlgorithm = e.target.value as 'random' | 'shuffled';
+              setAlgorithm(newAlgorithm);
+              setShuffledWords([]);
+              setCurrentIndex(0);
+              if (newAlgorithm === 'shuffled') {
+                fetchRandomFavorite();
+              }
+            }}
+            style={{
+              padding: '8px 12px',
+              fontSize: '14px',
+              borderRadius: '6px',
+              border: '1px solid #dee2e6',
+              backgroundColor: 'white',
+              cursor: 'pointer'
+            }}
+          >
+            <option value="random">🎲 Random</option>
+            <option value="shuffled">🔀 Shuffled Order</option>
+          </select>
+          
+          {algorithm === 'shuffled' && shuffledWords.length > 0 && (
+            <span style={{ fontSize: '13px', color: '#666' }}>
+              {currentIndex}/{shuffledWords.length}
+            </span>
+          )}
         </div>
       )}
 

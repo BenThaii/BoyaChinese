@@ -7,93 +7,93 @@ Target after rejection (30 per batch): 240
   Batch 1: Starting at matchIndex 0
   Batch 1 RESULTS:
     - Candidates parsed: 75
-    - Valid sentences: 68
-    - Invalid sentences: 7
+    - Valid sentences: 47
+    - Invalid sentences: 28
     - Ended at matchIndex: 75
-    ⚠️  Rejected 7 sentences:
-      - "那些是什么？" [Invalid: 些]
-      - "九点十分。" [Invalid: 分]
-      - "差五分六点。" [Invalid: 五, 分]
-      ... and 4 more
+    ⚠️  Rejected 28 sentences:
+      - "我们是美国人。" [Invalid: 人]
+      - "他是加拿大人吗？" [Invalid: 人]
+      - "我不是日本人。" [Invalid: 人]
+      ... and 25 more
   Batch 2: Starting at matchIndex 75
   Batch 2 RESULTS:
     - Candidates parsed: 75
-    - Valid sentences: 42
-    - Invalid sentences: 33
+    - Valid sentences: 34
+    - Invalid sentences: 41
     - Ended at matchIndex: 150
-    ⚠️  Rejected 33 sentences:
-      - "认识你很高兴。" [Invalid: 很]
-      - "他是王老师。" [Invalid: 他]
-      - "他在教室里。" [Invalid: 他]
-      ... and 30 more
+    ⚠️  Rejected 41 sentences:
+      - "认识您很高兴。" [Invalid: 认, 识]
+      - "他是哪国人？" [Invalid: 国]
+      - "师傅，这瓶啤酒多少钱？" [Invalid: 多, 少, 钱]
+      ... and 38 more
   Batch 3: Starting at matchIndex 150
   Batch 3 RESULTS:
     - Candidates parsed: 75
-    - Valid sentences: 45
-    - Invalid sentences: 30
+    - Valid sentences: 38
+    - Invalid sentences: 37
     - Ended at matchIndex: 225
-    ⚠️  Rejected 30 sentences:
-      - "认识你很高兴。" [Invalid: 你]
-      - "我姓李，叫李军。" [Invalid: 李]
-      - "她是王小姐。" [Invalid: 王]
-      ... and 27 more
+    ⚠️  Rejected 37 sentences:
+      - "您贵姓？" [Invalid: 贵, 姓]
+      - "我姓王，叫王大卫。" [Invalid: 姓]
+      - "认识你很高兴。" [Invalid: 高, 兴]
+      ... and 34 more
   Batch 4: Starting at matchIndex 225
   Batch 4 RESULTS:
     - Candidates parsed: 75
-    - Valid sentences: 45
-    - Invalid sentences: 30
+    - Valid sentences: 24
+    - Invalid sentences: 51
     - Ended at matchIndex: 300
-    ⚠️  Rejected 30 sentences:
-      - "我姓王，叫刘明。" [Invalid: 我]
-      - "他是加拿大人。" [Invalid: 加, 拿, 大]
-      - "那个日本人是谁？" [Invalid: 日]
-      ... and 27 more
-Vocab Group 1 COMPLETE: 120 sentences
+    ⚠️  Rejected 51 sentences:
+      - "请问，您贵姓？" [Invalid: 贵]
+      - "我姓王，叫王小妹。" [Invalid: 王, 妹]
+      - "认识你很高兴。" [Invalid: 很]
+      ... and 48 more
+Vocab Group 1 COMPLETE: 114 sentences
 
 ----- Processing Vocab Group 2 -----
   Batch 1: Starting at matchIndex 300
   Batch 1 RESULTS:
     - Candidates parsed: 75
-    - Valid sentences: 30
-    - Invalid sentences: 45
+    - Valid sentences: 35
+    - Invalid sentences: 40
     - Ended at matchIndex: 375
-    ⚠️  Rejected 45 sentences:
-      - "认识你很高兴。" [Invalid: 认, 识]
-      - "我介绍一下儿。" [Invalid: 一, 下, 儿]
-      - "这是我妈妈。" [Invalid: 妈]
-      ... and 42 more
+    ⚠️  Rejected 40 sentences:
+      - "我家有五口人。" [Invalid: 五]
+      - "我没有妹妹。" [Invalid: 没]
+      - "你有哥哥吗？" [Invalid: 哥]
+      ... and 37 more
   Batch 2: Starting at matchIndex 375
   Batch 2 RESULTS:
     - Candidates parsed: 75
-    - Valid sentences: 34
-    - Invalid sentences: 41
+    - Valid sentences: 23
+    - Invalid sentences: 52
     - Ended at matchIndex: 450
-    ⚠️  Rejected 41 sentences:
-      - "对不起。" [Invalid: 起]
-      - "我想买书。" [Invalid: 书]
-      - "这里有很多书。" [Invalid: 多, 书]
-      ... and 38 more
+    ⚠️  Rejected 52 sentences:
+      - "我姓王，叫王小云。" [Invalid: 王, 云]
+      - "很高兴认识你。" [Invalid: 高, 兴]
+      - "你的家在哪儿？" [Invalid: 在, 儿]
+      ... and 49 more
   Batch 3: Starting at matchIndex 450
   Batch 3 RESULTS:
     - Candidates parsed: 75
-    - Valid sentences: 37
-    - Invalid sentences: 38
+    - Valid sentences: 22
+    - Invalid sentences: 53
     - Ended at matchIndex: 525
-    ⚠️  Rejected 38 sentences:
-      - "认识你很高兴。" [Invalid: 高, 兴]
-      - "我姓王，是大卫的朋友。" [Invalid: 姓, 朋, 友]
-      - "欢迎你。" [Invalid: 欢, 迎]
-      ... and 35 more
+    ⚠️  Rejected 53 sentences:
+      - "我姓李，叫李军。" [Invalid: 李, 叫]
+      - "认识你很高兴。" [Invalid: 认, 识, 很, 高, 兴]
+      - "我家有六口人。" [Invalid: 六]
+      ... and 50 more
   Batch 4: Starting at matchIndex 525
   Batch 4 RESULTS:
     - Candidates parsed: 75
-    - Valid sentences: 35
-    - Invalid sentences: 40
+    - Valid sentences: 25
+    - Invalid sentences: 50
     - Ended at matchIndex: 600
-    ⚠️  Rejected 40 sentences:
-      - "认识你很高兴." [Invalid: 你]
-      - "谢谢您。" [Invalid: 谢]
-      - "没关系。" [Invalid: 没]
-      ... and 37 more
-Vocab Group 2 COMPLETE: 120 sentences
+    ⚠️  Rejected 50 sentences:
+      - "您贵姓？" [Invalid: 贵]
+      - "我叫李平。" [Invalid: 李, 平]
+      - "认识你很高兴。" [Invalid: 认, 识, 你, 很]
+      ... and 47 more
+Vocab Group 2 COMPLETE: 100 sentences
 
