@@ -284,16 +284,71 @@ REMEMBER: Create MEANINGFUL sentences with proper grammar, NOT random word lists
       usedCharacters = [];
       let remainingText = chineseCharsOnly;
       
+      // Helper function to check if a vocab word with placeholders matches the text
+      const matchesWithPlaceholder = (vocabWord: string, text: string): { matches: boolean; length: number; matchedText: string } => {
+        if (!vocabWord.includes('。。。')) {
+          // No placeholder, use exact match
+          return { 
+            matches: text.startsWith(vocabWord), 
+            length: vocabWord.length,
+            matchedText: text.startsWith(vocabWord) ? text.substring(0, vocabWord.length) : ''
+          };
+        }
+        
+        // Has placeholder - create a regex pattern
+        // Example: "从。。。到。。。" becomes /^从[^，。；？！]+到[^，。；？！]+/
+        // Match until punctuation to capture full phrases
+        const escapedWord = vocabWord.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const regexPattern = escapedWord.replace(/。。。/g, '[^，。；？！]+');
+        
+        const regex = new RegExp(`^${regexPattern}`);
+        const match = text.match(regex);
+        
+        return { 
+          matches: match !== null, 
+          length: match ? match[0].length : 0,
+          matchedText: match ? match[0] : ''
+        };
+      };
+      
       // Greedy matching: match longest words first
       while (remainingText.length > 0) {
         let matched = false;
         
         for (const char of sortedUniqueChars) {
-          if (remainingText.startsWith(char)) {
+          const matchResult = matchesWithPlaceholder(char, remainingText);
+          
+          if (matchResult.matches) {
             if (!usedCharacters.includes(char)) {
               usedCharacters.push(char);
             }
-            remainingText = remainingText.slice(char.length);
+            
+            // If this was a placeholder match, also extract vocabulary words from the matched text
+            if (char.includes('。。。') && matchResult.matchedText) {
+              // Re-parse the matched text to find all vocabulary words within it
+              let innerText = matchResult.matchedText;
+              while (innerText.length > 0) {
+                let innerMatched = false;
+                for (const innerChar of sortedUniqueChars) {
+                  // Skip the placeholder word itself to avoid infinite loop
+                  if (innerChar.includes('。。。')) continue;
+                  
+                  if (innerText.startsWith(innerChar)) {
+                    if (!usedCharacters.includes(innerChar)) {
+                      usedCharacters.push(innerChar);
+                    }
+                    innerText = innerText.slice(innerChar.length);
+                    innerMatched = true;
+                    break;
+                  }
+                }
+                if (!innerMatched) {
+                  innerText = innerText.slice(1);
+                }
+              }
+            }
+            
+            remainingText = remainingText.slice(matchResult.length);
             matched = true;
             break;
           }
@@ -330,15 +385,64 @@ REMEMBER: Create MEANINGFUL sentences with proper grammar, NOT random word lists
         const truncatedUsedCharacters: string[] = [];
         let remainingText = truncatedCharsOnly;
         
+        // Helper function to check if a vocab word with placeholders matches the text
+        const matchesWithPlaceholder = (vocabWord: string, text: string): { matches: boolean; length: number; matchedText: string } => {
+          if (!vocabWord.includes('。。。')) {
+            return { 
+              matches: text.startsWith(vocabWord), 
+              length: vocabWord.length,
+              matchedText: text.startsWith(vocabWord) ? text.substring(0, vocabWord.length) : ''
+            };
+          }
+          
+          const escapedWord = vocabWord.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+          const regexPattern = escapedWord.replace(/。。。/g, '[^，。；？！]+');
+          
+          const regex = new RegExp(`^${regexPattern}`);
+          const match = text.match(regex);
+          
+          return { 
+            matches: match !== null, 
+            length: match ? match[0].length : 0,
+            matchedText: match ? match[0] : ''
+          };
+        };
+        
         while (remainingText.length > 0) {
           let matched = false;
           
           for (const char of sortedUniqueChars) {
-            if (remainingText.startsWith(char)) {
+            const matchResult = matchesWithPlaceholder(char, remainingText);
+            
+            if (matchResult.matches) {
               if (!truncatedUsedCharacters.includes(char)) {
                 truncatedUsedCharacters.push(char);
               }
-              remainingText = remainingText.slice(char.length);
+              
+              // If this was a placeholder match, also extract vocabulary words from the matched text
+              if (char.includes('。。。') && matchResult.matchedText) {
+                let innerText = matchResult.matchedText;
+                while (innerText.length > 0) {
+                  let innerMatched = false;
+                  for (const innerChar of sortedUniqueChars) {
+                    if (innerChar.includes('。。。')) continue;
+                    
+                    if (innerText.startsWith(innerChar)) {
+                      if (!truncatedUsedCharacters.includes(innerChar)) {
+                        truncatedUsedCharacters.push(innerChar);
+                      }
+                      innerText = innerText.slice(innerChar.length);
+                      innerMatched = true;
+                      break;
+                    }
+                  }
+                  if (!innerMatched) {
+                    innerText = innerText.slice(1);
+                  }
+                }
+              }
+              
+              remainingText = remainingText.slice(matchResult.length);
               matched = true;
               break;
             }
@@ -557,14 +661,63 @@ REMEMBER: Create MEANINGFUL sentences with proper grammar, NOT random word lists
             const invalidCharacters: string[] = [];
             let remainingText = chineseCharsOnly;
 
+            // Helper function to check if a vocab word with placeholders matches the text
+            const matchesWithPlaceholder = (vocabWord: string, text: string): { matches: boolean; length: number; matchedText: string } => {
+              if (!vocabWord.includes('。。。')) {
+                return { 
+                  matches: text.startsWith(vocabWord), 
+                  length: vocabWord.length,
+                  matchedText: text.startsWith(vocabWord) ? text.substring(0, vocabWord.length) : ''
+                };
+              }
+              
+              const escapedWord = vocabWord.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+              const regexPattern = escapedWord.replace(/。。。/g, '[^，。；？！]+');
+              
+              const regex = new RegExp(`^${regexPattern}`);
+              const match = text.match(regex);
+              
+              return { 
+                matches: match !== null, 
+                length: match ? match[0].length : 0,
+                matchedText: match ? match[0] : ''
+              };
+            };
+
             while (remainingText.length > 0) {
               let matched = false;
               for (const char of sortedUniqueChars) {
-                if (remainingText.startsWith(char)) {
+                const matchResult = matchesWithPlaceholder(char, remainingText);
+                
+                if (matchResult.matches) {
                   if (!usedCharacters.includes(char)) {
                     usedCharacters.push(char);
                   }
-                  remainingText = remainingText.slice(char.length);
+                  
+                  // If this was a placeholder match, also extract vocabulary words from the matched text
+                  if (char.includes('。。。') && matchResult.matchedText) {
+                    let innerText = matchResult.matchedText;
+                    while (innerText.length > 0) {
+                      let innerMatched = false;
+                      for (const innerChar of sortedUniqueChars) {
+                        if (innerChar.includes('。。。')) continue;
+                        
+                        if (innerText.startsWith(innerChar)) {
+                          if (!usedCharacters.includes(innerChar)) {
+                            usedCharacters.push(innerChar);
+                          }
+                          innerText = innerText.slice(innerChar.length);
+                          innerMatched = true;
+                          break;
+                        }
+                      }
+                      if (!innerMatched) {
+                        innerText = innerText.slice(1);
+                      }
+                    }
+                  }
+                  
+                  remainingText = remainingText.slice(matchResult.length);
                   matched = true;
                   break;
                 }
@@ -875,16 +1028,65 @@ REMEMBER: Create ${count} MEANINGFUL sentences with proper grammar, NOT random w
         const usedCharacters: string[] = [];
         let remainingText = chineseCharsOnly;
         
+        // Helper function to check if a vocab word with placeholders matches the text
+        const matchesWithPlaceholder = (vocabWord: string, text: string): { matches: boolean; length: number; matchedText: string } => {
+          if (!vocabWord.includes('。。。')) {
+            return { 
+              matches: text.startsWith(vocabWord), 
+              length: vocabWord.length,
+              matchedText: text.startsWith(vocabWord) ? text.substring(0, vocabWord.length) : ''
+            };
+          }
+          
+          const escapedWord = vocabWord.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+          const regexPattern = escapedWord.replace(/。。。/g, '[^，。；？！]+');
+          
+          const regex = new RegExp(`^${regexPattern}`);
+          const match = text.match(regex);
+          
+          return { 
+            matches: match !== null, 
+            length: match ? match[0].length : 0,
+            matchedText: match ? match[0] : ''
+          };
+        };
+        
         // Greedy matching: match longest words first
         while (remainingText.length > 0) {
           let matched = false;
           
           for (const char of sortedUniqueChars) {
-            if (remainingText.startsWith(char)) {
+            const matchResult = matchesWithPlaceholder(char, remainingText);
+            
+            if (matchResult.matches) {
               if (!usedCharacters.includes(char)) {
                 usedCharacters.push(char);
               }
-              remainingText = remainingText.slice(char.length);
+              
+              // If this was a placeholder match, also extract vocabulary words from the matched text
+              if (char.includes('。。。') && matchResult.matchedText) {
+                let innerText = matchResult.matchedText;
+                while (innerText.length > 0) {
+                  let innerMatched = false;
+                  for (const innerChar of sortedUniqueChars) {
+                    if (innerChar.includes('。。。')) continue;
+                    
+                    if (innerText.startsWith(innerChar)) {
+                      if (!usedCharacters.includes(innerChar)) {
+                        usedCharacters.push(innerChar);
+                      }
+                      innerText = innerText.slice(innerChar.length);
+                      innerMatched = true;
+                      break;
+                    }
+                  }
+                  if (!innerMatched) {
+                    innerText = innerText.slice(1);
+                  }
+                }
+              }
+              
+              remainingText = remainingText.slice(matchResult.length);
               matched = true;
               break;
             }
