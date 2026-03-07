@@ -365,84 +365,10 @@ export default function FlashcardPage() {
           flex: 1,
           display: 'flex',
           flexDirection: 'column',
-          justifyContent: 'space-between',
+          justifyContent: 'flex-start',
           overflow: 'auto'
         }}>
-          {/* Chinese Character Card */}
-          <div style={{
-            padding: '30px 20px',
-            backgroundColor: '#f8f9fa',
-            border: '3px solid #007bff',
-            borderRadius: '16px',
-            marginBottom: '15px',
-            boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-            position: 'relative'
-          }}>
-            {currentWord.isFavorite && (
-              <div style={{
-                position: 'absolute',
-                top: '15px',
-                right: '15px',
-                fontSize: '32px',
-                color: '#ffc107'
-              }}>
-                ★
-              </div>
-            )}
-            
-            {/* Pronounce button on card - bottom right */}
-            <button
-              onClick={handlePronounce}
-              disabled={playing}
-              style={{
-                position: 'absolute',
-                bottom: '15px',
-                right: '15px',
-                padding: '8px 12px',
-                backgroundColor: playing ? '#6c757d' : '#28a745',
-                color: 'white',
-                border: 'none',
-                borderRadius: '6px',
-                cursor: playing ? 'not-allowed' : 'pointer',
-                fontSize: '20px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center'
-              }}
-            >
-              {playing ? '🔊' : '🔉'}
-            </button>
-            
-            <div style={{
-              fontSize: '60px',
-              fontWeight: 'bold',
-              color: '#333',
-              marginBottom: '15px'
-            }}>
-              {currentWord.chineseCharacter}
-            </div>
-
-            {!showDetails && (
-              <button
-                onClick={handleShowDetails}
-                style={{
-                  padding: '12px 30px',
-                  backgroundColor: '#007bff',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '8px',
-                  cursor: 'pointer',
-                  fontSize: '16px',
-                  fontWeight: 'bold',
-                  marginTop: '10px'
-                }}
-              >
-                Show Details
-              </button>
-            )}
-          </div>
-
-          {/* Details Section */}
+          {/* Details Section - Now appears ABOVE the flashcard */}
           {showDetails && (
             <div style={{
               padding: '20px',
@@ -722,6 +648,81 @@ export default function FlashcardPage() {
             </div>
           )}
 
+          {/* Chinese Character Card - Now appears BELOW the details */}
+          <div style={{
+            padding: '30px 20px',
+            backgroundColor: '#f8f9fa',
+            border: '3px solid #007bff',
+            borderRadius: '16px',
+            marginBottom: '10px',
+            boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+            position: 'relative',
+            marginTop: 'auto'
+          }}>
+            {currentWord.isFavorite && (
+              <div style={{
+                position: 'absolute',
+                top: '15px',
+                right: '15px',
+                fontSize: '32px',
+                color: '#ffc107'
+              }}>
+                ★
+              </div>
+            )}
+            
+            {/* Pronounce button on card - bottom right */}
+            <button
+              onClick={handlePronounce}
+              disabled={playing}
+              style={{
+                position: 'absolute',
+                bottom: '15px',
+                right: '15px',
+                padding: '8px 12px',
+                backgroundColor: playing ? '#6c757d' : '#28a745',
+                color: 'white',
+                border: 'none',
+                borderRadius: '6px',
+                cursor: playing ? 'not-allowed' : 'pointer',
+                fontSize: '20px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}
+            >
+              {playing ? '🔊' : '🔉'}
+            </button>
+            
+            <div style={{
+              fontSize: '60px',
+              fontWeight: 'bold',
+              color: '#333',
+              marginBottom: '15px'
+            }}>
+              {currentWord.chineseCharacter}
+            </div>
+
+            {!showDetails && (
+              <button
+                onClick={handleShowDetails}
+                style={{
+                  padding: '12px 30px',
+                  backgroundColor: '#007bff',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontSize: '16px',
+                  fontWeight: 'bold',
+                  marginTop: '10px'
+                }}
+              >
+                Show Details
+              </button>
+            )}
+          </div>
+
           {/* Next Button */}
           <div style={{ display: 'flex', justifyContent: 'center', width: '100%' }}>
             <button
@@ -737,7 +738,6 @@ export default function FlashcardPage() {
                 fontSize: '18px',
                 fontWeight: 'bold',
                 maxWidth: '300px',
-                marginTop: '10px',
                 opacity: isEditing ? 0.6 : 1
               }}
             >

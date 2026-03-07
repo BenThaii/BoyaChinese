@@ -48,7 +48,7 @@
 - [x] 8.4 Verify sentences with placeholders show all expected words
 
 ## Task 9: Manual Testing
-- [ ] 9.1 Generate 30 sentences on AI Test Page
+- [x] 9.1 Generate 30 sentences on AI Test Page
 - [ ] 9.2 Find sentences with "从。。。到。。。" pattern
 - [ ] 9.3 Verify all words are detected in "Characters Used" table
 - [ ] 9.4 Test other placeholder patterns if present

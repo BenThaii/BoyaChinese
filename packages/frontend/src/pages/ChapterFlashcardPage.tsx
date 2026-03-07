@@ -45,8 +45,10 @@ export default function ChapterFlashcardPage() {
       const response = await apiClient.get<number[]>('/user1/vocabulary/chapters');
       setAvailableChapters(response.data);
       if (response.data.length > 0) {
-        setChapterStart(response.data[0]);
-        setChapterEnd(response.data[0]);
+        // Set default to latest chapter (highest number)
+        const latestChapter = Math.max(...response.data);
+        setChapterStart(latestChapter);
+        setChapterEnd(latestChapter);
       }
     } catch (error) {
       console.error('Error fetching chapters:', error);
@@ -418,116 +420,42 @@ export default function ChapterFlashcardPage() {
           flex: 1,
           display: 'flex',
           flexDirection: 'column',
-          justifyContent: 'space-between',
+          justifyContent: 'flex-start',
           overflow: 'hidden'
         }}>
-          <div>
-            <div style={{
-              marginBottom: '10px',
-              padding: '6px 12px',
-              backgroundColor: '#e7f3ff',
-              borderRadius: '6px',
-              display: 'inline-block',
-              fontSize: '13px'
-            }}>
-              <strong>Chapters {chapterStart}-{chapterEnd}</strong>
-              {algorithm === 'shuffled' && shuffledWords.length > 0 && (
-                <span style={{ marginLeft: '8px', color: '#666' }}>
-                  • {currentIndex}/{shuffledWords.length} words
-                </span>
-              )}
-              {' | '}
-              <button
-                onClick={handleChangeSettings}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  color: '#007bff',
-                  cursor: 'pointer',
-                  textDecoration: 'underline',
-                  fontSize: '13px'
-                }}
-              >
-                Change
-              </button>
-            </div>
+          {/* Chapter info banner */}
+          <div style={{
+            marginBottom: '10px',
+            padding: '6px 12px',
+            backgroundColor: '#e7f3ff',
+            borderRadius: '6px',
+            display: 'inline-block',
+            fontSize: '13px'
+          }}>
+            <strong>Chapters {chapterStart}-{chapterEnd}</strong>
+            {algorithm === 'shuffled' && shuffledWords.length > 0 && (
+              <span style={{ marginLeft: '8px', color: '#666' }}>
+                • {currentIndex}/{shuffledWords.length} words
+              </span>
+            )}
+            {' | '}
+            <button
+              onClick={handleChangeSettings}
+              style={{
+                background: 'none',
+                border: 'none',
+                color: '#007bff',
+                cursor: 'pointer',
+                textDecoration: 'underline',
+                fontSize: '13px'
+              }}
+            >
+              Change
+            </button>
+          </div>
 
-            {/* Chinese Character Card */}
-            <div style={{
-              padding: '20px 15px',
-              backgroundColor: '#f8f9fa',
-              border: '3px solid #007bff',
-              borderRadius: '16px',
-              marginBottom: '10px',
-              boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-              position: 'relative'
-            }}>
-              {currentWord.isFavorite && (
-                <div style={{
-                  position: 'absolute',
-                  top: '10px',
-                  right: '10px',
-                  fontSize: '24px',
-                  color: '#ffc107'
-                }}>
-                  ★
-                </div>
-              )}
-              
-              {/* Pronounce button on card - bottom right */}
-              <button
-                onClick={handlePronounce}
-                disabled={playing}
-                style={{
-                  position: 'absolute',
-                  bottom: '10px',
-                  right: '10px',
-                  padding: '6px 10px',
-                  backgroundColor: playing ? '#6c757d' : '#28a745',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '6px',
-                  cursor: playing ? 'not-allowed' : 'pointer',
-                  fontSize: '18px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center'
-                }}
-              >
-                {playing ? '🔊' : '🔉'}
-              </button>
-              
-              <div style={{
-                fontSize: '60px',
-                fontWeight: 'bold',
-                color: '#333',
-                marginBottom: '10px'
-              }}>
-                {currentWord.chineseCharacter}
-              </div>
-
-              {!showDetails && (
-                <button
-                  onClick={handleShowDetails}
-                  style={{
-                    padding: '10px 24px',
-                    backgroundColor: '#007bff',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '8px',
-                    cursor: 'pointer',
-                    fontSize: '14px',
-                    fontWeight: 'bold',
-                    marginTop: '5px'
-                  }}
-                >
-                  Show Details
-                </button>
-              )}
-            </div>
-
-            {/* Details Section */}
-            {showDetails && (
+          {/* Details Section - Now appears ABOVE the flashcard */}
+          {showDetails && (
               <div style={{
                 padding: '12px',
                 backgroundColor: 'white',
@@ -806,10 +734,84 @@ export default function ChapterFlashcardPage() {
                 `}</style>
               </div>
             )}
-          </div>
+
+            {/* Chinese Character Card - Now appears BELOW the details */}
+            <div style={{
+              padding: '20px 15px',
+              backgroundColor: '#f8f9fa',
+              border: '3px solid #007bff',
+              borderRadius: '16px',
+              marginBottom: '10px',
+              boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+              position: 'relative',
+              marginTop: 'auto'
+            }}>
+              {currentWord.isFavorite && (
+                <div style={{
+                  position: 'absolute',
+                  top: '10px',
+                  right: '10px',
+                  fontSize: '24px',
+                  color: '#ffc107'
+                }}>
+                  ★
+                </div>
+              )}
+              
+              {/* Pronounce button on card - bottom right */}
+              <button
+                onClick={handlePronounce}
+                disabled={playing}
+                style={{
+                  position: 'absolute',
+                  bottom: '10px',
+                  right: '10px',
+                  padding: '6px 10px',
+                  backgroundColor: playing ? '#6c757d' : '#28a745',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '6px',
+                  cursor: playing ? 'not-allowed' : 'pointer',
+                  fontSize: '18px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}
+              >
+                {playing ? '🔊' : '🔉'}
+              </button>
+              
+              <div style={{
+                fontSize: '60px',
+                fontWeight: 'bold',
+                color: '#333',
+                marginBottom: '10px'
+              }}>
+                {currentWord.chineseCharacter}
+              </div>
+
+              {!showDetails && (
+                <button
+                  onClick={handleShowDetails}
+                  style={{
+                    padding: '10px 24px',
+                    backgroundColor: '#007bff',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    fontSize: '14px',
+                    fontWeight: 'bold',
+                    marginTop: '5px'
+                  }}
+                >
+                  Show Details
+                </button>
+              )}
+            </div>
 
           {/* Next Button */}
-          <div style={{ display: 'flex', justifyContent: 'center', width: '100%', marginTop: '10px' }}>
+          <div style={{ display: 'flex', justifyContent: 'center', width: '100%' }}>
             <button
               onClick={handleNext}
               disabled={isEditing}
