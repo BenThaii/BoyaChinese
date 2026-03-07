@@ -103,30 +103,82 @@ export class PhraseGeneratorService {
   async generateSentencesForGroup(group: VocabGroup): Promise<GeneratedSentence[]> {
     const pool = getPool();
     
-    // Fetch all vocabulary characters for the chapter range (1 to chapterEndpoint)
+    // Fetch all vocabulary with chapter info and favorite status
     const [rows] = await pool.query<RowDataPacket[]>(
-      `SELECT chinese_character FROM vocabulary_entries 
+      `SELECT chinese_character, chapter, is_favorite FROM vocabulary_entries 
        WHERE chapter >= ? AND chapter <= ?`,
       [group.chapterStart, group.chapterEndpoint]
     );
 
-    const allCharacters = rows.map(row => row.chinese_character as string);
-
-    if (allCharacters.length === 0) {
+    if (rows.length === 0) {
       throw new Error(`No vocabulary found for vocab group ${group.id} (chapters ${group.chapterStart}-${group.chapterEndpoint})`);
     }
+
+    // Separate favorites and non-favorites
+    const favorites = rows
+      .filter(row => row.is_favorite === 1)
+      .map(row => row.chinese_character as string);
+    
+    const nonFavorites = rows
+      .filter(row => row.is_favorite !== 1)
+      .map(row => ({ 
+        character: row.chinese_character as string, 
+        chapter: row.chapter as number 
+      }));
+
+    console.log(`[PhraseGenerator] Group ${group.id}: ${favorites.length} favorites, ${nonFavorites.length} non-favorites`);
 
     // Generate 4 batches of 30 sentences each
     const allSentences: GeneratedSentence[] = [];
     
     for (let i = 0; i < 4; i++) {
-      // Randomly select 300 characters from the vocabulary
-      // If we have fewer than 300 characters, we'll sample with replacement
       const selectedCharacters: string[] = [];
-      for (let j = 0; j < 300; j++) {
-        const randomIndex = Math.floor(Math.random() * allCharacters.length);
-        selectedCharacters.push(allCharacters[randomIndex]);
+      
+      // Step 1: Always include ALL favorite words
+      selectedCharacters.push(...favorites);
+      
+      // Step 2: Fill remaining slots with exponentially weighted selection from non-favorites
+      const remainingSlots = 300 - favorites.length;
+      
+      if (remainingSlots > 0 && nonFavorites.length > 0) {
+        // Calculate exponential weights: weight = e^(chapter / maxChapter)
+        const maxChapter = Math.max(...nonFavorites.map(v => v.chapter));
+        const minChapter = Math.min(...nonFavorites.map(v => v.chapter));
+        
+        // Create weighted array where each word appears multiple times based on its weight
+        const weightedPool: string[] = [];
+        
+        for (const vocab of nonFavorites) {
+          // Exponential weight: e^(chapter / maxChapter)
+          // Normalize to range [1, e] by using (chapter - minChapter) / (maxChapter - minChapter)
+          const normalizedChapter = maxChapter === minChapter 
+            ? 1 
+            : (vocab.chapter - minChapter) / (maxChapter - minChapter);
+          
+          const weight = Math.exp(normalizedChapter);
+          
+          // Add word to pool multiple times based on weight (rounded to integer)
+          const copies = Math.max(1, Math.round(weight * 10)); // Scale by 10 for better granularity
+          
+          for (let j = 0; j < copies; j++) {
+            weightedPool.push(vocab.character);
+          }
+        }
+        
+        // Randomly sample from weighted pool
+        for (let j = 0; j < remainingSlots; j++) {
+          const randomIndex = Math.floor(Math.random() * weightedPool.length);
+          selectedCharacters.push(weightedPool[randomIndex]);
+        }
+      } else if (remainingSlots > 0 && nonFavorites.length === 0) {
+        // Only favorites exist, sample with replacement
+        for (let j = 0; j < remainingSlots; j++) {
+          const randomIndex = Math.floor(Math.random() * favorites.length);
+          selectedCharacters.push(favorites[randomIndex]);
+        }
       }
+
+      console.log(`[PhraseGenerator] Batch ${i + 1}: Selected ${selectedCharacters.length} characters (${favorites.length} favorites + ${selectedCharacters.length - favorites.length} weighted)`);
 
       // Generate batch of 30 sentences
       const batchSentences = await this.generateBatch(selectedCharacters);

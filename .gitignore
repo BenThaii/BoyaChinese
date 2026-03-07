@@ -26,7 +26,6 @@ Thumbs.db
 logs/
 *.log
 npm-debug.log*
-packages/backend/temp/parsing-log.txt
 
 # Testing
 coverage/
@@ -34,3 +33,4 @@ coverage/
 # Temporary files
 *.tmp
 .cache/
+packages/backend/temp/parsing-log.txt
