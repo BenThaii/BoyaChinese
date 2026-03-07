@@ -42,12 +42,20 @@ function selectVocabularyWithExponentialWeighting(
     const weightedPool: string[] = [];
     
     for (const vocab of nonFavorites) {
-      // Exponential weight: e^(chapter / maxChapter)
+      // Normalize chapter to [0, 1] range
       const normalizedChapter = maxChapter === minChapter 
         ? 1 
         : (vocab.chapter - minChapter) / (maxChapter - minChapter);
       
-      const weight = Math.exp(normalizedChapter);
+      // Exponential weight: e^(normalizedChapter)
+      const exponentialWeight = Math.exp(normalizedChapter);
+      
+      // Linear weight: scale to match exponential range [1, e]
+      const linearWeight = 1 + normalizedChapter * (Math.E - 1);
+      
+      // Blend 50% exponential + 50% linear for smoother distribution
+      const weight = 0.5 * exponentialWeight + 0.5 * linearWeight;
+      
       const copies = Math.max(1, Math.round(weight * 10));
       
       for (let j = 0; j < copies; j++) {

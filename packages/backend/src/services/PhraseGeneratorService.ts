@@ -141,7 +141,7 @@ export class PhraseGeneratorService {
       const remainingSlots = 300 - favorites.length;
       
       if (remainingSlots > 0 && nonFavorites.length > 0) {
-        // Calculate exponential weights: weight = e^(chapter / maxChapter)
+        // Calculate smoothed exponential weights (50% exponential + 50% linear)
         const maxChapter = Math.max(...nonFavorites.map(v => v.chapter));
         const minChapter = Math.min(...nonFavorites.map(v => v.chapter));
         
@@ -149,16 +149,22 @@ export class PhraseGeneratorService {
         const weightedPool: string[] = [];
         
         for (const vocab of nonFavorites) {
-          // Exponential weight: e^(chapter / maxChapter)
-          // Normalize to range [1, e] by using (chapter - minChapter) / (maxChapter - minChapter)
+          // Normalize chapter to [0, 1] range
           const normalizedChapter = maxChapter === minChapter 
             ? 1 
             : (vocab.chapter - minChapter) / (maxChapter - minChapter);
           
-          const weight = Math.exp(normalizedChapter);
+          // Exponential weight: e^(normalizedChapter) ranges from 1 to e (≈2.718)
+          const exponentialWeight = Math.exp(normalizedChapter);
+          
+          // Linear weight: normalizedChapter ranges from 0 to 1, scale to [1, 2.718] to match exponential range
+          const linearWeight = 1 + normalizedChapter * (Math.E - 1);
+          
+          // Blend 50% exponential + 50% linear for smoother distribution
+          const blendedWeight = 0.5 * exponentialWeight + 0.5 * linearWeight;
           
           // Add word to pool multiple times based on weight (rounded to integer)
-          const copies = Math.max(1, Math.round(weight * 10)); // Scale by 10 for better granularity
+          const copies = Math.max(1, Math.round(blendedWeight * 10)); // Scale by 10 for better granularity
           
           for (let j = 0; j < copies; j++) {
             weightedPool.push(vocab.character);

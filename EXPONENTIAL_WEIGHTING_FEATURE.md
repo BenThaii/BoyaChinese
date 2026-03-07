@@ -8,23 +8,29 @@ The phrase generation system now uses exponential weighting to prioritize vocabu
 ### Step 1: Always Include Favorites
 All words marked as favorites are automatically included in every batch. This ensures that important vocabulary the user wants to practice is always present in generated phrases.
 
-### Step 2: Exponential Weighting for Non-Favorites
-For the remaining slots (300 - number of favorites), words are selected using exponential weighting based on their chapter number:
+### Step 2: Smoothed Exponential Weighting for Non-Favorites
+For the remaining slots (300 - number of favorites), words are selected using a smoothed exponential weighting based on their chapter number:
 
-**Weight Formula:** `weight = e^((chapter - minChapter) / (maxChapter - minChapter))`
+**Weight Formula:** `weight = 0.5 × e^(normalized) + 0.5 × linear(normalized)`
 
-This creates an exponential distribution where:
-- Words from later chapters have exponentially higher probability of selection
-- Words from earlier chapters still have a chance to be selected (not excluded)
-- The distribution is normalized to the chapter range
+Where:
+- `normalized = (chapter - minChapter) / (maxChapter - minChapter)` (ranges from 0 to 1)
+- Exponential component: `e^(normalized)` (ranges from 1 to e ≈ 2.718)
+- Linear component: `1 + normalized × (e - 1)` (ranges from 1 to e ≈ 2.718)
+- Final weight is 50% blend of both
+
+This creates a smoother distribution where:
+- Words from later chapters have higher probability of selection (but not as extreme as pure exponential)
+- Words from earlier chapters have better representation than pure exponential
+- The distribution balances advanced vocabulary with variety
 
 ### Example Distribution
-For chapters 1-20 with 10 words per chapter:
-- Chapters 1-7 (early): ~22% of selections
-- Chapters 8-14 (mid): ~35% of selections  
-- Chapters 15-20 (late): ~43% of selections
+For chapters 1-20 with 10 words per chapter (smoothed 50%):
+- Chapters 1-7 (early): ~21% of selections
+- Chapters 8-14 (mid): ~38% of selections  
+- Chapters 15-20 (late): ~41% of selections
 
-This ensures phrases use more advanced vocabulary while maintaining variety.
+This ensures phrases use more advanced vocabulary while maintaining good variety across all chapters.
 
 ## Implementation Details
 
@@ -43,7 +49,16 @@ This ensures phrases use more advanced vocabulary while maintaining variety.
 ### Weight Calculation
 ```typescript
 const normalizedChapter = (chapter - minChapter) / (maxChapter - minChapter);
-const weight = Math.exp(normalizedChapter);
+
+// Exponential component
+const exponentialWeight = Math.exp(normalizedChapter);
+
+// Linear component (scaled to match exponential range)
+const linearWeight = 1 + normalizedChapter * (Math.E - 1);
+
+// Blend 50% exponential + 50% linear for smoother distribution
+const weight = 0.5 * exponentialWeight + 0.5 * linearWeight;
+
 const copies = Math.max(1, Math.round(weight * 10)); // Scale for granularity
 ```
 
@@ -73,9 +88,10 @@ npx tsx scripts/test-exponential-weighting.ts
 ## Benefits
 
 1. **Prioritizes Advanced Vocabulary**: Phrases use more words from recent chapters
-2. **Maintains Variety**: Earlier chapters still contribute, preventing monotony
+2. **Maintains Better Variety**: Smoothed weighting gives earlier chapters better representation than pure exponential
 3. **Respects User Preferences**: Favorites are always included regardless of chapter
-4. **Balanced Learning**: Exponential (not linear) weighting provides good balance
+4. **Balanced Learning**: 50% smoothing provides excellent balance between bias and variety
+5. **Natural Progression**: Mid-range chapters get appropriate representation
 
 ## Configuration
 
