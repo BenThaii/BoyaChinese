@@ -386,7 +386,7 @@ export default function PhrasesPage() {
   };
 
   return (
-    <div style={{ padding: '20px', maxWidth: '1200px', margin: '0 auto' }}>
+    <div style={{ padding: '20px', paddingTop: '50px', maxWidth: '1200px', margin: '0 auto' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
         <h1 style={{ margin: 0 }}>Pre-Generated Phrases</h1>
         <div style={{ display: 'flex', gap: '10px' }}>

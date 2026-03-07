@@ -36,19 +36,18 @@ function Navigation() {
       <button
         onClick={toggleMenu}
         style={{
-          padding: '10px 15px',
+          padding: '8px 12px',
           backgroundColor: 'transparent',
           border: 'none',
           cursor: 'pointer',
-          fontSize: '20px',
           color: 'white',
           display: 'flex',
           alignItems: 'center',
-          gap: '8px'
+          gap: '6px'
         }}
       >
-        <span style={{ fontSize: '24px' }}>☰</span>
-        <span style={{ fontSize: '14px', fontWeight: 'bold' }}>Menu</span>
+        <span style={{ fontSize: '20px' }}>☰</span>
+        <span style={{ fontSize: '13px', fontWeight: 'bold' }}>Menu</span>
       </button>
 
       {/* Dropdown Menu */}
@@ -287,7 +286,7 @@ function App() {
     <Router>
       <div className="app">
         <Navigation />
-        <main style={{ paddingTop: '50px' }}>
+        <main style={{ paddingTop: '40px' }}>
           <Routes>
             <Route path="/" element={
               <div>

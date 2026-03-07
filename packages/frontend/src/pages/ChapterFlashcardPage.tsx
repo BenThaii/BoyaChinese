@@ -252,6 +252,7 @@ export default function ChapterFlashcardPage() {
   return (
     <div style={{
       padding: '10px',
+      paddingTop: '50px',
       maxWidth: '800px',
       margin: '0 auto',
       minHeight: '100vh',

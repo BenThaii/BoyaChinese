@@ -270,7 +270,7 @@ export default function EnglishPhrasesPage() {
   };
 
   return (
-    <div style={{ padding: '20px', maxWidth: '1200px', margin: '0 auto' }}>
+    <div style={{ padding: '20px', paddingTop: '50px', maxWidth: '1200px', margin: '0 auto' }}>
       <h1 style={{ marginBottom: '10px' }}>English Phrases</h1>
       <p style={{ color: '#666', marginBottom: '30px' }}>
         Practice Chinese sentences by reading English translations. Click any sentence to see the Chinese text and character details.
