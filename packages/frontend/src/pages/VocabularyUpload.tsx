@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { vocabularyApi } from '../api/client';
+import { apiClient } from '../api/client';
 
 export default function VocabularyUpload() {
   const { username } = useParams<{ username: string }>();
@@ -12,9 +13,30 @@ export default function VocabularyUpload() {
     englishMeaning: '',
     learningNote: '',
     chapter: 1,
+    chapterLabel: '',
   });
   const [loading, setLoading] = useState(false);
   const [audioPlaying, setAudioPlaying] = useState(false);
+
+  // Fetch latest chapter on mount
+  useEffect(() => {
+    const fetchLatestChapter = async () => {
+      if (!username) return;
+      
+      try {
+        const response = await apiClient.get<number[]>(`/${username}/vocabulary/chapters`);
+        if (response.data.length > 0) {
+          const latestChapter = Math.max(...response.data);
+          setForm(prev => ({ ...prev, chapter: latestChapter }));
+        }
+      } catch (error) {
+        console.error('Error fetching chapters:', error);
+        // Keep default chapter 1 if fetch fails
+      }
+    };
+
+    fetchLatestChapter();
+  }, [username]);
 
   const handlePronounce = () => {
     if (!form.chineseCharacter) {
@@ -77,6 +99,10 @@ export default function VocabularyUpload() {
     try {
       await vocabularyApi.create(username, form);
       alert('Vocabulary entry created!');
+      
+      // Keep the same chapter for next entry
+      const currentChapter = form.chapter;
+      const currentChapterLabel = form.chapterLabel;
       setForm({
         chineseCharacter: '',
         pinyin: '',
@@ -84,7 +110,8 @@ export default function VocabularyUpload() {
         modernVietnamese: '',
         englishMeaning: '',
         learningNote: '',
-        chapter: 1,
+        chapter: currentChapter,
+        chapterLabel: currentChapterLabel,
       });
     } catch (error) {
       console.error('Failed to create entry:', error);
@@ -154,8 +181,17 @@ export default function VocabularyUpload() {
           <input
             type="number"
             value={form.chapter}
-            onChange={(e) => setForm({ ...form, chapter: parseInt(e.target.value) })}
+            onChange={(e) => setForm({ ...form, chapter: parseInt(e.target.value) || 0 })}
             required
+          />
+        </div>
+        <div>
+          <label>Chapter Label (optional):</label>
+          <input
+            type="text"
+            value={form.chapterLabel}
+            onChange={(e) => setForm({ ...form, chapterLabel: e.target.value })}
+            placeholder="e.g., Introduction, Review, etc."
           />
         </div>
         <div>

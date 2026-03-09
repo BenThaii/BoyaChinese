@@ -20,6 +20,7 @@ export interface VocabularyEntry {
   learningNote?: string;
   isFavorite?: boolean;
   chapter: number;
+  chapterLabel?: string;
   createdAt: string;
   updatedAt: string;
   sharedFrom?: string;
@@ -78,8 +79,8 @@ export const vocabularyApi = {
   deleteUser: (username: string) =>
     apiClient.delete(`/vocabulary/users/${username}`),
 
-  batchUpload: (username: string, characters: string, chapter: number) =>
-    apiClient.post(`/${username}/vocabulary/batch`, { characters, chapter }),
+  batchUpload: (username: string, characters: string, chapter: number, chapterLabel?: string) =>
+    apiClient.post(`/${username}/vocabulary/batch`, { characters, chapter, chapterLabel }),
 };
 
 export const adminApi = {

@@ -101,8 +101,8 @@ router.get('/vocabulary/shared', async (req: Request, res: Response) => {
 
     const chapterNum = parseInt(chapter as string, 10);
 
-    if (isNaN(chapterNum) || chapterNum < 1) {
-      return res.status(400).json({ error: 'chapter must be a positive integer' });
+    if (isNaN(chapterNum)) {
+      return res.status(400).json({ error: 'chapter must be a valid integer' });
     }
 
     const usernames = await vocabularyManager.getSharedVocabularySources(chapterNum);
@@ -129,11 +129,12 @@ router.get('/vocabulary/shared', async (req: Request, res: Response) => {
 router.post('/:username/vocabulary/batch', async (req: Request, res: Response) => {
   try {
     const { username } = req.params;
-    const { characters, chapter } = req.body;
+    const { characters, chapter, chapterLabel } = req.body;
 
     console.log('[Batch Upload] Request from user:', username);
     console.log('[Batch Upload] Characters:', characters);
     console.log('[Batch Upload] Chapter:', chapter);
+    console.log('[Batch Upload] Chapter Label:', chapterLabel);
 
     if (!username || typeof username !== 'string') {
       return res.status(400).json({ error: 'Invalid username' });
@@ -143,8 +144,8 @@ router.post('/:username/vocabulary/batch', async (req: Request, res: Response) =
       return res.status(400).json({ error: 'characters is required' });
     }
 
-    if (!chapter || typeof chapter !== 'number' || chapter < 1) {
-      return res.status(400).json({ error: 'chapter must be a positive integer' });
+    if (!chapter || typeof chapter !== 'number' || isNaN(chapter)) {
+      return res.status(400).json({ error: 'chapter must be a valid integer' });
     }
 
     // Split by comma, semicolon, or newline and clean up
@@ -180,7 +181,8 @@ router.post('/:username/vocabulary/batch', async (req: Request, res: Response) =
           // Create entry with automatic translation
           const entry = await vocabularyManager.createEntry(username, {
             chineseCharacter: char,
-            chapter: chapter
+            chapter: chapter,
+            chapterLabel: chapterLabel || undefined
           });
 
           console.log(`[Batch Upload] ✓ Success: ${char}`);
@@ -238,8 +240,8 @@ router.post('/:username/vocabulary', async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'chineseCharacter is required' });
     }
 
-    if (!entry.chapter || typeof entry.chapter !== 'number' || entry.chapter < 1) {
-      return res.status(400).json({ error: 'chapter must be a positive integer' });
+    if (!entry.chapter || typeof entry.chapter !== 'number' || isNaN(entry.chapter)) {
+      return res.status(400).json({ error: 'chapter must be a valid integer' });
     }
 
     const createdEntry = await vocabularyManager.createEntry(username, entry);
@@ -273,11 +275,7 @@ router.get('/:username/vocabulary', async (req: Request, res: Response) => {
         return res.status(400).json({ error: 'chapterStart and chapterEnd must be valid numbers' });
       }
 
-      if (start < 1 || end < 1) {
-        return res.status(400).json({ error: 'Chapter numbers must be positive integers' });
-      }
-
-      if (start > end) {
+if (start > end) {
         return res.status(400).json({ error: 'chapterStart must be less than or equal to chapterEnd' });
       }
 
@@ -328,7 +326,7 @@ router.get('/:username/vocabulary/chapters/random', async (req: Request, res: Re
       return res.status(400).json({ error: 'chapterStart and chapterEnd must be valid numbers' });
     }
 
-    if (start < 1 || end < 1) {
+    if (false) { // Chapter can be any integer
       return res.status(400).json({ error: 'Chapter numbers must be positive integers' });
     }
 
@@ -426,8 +424,8 @@ router.post('/:username/vocabulary/share', async (req: Request, res: Response) =
       return res.status(400).json({ error: 'sourceUsername is required' });
     }
 
-    if (!chapter || typeof chapter !== 'number' || chapter < 1) {
-      return res.status(400).json({ error: 'chapter must be a positive integer' });
+    if (!chapter || typeof chapter !== 'number' || isNaN(chapter)) {
+      return res.status(400).json({ error: 'chapter must be a valid integer' });
     }
 
     const copiedCount = await vocabularyManager.shareChapter(sourceUsername, username, chapter);
@@ -474,11 +472,7 @@ router.get('/:username/vocabulary/favorites', async (req: Request, res: Response
         return res.status(400).json({ error: 'chapterStart and chapterEnd must be valid numbers' });
       }
 
-      if (start < 1 || end < 1) {
-        return res.status(400).json({ error: 'Chapter numbers must be positive integers' });
-      }
-
-      if (start > end) {
+if (start > end) {
         return res.status(400).json({ error: 'chapterStart must be less than or equal to chapterEnd' });
       }
 
@@ -529,11 +523,7 @@ router.get('/:username/vocabulary/favorites/random', async (req: Request, res: R
         return res.status(400).json({ error: 'chapterStart and chapterEnd must be valid numbers' });
       }
 
-      if (start < 1 || end < 1) {
-        return res.status(400).json({ error: 'Chapter numbers must be positive integers' });
-      }
-
-      if (start > end) {
+if (start > end) {
         return res.status(400).json({ error: 'chapterStart must be less than or equal to chapterEnd' });
       }
 
@@ -602,8 +592,8 @@ router.put('/:username/vocabulary/:id', async (req: Request, res: Response) => {
     }
 
     if (updates.chapter !== undefined) {
-      if (typeof updates.chapter !== 'number' || updates.chapter < 1) {
-        return res.status(400).json({ error: 'chapter must be a positive integer' });
+      if (typeof updates.chapter !== 'number' || isNaN(updates.chapter)) {
+        return res.status(400).json({ error: 'chapter must be a valid integer' });
       }
     }
 
@@ -691,3 +681,4 @@ router.post('/:username/vocabulary/toggle-favorite', async (req: Request, res: R
 });
 
 export default router;
+

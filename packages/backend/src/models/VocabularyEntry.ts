@@ -20,6 +20,7 @@ export interface VocabularyInput {
   englishMeaning?: string;
   learningNote?: string;
   chapter: number;
+  chapterLabel?: string;
   isFavorite?: boolean;
 }
 
@@ -30,6 +31,7 @@ export interface VocabularyEntry extends VocabularyInput {
   id: string;
   username: string;
   pinyin: string; // Required in full entry
+  chapterLabel?: string;
   isFavorite?: boolean; // Optional for backward compatibility with tests
   createdAt: Date;
   updatedAt: Date;
@@ -48,6 +50,8 @@ interface VocabularyEntryRow extends RowDataPacket {
   modern_vietnamese: string | null;
   english_meaning: string | null;
   learning_note: string | null;
+  chapter: number;
+  chapter_label: string | null;
   is_favorite: number; // MySQL BOOLEAN is stored as TINYINT (0 or 1)
   chapter: number;
   created_at: Date;
@@ -70,6 +74,7 @@ function rowToEntry(row: VocabularyEntryRow): VocabularyEntry {
     learningNote: row.learning_note || undefined,
     isFavorite: row.is_favorite === 1,
     chapter: row.chapter,
+    chapterLabel: row.chapter_label || undefined,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     sharedFrom: row.shared_from || undefined
@@ -93,8 +98,8 @@ export class VocabularyEntryDAO {
     const [result] = await pool.query<ResultSetHeader>(
       `INSERT INTO vocabulary_entries 
        (id, username, chinese_character, pinyin, han_vietnamese, modern_vietnamese, 
-        english_meaning, learning_note, is_favorite, chapter, shared_from)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        english_meaning, learning_note, is_favorite, chapter, chapter_label, shared_from)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         id,
         username,
@@ -106,6 +111,7 @@ export class VocabularyEntryDAO {
         entry.learningNote || null,
         entry.isFavorite ? 1 : 0,
         entry.chapter,
+        entry.chapterLabel || null,
         null
       ]
     );
@@ -220,6 +226,10 @@ export class VocabularyEntryDAO {
       updateFields.push('chapter = ?');
       params.push(updates.chapter);
     }
+    if (updates.chapterLabel !== undefined) {
+      updateFields.push('chapter_label = ?');
+      params.push(updates.chapterLabel || null);
+    }
     if (updates.isFavorite !== undefined) {
       updateFields.push('is_favorite = ?');
       params.push(updates.isFavorite ? 1 : 0);
@@ -312,8 +322,8 @@ export class VocabularyEntryDAO {
     const [result] = await pool.query<ResultSetHeader>(
       `INSERT INTO vocabulary_entries 
        (id, username, chinese_character, pinyin, han_vietnamese, modern_vietnamese, 
-        english_meaning, learning_note, is_favorite, chapter, shared_from)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        english_meaning, learning_note, is_favorite, chapter, chapter_label, shared_from)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         id,
         username,
@@ -325,6 +335,7 @@ export class VocabularyEntryDAO {
         entry.learningNote || null,
         entry.isFavorite ? 1 : 0,
         entry.chapter,
+        entry.chapterLabel || null,
         sharedFrom
       ]
     );

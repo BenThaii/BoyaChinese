@@ -11,6 +11,7 @@ export default function VocabularyManagement() {
   const [showBatchUpload, setShowBatchUpload] = useState(false);
   const [batchText, setBatchText] = useState('');
   const [batchChapter, setBatchChapter] = useState<string>('1');
+  const [batchChapterLabel, setBatchChapterLabel] = useState<string>('');
   const [batchUploading, setBatchUploading] = useState(false);
   const [batchResult, setBatchResult] = useState<{ success: number; failed: number; total: number } | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -52,6 +53,12 @@ export default function VocabularyManagement() {
     try {
       const response = await vocabularyApi.getChapters(username);
       setAvailableChapters(response.data);
+      
+      // Set default batch chapter to latest chapter
+      if (response.data.length > 0) {
+        const latestChapter = Math.max(...response.data);
+        setBatchChapter(latestChapter.toString());
+      }
     } catch (error) {
       console.error('Failed to load chapters:', error);
     }
@@ -113,16 +120,16 @@ export default function VocabularyManagement() {
     
     // Validate chapter input
     const chapterNum = parseInt(batchChapter);
-    if (!batchChapter.trim() || isNaN(chapterNum) || chapterNum < 1) {
-      alert('Please enter a valid chapter number (must be 1 or greater)');
+    if (!batchChapter.trim() || isNaN(chapterNum)) {
+      alert('Please enter a valid chapter number');
       return;
     }
     
     setBatchUploading(true);
     setBatchResult(null);
     try {
-      console.log('Sending batch upload request:', { username, batchText, batchChapter: chapterNum });
-      const response = await vocabularyApi.batchUpload(username, batchText, chapterNum);
+      console.log('Sending batch upload request:', { username, batchText, batchChapter: chapterNum, batchChapterLabel });
+      const response = await vocabularyApi.batchUpload(username, batchText, chapterNum, batchChapterLabel || undefined);
       console.log('Batch upload response:', response.data);
       setBatchResult({
         success: response.data.success,
@@ -130,6 +137,7 @@ export default function VocabularyManagement() {
         total: response.data.total,
       });
       setBatchText('');
+      setBatchChapterLabel(''); // Clear chapter label after upload
       loadChapters(); // Reload chapters in case new chapter was added
       loadEntries();
     } catch (error: any) {
@@ -445,10 +453,22 @@ export default function VocabularyManagement() {
                 type="number"
                 value={batchChapter}
                 onChange={(e) => setBatchChapter(e.target.value)}
-                min="1"
                 style={{ marginLeft: '10px', width: '80px' }}
                 disabled={batchUploading}
                 placeholder="Chapter"
+              />
+            </label>
+          </div>
+          <div style={{ marginBottom: '10px' }}>
+            <label>
+              Chapter Label (optional): 
+              <input
+                type="text"
+                value={batchChapterLabel}
+                onChange={(e) => setBatchChapterLabel(e.target.value)}
+                style={{ marginLeft: '10px', width: '200px' }}
+                disabled={batchUploading}
+                placeholder="e.g., Introduction, Review"
               />
             </label>
           </div>

@@ -49,6 +49,7 @@ async function createTables() {
         english_meaning TEXT,
         learning_note TEXT,
         chapter INTEGER NOT NULL,
+        chapter_label VARCHAR(255),
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
         shared_from VARCHAR(255),
@@ -56,6 +57,15 @@ async function createTables() {
         INDEX idx_chapter (chapter)
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     `);
+
+    // Add chapter_label column if it doesn't exist (for existing databases)
+    await connection.query(`
+      ALTER TABLE vocabulary_entries 
+      ADD COLUMN IF NOT EXISTS chapter_label VARCHAR(255) AFTER chapter;
+    `).catch(() => {
+      // Column might already exist, ignore error
+      console.log('chapter_label column already exists or could not be added');
+    });
 
     // Create vocabulary_sharing table
     await connection.query(`
