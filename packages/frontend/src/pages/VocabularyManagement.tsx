@@ -17,7 +17,9 @@ export default function VocabularyManagement() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [playingAudio, setPlayingAudio] = useState<string | null>(null);
   const [availableChapters, setAvailableChapters] = useState<number[]>([]);
+  const [availableChapterLabels, setAvailableChapterLabels] = useState<string[]>([]);
   const [selectedChapter, setSelectedChapter] = useState<number | null>(null);
+  const [selectedChapterLabel, setSelectedChapterLabel] = useState<string | null>(null);
   const [batchEditMode, setBatchEditMode] = useState(false);
   const [batchEditForms, setBatchEditForms] = useState<Map<string, Partial<VocabularyEntry>>>(new Map());
   const [showScrollTop, setShowScrollTop] = useState(false);
@@ -42,11 +44,12 @@ export default function VocabularyManagement() {
 
   useEffect(() => {
     loadChapters();
+    loadChapterLabels();
   }, [username]);
 
   useEffect(() => {
     loadEntries();
-  }, [username, selectedChapter]);
+  }, [username, selectedChapter, selectedChapterLabel]);
 
   const loadChapters = async () => {
     if (!username) return;
@@ -64,13 +67,31 @@ export default function VocabularyManagement() {
     }
   };
 
+  const loadChapterLabels = async () => {
+    if (!username) return;
+    try {
+      const response = await vocabularyApi.getChapterLabels(username);
+      setAvailableChapterLabels(response.data);
+    } catch (error) {
+      console.error('Failed to load chapter labels:', error);
+    }
+  };
+
   const loadEntries = async () => {
     if (!username) return;
     setLoading(true);
     try {
-      const response = selectedChapter 
-        ? await vocabularyApi.getAll(username, selectedChapter, selectedChapter)
-        : await vocabularyApi.getAll(username);
+      let response;
+      if (selectedChapterLabel) {
+        // Filter by chapter label (takes precedence)
+        response = await vocabularyApi.getByChapterLabel(username, selectedChapterLabel);
+      } else if (selectedChapter) {
+        // Filter by chapter number
+        response = await vocabularyApi.getAll(username, selectedChapter, selectedChapter);
+      } else {
+        // No filter
+        response = await vocabularyApi.getAll(username);
+      }
       setEntries(response.data);
     } catch (error) {
       console.error('Failed to load vocabulary:', error);
@@ -97,6 +118,9 @@ export default function VocabularyManagement() {
             : e
         )
       );
+      
+      // Reload chapter labels in case a new label was added
+      loadChapterLabels();
       
       setEditingId(null);
     } catch (error) {
@@ -139,6 +163,7 @@ export default function VocabularyManagement() {
       setBatchText('');
       setBatchChapterLabel(''); // Clear chapter label after upload
       loadChapters(); // Reload chapters in case new chapter was added
+      loadChapterLabels(); // Reload chapter labels in case new label was added
       loadEntries();
     } catch (error: any) {
       console.error('Failed to batch upload:', error);
@@ -245,6 +270,9 @@ export default function VocabularyManagement() {
         })
       );
       
+      // Reload chapter labels in case new labels were added
+      loadChapterLabels();
+      
       setBatchEditMode(false);
       setBatchEditForms(new Map());
       setSelectedIds(new Set());
@@ -336,10 +364,31 @@ export default function VocabularyManagement() {
       
       <div style={{ marginBottom: '20px' }}>
         <label style={{ marginRight: '15px' }}>
+          Filter by Chapter Label: 
+          <select 
+            value={selectedChapterLabel || ''} 
+            onChange={(e) => {
+              const value = e.target.value;
+              setSelectedChapterLabel(value || null);
+              // Clear chapter filter when label is selected
+              if (value) {
+                setSelectedChapter(null);
+              }
+            }}
+            style={{ marginLeft: '10px' }}
+          >
+            <option value="">No Label Filter</option>
+            {availableChapterLabels.map(label => (
+              <option key={label} value={label}>{label}</option>
+            ))}
+          </select>
+        </label>
+        <label style={{ marginRight: '15px', opacity: selectedChapterLabel ? 0.5 : 1 }}>
           Filter by Chapter: 
           <select 
             value={selectedChapter || ''} 
             onChange={(e) => setSelectedChapter(e.target.value ? parseInt(e.target.value) : null)}
+            disabled={!!selectedChapterLabel}
             style={{ marginLeft: '10px' }}
           >
             <option value="">All Chapters</option>
@@ -366,6 +415,7 @@ export default function VocabularyManagement() {
           onClick={() => {
             // Clear all filters
             setSelectedChapter(null);
+            setSelectedChapterLabel(null);
             setShowFavoritesOnly(false);
             setColumnFilters({
               favorite: 'all',

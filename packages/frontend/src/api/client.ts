@@ -61,6 +61,14 @@ export const vocabularyApi = {
   getChapters: (username: string) =>
     apiClient.get<number[]>(`/${username}/vocabulary/chapters`),
 
+  getChapterLabels: (username: string) =>
+    apiClient.get<string[]>(`/${username}/vocabulary/chapter-labels`),
+
+  getByChapterLabel: (username: string, chapterLabel: string) =>
+    apiClient.get<VocabularyEntry[]>(`/${username}/vocabulary`, {
+      params: { chapterLabel }
+    }),
+
   share: (username: string, sourceUsername: string, chapter: number) =>
     apiClient.post(`/${username}/vocabulary/share`, {
       sourceUsername,

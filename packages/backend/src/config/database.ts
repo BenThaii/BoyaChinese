@@ -59,13 +59,20 @@ async function createTables() {
     `);
 
     // Add chapter_label column if it doesn't exist (for existing databases)
-    await connection.query(`
-      ALTER TABLE vocabulary_entries 
-      ADD COLUMN IF NOT EXISTS chapter_label VARCHAR(255) AFTER chapter;
-    `).catch(() => {
-      // Column might already exist, ignore error
-      console.log('chapter_label column already exists or could not be added');
-    });
+    try {
+      await connection.query(`
+        ALTER TABLE vocabulary_entries 
+        ADD COLUMN chapter_label VARCHAR(255) AFTER chapter;
+      `);
+      console.log('chapter_label column added successfully');
+    } catch (error: any) {
+      // Column might already exist (error code 1060), ignore error
+      if (error.errno === 1060) {
+        console.log('chapter_label column already exists');
+      } else {
+        console.error('Error adding chapter_label column:', error.message);
+      }
+    }
 
     // Create vocabulary_sharing table
     await connection.query(`

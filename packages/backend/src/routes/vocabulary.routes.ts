@@ -5,8 +5,9 @@
  * - GET /api/vocabulary/users - Get all users
  * - GET /api/vocabulary/shared - Get users with shared vocabulary for a chapter
  * - POST /api/:username/vocabulary - Create vocabulary entry
- * - GET /api/:username/vocabulary - Get vocabulary entries with optional chapter filtering
+ * - GET /api/:username/vocabulary - Get vocabulary entries with optional chapter or label filtering
  * - GET /api/:username/vocabulary/chapters - Get available chapters
+ * - GET /api/:username/vocabulary/chapter-labels - Get available chapter labels
  * - GET /api/:username/vocabulary/:id - Get single vocabulary entry
  * - PUT /api/:username/vocabulary/:id - Update vocabulary entry
  * - DELETE /api/:username/vocabulary/:id - Delete vocabulary entry
@@ -255,34 +256,42 @@ router.post('/:username/vocabulary', async (req: Request, res: Response) => {
 /**
  * GET /api/:username/vocabulary
  * 
- * Get vocabulary entries with optional chapter filtering
+ * Get vocabulary entries with optional chapter or chapter label filtering
  */
 router.get('/:username/vocabulary', async (req: Request, res: Response) => {
   try {
     const { username } = req.params;
-    const { chapterStart, chapterEnd } = req.query;
+    const { chapterStart, chapterEnd, chapterLabel } = req.query;
 
     if (!username || typeof username !== 'string') {
       return res.status(400).json({ error: 'Invalid username' });
     }
 
-    let chapterRange;
-    if (chapterStart && chapterEnd) {
-      const start = parseInt(chapterStart as string, 10);
-      const end = parseInt(chapterEnd as string, 10);
+    let entries;
 
-      if (isNaN(start) || isNaN(end)) {
-        return res.status(400).json({ error: 'chapterStart and chapterEnd must be valid numbers' });
+    // Chapter label takes precedence over chapter range
+    if (chapterLabel && typeof chapterLabel === 'string') {
+      entries = await vocabularyManager.getEntriesByChapterLabel(username, chapterLabel);
+    } else {
+      let chapterRange;
+      if (chapterStart && chapterEnd) {
+        const start = parseInt(chapterStart as string, 10);
+        const end = parseInt(chapterEnd as string, 10);
+
+        if (isNaN(start) || isNaN(end)) {
+          return res.status(400).json({ error: 'chapterStart and chapterEnd must be valid numbers' });
+        }
+
+        if (start > end) {
+          return res.status(400).json({ error: 'chapterStart must be less than or equal to chapterEnd' });
+        }
+
+        chapterRange = { start, end };
       }
 
-if (start > end) {
-        return res.status(400).json({ error: 'chapterStart must be less than or equal to chapterEnd' });
-      }
-
-      chapterRange = { start, end };
+      entries = await vocabularyManager.getEntries(username, chapterRange);
     }
 
-    const entries = await vocabularyManager.getEntries(username, chapterRange);
     res.json(entries);
   } catch (error) {
     console.error('Error getting vocabulary entries:', error);
@@ -293,57 +302,61 @@ if (start > end) {
 /**
  * GET /api/:username/vocabulary/chapters/random
  * 
- * Get a random vocabulary entry from specified chapters
+ * Get a random vocabulary entry from specified chapters or chapter label
  * Note: This must come BEFORE /:username/vocabulary/chapters to avoid route conflict
  * 
  * Query parameters:
- * - chapterStart: number (required)
- * - chapterEnd: number (required)
+ * - chapterStart: number (optional if chapterLabel provided)
+ * - chapterEnd: number (optional if chapterLabel provided)
+ * - chapterLabel: string (optional, takes precedence over chapter range)
  * 
  * Response:
- * - 200: Random vocabulary entry from specified chapters
+ * - 200: Random vocabulary entry from specified chapters or label
  * - 400: Invalid parameters
- * - 404: No entries found in specified chapters
+ * - 404: No entries found
  * - 500: Server error
  */
 router.get('/:username/vocabulary/chapters/random', async (req: Request, res: Response) => {
   try {
     const { username } = req.params;
-    const { chapterStart, chapterEnd } = req.query;
+    const { chapterStart, chapterEnd, chapterLabel } = req.query;
 
     if (!username || typeof username !== 'string') {
       return res.status(400).json({ error: 'Invalid username' });
     }
 
-    if (!chapterStart || !chapterEnd) {
-      return res.status(400).json({ error: 'chapterStart and chapterEnd are required' });
+    let randomEntry;
+
+    // Chapter label takes precedence over chapter range
+    if (chapterLabel && typeof chapterLabel === 'string') {
+      randomEntry = await vocabularyManager.getRandomByChapterLabel(username, chapterLabel);
+    } else {
+      if (!chapterStart || !chapterEnd) {
+        return res.status(400).json({ error: 'chapterStart and chapterEnd are required when chapterLabel is not provided' });
+      }
+
+      const start = parseInt(chapterStart as string, 10);
+      const end = parseInt(chapterEnd as string, 10);
+
+      if (isNaN(start) || isNaN(end)) {
+        return res.status(400).json({ error: 'chapterStart and chapterEnd must be valid numbers' });
+      }
+
+      if (start > end) {
+        return res.status(400).json({ error: 'chapterStart must be less than or equal to chapterEnd' });
+      }
+
+      randomEntry = await vocabularyManager.getRandomByChapters(username, start, end);
     }
-
-    const start = parseInt(chapterStart as string, 10);
-    const end = parseInt(chapterEnd as string, 10);
-
-    if (isNaN(start) || isNaN(end)) {
-      return res.status(400).json({ error: 'chapterStart and chapterEnd must be valid numbers' });
-    }
-
-    if (false) { // Chapter can be any integer
-      return res.status(400).json({ error: 'Chapter numbers must be positive integers' });
-    }
-
-    if (start > end) {
-      return res.status(400).json({ error: 'chapterStart must be less than or equal to chapterEnd' });
-    }
-
-    const randomEntry = await vocabularyManager.getRandomByChapters(username, start, end);
 
     if (!randomEntry) {
-      return res.status(404).json({ error: 'No entries found in specified chapters' });
+      return res.status(404).json({ error: 'No entries found' });
     }
 
     res.json(randomEntry);
   } catch (error) {
-    console.error('Error getting random entry by chapters:', error);
-    res.status(500).json({ error: 'Failed to get random entry by chapters' });
+    console.error('Error getting random entry:', error);
+    res.status(500).json({ error: 'Failed to get random entry' });
   }
 });
 
@@ -366,6 +379,28 @@ router.get('/:username/vocabulary/chapters', async (req: Request, res: Response)
   } catch (error) {
     console.error('Error getting available chapters:', error);
     res.status(500).json({ error: 'Failed to get available chapters' });
+  }
+});
+
+/**
+ * GET /api/:username/vocabulary/chapter-labels
+ * 
+ * Get all unique chapter labels for a user
+ * Note: This must come before /:id route
+ */
+router.get('/:username/vocabulary/chapter-labels', async (req: Request, res: Response) => {
+  try {
+    const { username } = req.params;
+
+    if (!username || typeof username !== 'string') {
+      return res.status(400).json({ error: 'Invalid username' });
+    }
+
+    const labels = await vocabularyManager.getChapterLabels(username);
+    res.json(labels);
+  } catch (error) {
+    console.error('Error getting chapter labels:', error);
+    res.status(500).json({ error: 'Failed to get chapter labels' });
   }
 });
 
@@ -442,10 +477,11 @@ router.post('/:username/vocabulary/share', async (req: Request, res: Response) =
 /**
  * GET /api/:username/vocabulary/favorites
  * 
- * Get all favorite vocabulary entries with optional chapter filtering
+ * Get all favorite vocabulary entries with optional chapter or chapter label filtering
  * Query parameters:
  * - chapterStart: number (optional)
  * - chapterEnd: number (optional)
+ * - chapterLabel: string (optional, takes precedence over chapter range)
  * 
  * Response:
  * - 200: Array of favorite entries
@@ -457,29 +493,37 @@ router.post('/:username/vocabulary/share', async (req: Request, res: Response) =
 router.get('/:username/vocabulary/favorites', async (req: Request, res: Response) => {
   try {
     const { username } = req.params;
-    const { chapterStart, chapterEnd } = req.query;
+    const { chapterStart, chapterEnd, chapterLabel } = req.query;
 
     if (!username || typeof username !== 'string') {
       return res.status(400).json({ error: 'Invalid username' });
     }
 
-    let chapterRange;
-    if (chapterStart && chapterEnd) {
-      const start = parseInt(chapterStart as string, 10);
-      const end = parseInt(chapterEnd as string, 10);
+    let entries;
 
-      if (isNaN(start) || isNaN(end)) {
-        return res.status(400).json({ error: 'chapterStart and chapterEnd must be valid numbers' });
-      }
+    // Chapter label takes precedence over chapter range
+    if (chapterLabel && typeof chapterLabel === 'string') {
+      entries = await vocabularyManager.getEntriesByChapterLabel(username, chapterLabel);
+    } else {
+      let chapterRange;
+      if (chapterStart && chapterEnd) {
+        const start = parseInt(chapterStart as string, 10);
+        const end = parseInt(chapterEnd as string, 10);
+
+        if (isNaN(start) || isNaN(end)) {
+          return res.status(400).json({ error: 'chapterStart and chapterEnd must be valid numbers' });
+        }
 
 if (start > end) {
-        return res.status(400).json({ error: 'chapterStart must be less than or equal to chapterEnd' });
+          return res.status(400).json({ error: 'chapterStart must be less than or equal to chapterEnd' });
+        }
+
+        chapterRange = { start, end };
       }
 
-      chapterRange = { start, end };
+      entries = await vocabularyManager.getEntries(username, chapterRange);
     }
 
-    const entries = await vocabularyManager.getEntries(username, chapterRange);
     const favorites = entries.filter(entry => entry.isFavorite);
     res.json(favorites);
   } catch (error) {
@@ -491,11 +535,12 @@ if (start > end) {
 /**
  * GET /api/:username/vocabulary/favorites/random
  * 
- * Get a random favorite vocabulary entry with optional chapter filtering
+ * Get a random favorite vocabulary entry with optional chapter or chapter label filtering
  * 
  * Query parameters:
  * - chapterStart: number (optional)
  * - chapterEnd: number (optional)
+ * - chapterLabel: string (optional, takes precedence over chapter range)
  * 
  * Response:
  * - 200: Random favorite vocabulary entry
@@ -507,7 +552,7 @@ if (start > end) {
 router.get('/:username/vocabulary/favorites/random', async (req: Request, res: Response) => {
   try {
     const { username } = req.params;
-    const { chapterStart, chapterEnd } = req.query;
+    const { chapterStart, chapterEnd, chapterLabel } = req.query;
 
     if (!username || typeof username !== 'string') {
       return res.status(400).json({ error: 'Invalid username' });
@@ -515,7 +560,10 @@ router.get('/:username/vocabulary/favorites/random', async (req: Request, res: R
 
     let randomFavorite;
 
-    if (chapterStart && chapterEnd) {
+    // Chapter label takes precedence over chapter range
+    if (chapterLabel && typeof chapterLabel === 'string') {
+      randomFavorite = await vocabularyManager.getRandomFavoriteByChapterLabel(username, chapterLabel);
+    } else if (chapterStart && chapterEnd) {
       const start = parseInt(chapterStart as string, 10);
       const end = parseInt(chapterEnd as string, 10);
 

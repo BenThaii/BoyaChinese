@@ -309,6 +309,45 @@ export class VocabularyManager {
   async getRandomByChapters(username: string, chapterStart: number, chapterEnd: number): Promise<VocabularyEntry | null> {
     return await VocabularyEntryDAO.getRandomByChapters(username, chapterStart, chapterEnd);
   }
+
+  /**
+   * Get all unique chapter labels for a user
+   * @param username - Username to get chapter labels for
+   * @returns Array of unique chapter labels
+   */
+  async getChapterLabels(username: string): Promise<string[]> {
+    return await VocabularyEntryDAO.getChapterLabels(username);
+  }
+
+  /**
+   * Get vocabulary entries by chapter label
+   * @param username - Owner username
+   * @param chapterLabel - Chapter label to filter by
+   * @returns Array of vocabulary entries
+   */
+  async getEntriesByChapterLabel(username: string, chapterLabel: string): Promise<VocabularyEntry[]> {
+    return await VocabularyEntryDAO.findByChapterLabel(username, chapterLabel);
+  }
+
+  /**
+   * Get a random favorite vocabulary entry by chapter label
+   * @param username - Owner username
+   * @param chapterLabel - Chapter label to filter by
+   * @returns Random favorite entry or null if no favorites exist
+   */
+  async getRandomFavoriteByChapterLabel(username: string, chapterLabel: string): Promise<VocabularyEntry | null> {
+    return await VocabularyEntryDAO.getRandomFavoriteByChapterLabel(username, chapterLabel);
+  }
+
+  /**
+   * Get a random vocabulary entry by chapter label
+   * @param username - Owner username
+   * @param chapterLabel - Chapter label to filter by
+   * @returns Random entry or null if no entries exist
+   */
+  async getRandomByChapterLabel(username: string, chapterLabel: string): Promise<VocabularyEntry | null> {
+    return await VocabularyEntryDAO.getRandomByChapterLabel(username, chapterLabel);
+  }
 }
 
 // Export singleton instance

@@ -12,6 +12,7 @@ interface VocabularyEntry {
   learningNote?: string;
   isFavorite: boolean;
   chapter: number;
+  chapterLabel?: string;
   sharedFrom?: string;
   createdAt: string;
   updatedAt: string;
@@ -28,7 +29,9 @@ export default function FlashcardPage() {
   const [showChapterFilter, setShowChapterFilter] = useState(false);
   const [chapterStart, setChapterStart] = useState<number | null>(null);
   const [chapterEnd, setChapterEnd] = useState<number | null>(null);
+  const [chapterLabel, setChapterLabel] = useState<string | null>(null);
   const [availableChapters, setAvailableChapters] = useState<number[]>([]);
+  const [availableChapterLabels, setAvailableChapterLabels] = useState<string[]>([]);
   const [isEditing, setIsEditing] = useState(false);
   const [editedWord, setEditedWord] = useState<VocabularyEntry | null>(null);
   const [algorithm, setAlgorithm] = useState<'random' | 'shuffled'>('random');
@@ -37,6 +40,7 @@ export default function FlashcardPage() {
 
   useEffect(() => {
     fetchAvailableChapters();
+    fetchAvailableChapterLabels();
     fetchRandomFavorite();
   }, []);
 
@@ -46,6 +50,15 @@ export default function FlashcardPage() {
       setAvailableChapters(response.data);
     } catch (error) {
       console.error('Error fetching chapters:', error);
+    }
+  };
+
+  const fetchAvailableChapterLabels = async () => {
+    try {
+      const response = await apiClient.get<string[]>('/user1/vocabulary/chapter-labels');
+      setAvailableChapterLabels(response.data);
+    } catch (error) {
+      console.error('Error fetching chapter labels:', error);
     }
   };
 
@@ -61,15 +74,26 @@ export default function FlashcardPage() {
         if (shuffledWords.length === 0 || currentIndex >= shuffledWords.length) {
           // Fetch all favorites
           let url = '/user1/vocabulary/favorites';
-          if (chapterStart !== null && chapterEnd !== null) {
-            url += `?chapterStart=${chapterStart}&chapterEnd=${chapterEnd}`;
+          const params = new URLSearchParams();
+          
+          if (chapterLabel) {
+            params.append('chapterLabel', chapterLabel);
+          } else if (chapterStart !== null && chapterEnd !== null) {
+            params.append('chapterStart', chapterStart.toString());
+            params.append('chapterEnd', chapterEnd.toString());
+          }
+          
+          if (params.toString()) {
+            url += `?${params.toString()}`;
           }
           
           const response = await apiClient.get<VocabularyEntry[]>(url);
           
           if (response.data.length === 0) {
             setNoFavorites(true);
-            if (chapterStart !== null && chapterEnd !== null) {
+            if (chapterLabel) {
+              setError(`No favorite words found with chapter label "${chapterLabel}". Try a different label or remove the filter.`);
+            } else if (chapterStart !== null && chapterEnd !== null) {
               setError(`No favorite words found in chapters ${chapterStart}-${chapterEnd}. Try different chapters or remove the filter.`);
             } else {
               setError('No favorite words found. Please mark some words as favorites first.');
@@ -91,8 +115,17 @@ export default function FlashcardPage() {
       } else {
         // Random algorithm: fetch random word each time
         let url = '/user1/vocabulary/favorites/random';
-        if (chapterStart !== null && chapterEnd !== null) {
-          url += `?chapterStart=${chapterStart}&chapterEnd=${chapterEnd}`;
+        const params = new URLSearchParams();
+        
+        if (chapterLabel) {
+          params.append('chapterLabel', chapterLabel);
+        } else if (chapterStart !== null && chapterEnd !== null) {
+          params.append('chapterStart', chapterStart.toString());
+          params.append('chapterEnd', chapterEnd.toString());
+        }
+        
+        if (params.toString()) {
+          url += `?${params.toString()}`;
         }
         
         const response = await apiClient.get<VocabularyEntry>(url);
@@ -101,7 +134,9 @@ export default function FlashcardPage() {
     } catch (err: any) {
       if (err.response?.status === 404) {
         setNoFavorites(true);
-        if (chapterStart !== null && chapterEnd !== null) {
+        if (chapterLabel) {
+          setError(`No favorite words found with chapter label "${chapterLabel}". Try a different label or remove the filter.`);
+        } else if (chapterStart !== null && chapterEnd !== null) {
           setError(`No favorite words found in chapters ${chapterStart}-${chapterEnd}. Try different chapters or remove the filter.`);
         } else {
           setError('No favorite words found. Please mark some words as favorites first.');
@@ -134,7 +169,9 @@ export default function FlashcardPage() {
         hanVietnamese: editedWord.hanVietnamese,
         modernVietnamese: editedWord.modernVietnamese,
         englishMeaning: editedWord.englishMeaning,
-        learningNote: editedWord.learningNote
+        learningNote: editedWord.learningNote,
+        chapter: editedWord.chapter,
+        chapterLabel: editedWord.chapterLabel
       });
 
       setCurrentWord(response.data);
@@ -171,6 +208,7 @@ export default function FlashcardPage() {
   const handleClearFilter = () => {
     setChapterStart(null);
     setChapterEnd(null);
+    setChapterLabel(null);
     setShowChapterFilter(false);
     // Reset shuffled list when filter changes
     setShuffledWords([]);
@@ -264,7 +302,12 @@ export default function FlashcardPage() {
     }}>
       <h1 style={{ marginBottom: '20px', marginTop: '0', textAlign: 'center', fontSize: '24px' }}>
         Flashcard Practice
-        {chapterStart !== null && chapterEnd !== null && (
+        {chapterLabel && (
+          <div style={{ fontSize: '14px', color: '#666', marginTop: '5px' }}>
+            Chapter Label: "{chapterLabel}"
+          </div>
+        )}
+        {!chapterLabel && chapterStart !== null && chapterEnd !== null && (
           <div style={{ fontSize: '14px', color: '#666', marginTop: '5px' }}>
             Chapters {chapterStart}-{chapterEnd}
           </div>
@@ -278,7 +321,7 @@ export default function FlashcardPage() {
             onClick={() => setShowChapterFilter(true)}
             style={{
               padding: '8px 16px',
-              backgroundColor: chapterStart !== null ? '#28a745' : '#6c757d',
+              backgroundColor: (chapterStart !== null || chapterLabel !== null) ? '#28a745' : '#6c757d',
               color: 'white',
               border: 'none',
               borderRadius: '6px',
@@ -286,7 +329,7 @@ export default function FlashcardPage() {
               fontSize: '14px'
             }}
           >
-            {chapterStart !== null ? '📚 Filter Active' : '📚 Filter by Chapter'}
+            {(chapterStart !== null || chapterLabel !== null) ? '📚 Filter Active' : '📚 Filter by Chapter'}
           </button>
           
           <select
@@ -420,7 +463,14 @@ export default function FlashcardPage() {
 
                   <div style={{ marginBottom: '15px', paddingTop: '10px', borderTop: '1px solid #dee2e6' }}>
                     <strong style={{ fontSize: '14px', color: '#666' }}>Chapter:</strong>
-                    <div style={{ fontSize: '16px', marginTop: '5px' }}>{currentWord.chapter}</div>
+                    <div style={{ fontSize: '16px', marginTop: '5px' }}>
+                      {currentWord.chapter}
+                      {currentWord.chapterLabel && (
+                        <span style={{ fontSize: '14px', color: '#888', marginLeft: '8px' }}>
+                          ({currentWord.chapterLabel})
+                        </span>
+                      )}
+                    </div>
                   </div>
 
                   <div 
@@ -588,6 +638,43 @@ export default function FlashcardPage() {
                         borderRadius: '4px',
                         border: '1px solid #dee2e6',
                         resize: 'vertical'
+                      }}
+                    />
+                  </div>
+
+                  <div style={{ marginBottom: '15px' }}>
+                    <label style={{ fontSize: '14px', color: '#666', fontWeight: 'bold', display: 'block', marginBottom: '5px' }}>
+                      Chapter:
+                    </label>
+                    <input
+                      type="number"
+                      value={editedWord?.chapter || ''}
+                      onChange={(e) => setEditedWord(editedWord ? { ...editedWord, chapter: parseInt(e.target.value) || 0 } : null)}
+                      style={{
+                        width: '100%',
+                        padding: '8px',
+                        fontSize: '16px',
+                        borderRadius: '4px',
+                        border: '1px solid #dee2e6'
+                      }}
+                    />
+                  </div>
+
+                  <div style={{ marginBottom: '15px' }}>
+                    <label style={{ fontSize: '14px', color: '#666', fontWeight: 'bold', display: 'block', marginBottom: '5px' }}>
+                      Chapter Label:
+                    </label>
+                    <input
+                      type="text"
+                      value={editedWord?.chapterLabel || ''}
+                      onChange={(e) => setEditedWord(editedWord ? { ...editedWord, chapterLabel: e.target.value } : null)}
+                      placeholder="Optional"
+                      style={{
+                        width: '100%',
+                        padding: '8px',
+                        fontSize: '16px',
+                        borderRadius: '4px',
+                        border: '1px solid #dee2e6'
                       }}
                     />
                   </div>
@@ -885,11 +972,49 @@ export default function FlashcardPage() {
             
             <div style={{ marginBottom: '20px' }}>
               <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
+                Chapter Label:
+              </label>
+              <select
+                value={chapterLabel ?? ''}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  setChapterLabel(value || null);
+                  // Clear chapter range when label is selected
+                  if (value) {
+                    setChapterStart(null);
+                    setChapterEnd(null);
+                  }
+                }}
+                style={{
+                  width: '100%',
+                  padding: '10px',
+                  fontSize: '16px',
+                  borderRadius: '6px',
+                  border: '1px solid #dee2e6'
+                }}
+              >
+                <option value="">No Label Filter</option>
+                {availableChapterLabels.map(label => (
+                  <option key={label} value={label}>{label}</option>
+                ))}
+              </select>
+              <div style={{ fontSize: '13px', color: '#666', marginTop: '5px' }}>
+                Filter by chapter label (takes precedence over chapter range)
+              </div>
+            </div>
+
+            <div style={{ 
+              marginBottom: '20px',
+              opacity: chapterLabel ? 0.5 : 1,
+              pointerEvents: chapterLabel ? 'none' : 'auto'
+            }}>
+              <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
                 Start Chapter:
               </label>
               <select
                 value={chapterStart ?? ''}
                 onChange={(e) => setChapterStart(e.target.value ? parseInt(e.target.value) : null)}
+                disabled={!!chapterLabel}
                 style={{
                   width: '100%',
                   padding: '10px',
@@ -905,13 +1030,18 @@ export default function FlashcardPage() {
               </select>
             </div>
 
-            <div style={{ marginBottom: '25px' }}>
+            <div style={{ 
+              marginBottom: '25px',
+              opacity: chapterLabel ? 0.5 : 1,
+              pointerEvents: chapterLabel ? 'none' : 'auto'
+            }}>
               <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
                 End Chapter:
               </label>
               <select
                 value={chapterEnd ?? ''}
                 onChange={(e) => setChapterEnd(e.target.value ? parseInt(e.target.value) : null)}
+                disabled={!!chapterLabel}
                 style={{
                   width: '100%',
                   padding: '10px',
@@ -932,7 +1062,7 @@ export default function FlashcardPage() {
               gap: '10px',
               justifyContent: 'flex-end'
             }}>
-              {chapterStart !== null && (
+              {(chapterStart !== null || chapterLabel !== null) && (
                 <button
                   onClick={handleClearFilter}
                   style={{

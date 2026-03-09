@@ -482,4 +482,88 @@ export class VocabularyEntryDAO {
 
     return rowToEntry(rows[0]);
   }
+  /**
+   * Get all unique chapter labels for a user
+   * @param username - Owner username
+   * @returns Array of unique chapter labels (excluding null/empty)
+   */
+  static async getChapterLabels(username: string): Promise<string[]> {
+    const pool = getPool();
+
+    const [rows] = await pool.query<RowDataPacket[]>(
+      `SELECT DISTINCT chapter_label FROM vocabulary_entries
+       WHERE username = ? AND chapter_label IS NOT NULL AND chapter_label != ''
+       ORDER BY chapter_label ASC`,
+      [username]
+    );
+
+    return rows.map(row => row.chapter_label as string);
+  }
+
+  /**
+   * Find vocabulary entries by chapter label
+   * @param username - Owner username
+   * @param chapterLabel - Chapter label to filter by
+   * @returns Array of vocabulary entries with matching chapter label
+   */
+  static async findByChapterLabel(username: string, chapterLabel: string): Promise<VocabularyEntry[]> {
+    const pool = getPool();
+
+    const [rows] = await pool.query<VocabularyEntryRow[]>(
+      `SELECT * FROM vocabulary_entries
+       WHERE username = ? AND chapter_label = ?
+       ORDER BY chapter ASC, created_at ASC`,
+      [username, chapterLabel]
+    );
+
+    return rows.map(rowToEntry);
+  }
+
+  /**
+   * Get a random favorite vocabulary entry by chapter label
+   * @param username - Owner username
+   * @param chapterLabel - Chapter label to filter by
+   * @returns Random favorite entry with matching chapter label or null if no favorites exist
+   */
+  static async getRandomFavoriteByChapterLabel(username: string, chapterLabel: string): Promise<VocabularyEntry | null> {
+    const pool = getPool();
+
+    const [rows] = await pool.query<VocabularyEntryRow[]>(
+      `SELECT * FROM vocabulary_entries
+       WHERE username = ? AND is_favorite = 1 AND chapter_label = ?
+       ORDER BY RAND()
+       LIMIT 1`,
+      [username, chapterLabel]
+    );
+
+    if (rows.length === 0) {
+      return null;
+    }
+
+    return rowToEntry(rows[0]);
+  }
+
+  /**
+   * Get a random vocabulary entry by chapter label
+   * @param username - Owner username
+   * @param chapterLabel - Chapter label to filter by
+   * @returns Random entry with matching chapter label or null if no entries exist
+   */
+  static async getRandomByChapterLabel(username: string, chapterLabel: string): Promise<VocabularyEntry | null> {
+    const pool = getPool();
+
+    const [rows] = await pool.query<VocabularyEntryRow[]>(
+      `SELECT * FROM vocabulary_entries
+       WHERE username = ? AND chapter_label = ?
+       ORDER BY RAND()
+       LIMIT 1`,
+      [username, chapterLabel]
+    );
+
+    if (rows.length === 0) {
+      return null;
+    }
+
+    return rowToEntry(rows[0]);
+  }
 }
