@@ -53,7 +53,6 @@ interface VocabularyEntryRow extends RowDataPacket {
   chapter: number;
   chapter_label: string | null;
   is_favorite: number; // MySQL BOOLEAN is stored as TINYINT (0 or 1)
-  chapter: number;
   created_at: Date;
   updated_at: Date;
   shared_from: string | null;
