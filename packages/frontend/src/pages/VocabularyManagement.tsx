@@ -504,6 +504,7 @@ export default function VocabularyManagement() {
             <th>English</th>
             <th>Note</th>
             <th>Chapter</th>
+            <th>Chapter Label</th>
             <th>Actions</th>
           </tr>
           <tr style={{ backgroundColor: '#f8f9fa' }}>
@@ -617,6 +618,7 @@ export default function VocabularyManagement() {
             </th>
             <th></th>
             <th></th>
+            <th></th>
           </tr>
         </thead>
         <tbody>
@@ -705,6 +707,13 @@ export default function VocabularyManagement() {
                     />
                   </td>
                   <td>
+                    <input
+                      value={batchEditForms.get(entry.id)?.chapterLabel || ''}
+                      onChange={(e) => updateBatchEditForm(entry.id, 'chapterLabel', e.target.value)}
+                      placeholder="Optional"
+                    />
+                  </td>
+                  <td>
                     {/* No actions in batch edit mode */}
                   </td>
                 </>
@@ -790,6 +799,15 @@ export default function VocabularyManagement() {
                     />
                   </td>
                   <td>
+                    <input
+                      value={editForm.chapterLabel || ''}
+                      onChange={(e) =>
+                        setEditForm({ ...editForm, chapterLabel: e.target.value })
+                      }
+                      placeholder="Optional"
+                    />
+                  </td>
+                  <td>
                     <button onClick={handleSave}>Save</button>
                     <button onClick={() => setEditingId(null)}>Cancel</button>
                   </td>
@@ -820,6 +838,7 @@ export default function VocabularyManagement() {
                   <td>{entry.englishMeaning}</td>
                   <td>{entry.learningNote}</td>
                   <td>{entry.chapter}</td>
+                  <td>{entry.chapterLabel || '-'}</td>
                   <td onClick={(e) => e.stopPropagation()}>
                     <button 
                       onClick={() => handlePronounce(entry.chineseCharacter, entry.id)}
