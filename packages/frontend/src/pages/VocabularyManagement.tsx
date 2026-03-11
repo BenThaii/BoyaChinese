@@ -15,7 +15,6 @@ export default function VocabularyManagement() {
   const [batchUploading, setBatchUploading] = useState(false);
   const [batchResult, setBatchResult] = useState<{ success: number; failed: number; total: number } | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const [playingAudio, setPlayingAudio] = useState<string | null>(null);
   const [availableChapters, setAvailableChapters] = useState<number[]>([]);
   const [availableChapterLabels, setAvailableChapterLabels] = useState<string[]>([]);
   const [selectedChapter, setSelectedChapter] = useState<number | null>(null);
@@ -192,28 +191,6 @@ export default function VocabularyManagement() {
       alert(`Batch upload failed: ${errorMsg}`);
     } finally {
       setBatchUploading(false);
-    }
-  };
-
-  const handlePronounce = async (text: string, id: string) => {
-    if (!text) return;
-    
-    // Use browser's Web Speech API for pronunciation
-    if ('speechSynthesis' in window) {
-      setPlayingAudio(id);
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.lang = 'zh-CN'; // Chinese (Simplified)
-      utterance.rate = 0.5; // Slower speed for learning (0.5 = half speed)
-      
-      utterance.onend = () => setPlayingAudio(null);
-      utterance.onerror = () => {
-        setPlayingAudio(null);
-        alert('Failed to play pronunciation');
-      };
-      
-      window.speechSynthesis.speak(utterance);
-    } else {
-      alert('Text-to-speech is not supported in your browser');
     }
   };
 
