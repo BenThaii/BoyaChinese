@@ -24,6 +24,7 @@ export default function VocabularyManagement() {
   const [batchEditForms, setBatchEditForms] = useState<Map<string, Partial<VocabularyEntry>>>(new Map());
   const [showScrollTop, setShowScrollTop] = useState(false);
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
+  const [isSmallScreen, setIsSmallScreen] = useState(window.innerWidth < 1200);
   const [columnFilters, setColumnFilters] = useState({
     favorite: 'all', // 'all', 'favorites', 'non-favorites'
     chinese: '',
@@ -35,11 +36,30 @@ export default function VocabularyManagement() {
   });
 
   useEffect(() => {
+    let scrollTimeout: NodeJS.Timeout;
     const handleScroll = () => {
-      setShowScrollTop(window.scrollY > 300);
+      // Throttle scroll events to improve performance
+      clearTimeout(scrollTimeout);
+      scrollTimeout = setTimeout(() => {
+        setShowScrollTop(window.scrollY > 300);
+      }, 100);
     };
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
+    
+    const handleResize = () => {
+      // Handle window resize - could be used for responsive adjustments
+      // Currently just ensuring scroll button visibility is updated
+      setShowScrollTop(window.scrollY > 300);
+      setIsSmallScreen(window.innerWidth < 1200);
+    };
+    
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    window.addEventListener('resize', handleResize, { passive: true });
+    
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      window.removeEventListener('resize', handleResize);
+      clearTimeout(scrollTimeout);
+    };
   }, []);
 
   useEffect(() => {
@@ -308,6 +328,27 @@ export default function VocabularyManagement() {
     toggleSelection(id);
   };
 
+  const handleCheckboxChange = (id: string) => {
+    toggleSelection(id);
+  };
+
+  const handleToggleFavorite = async (id: string) => {
+    if (!username) return;
+    const entry = entries.find(e => e.id === id);
+    if (!entry) return;
+    
+    try {
+      await vocabularyApi.update(username, id, { isFavorite: !entry.isFavorite });
+      setEntries(prevEntries =>
+        prevEntries.map(e =>
+          e.id === id ? { ...e, isFavorite: !e.isFavorite } : e
+        )
+      );
+    } catch (error) {
+      console.error('Failed to toggle favorite:', error);
+    }
+  };
+
   if (loading) return <div>Loading...</div>;
 
   // Filter entries based on batch edit mode and favorites filter
@@ -364,6 +405,23 @@ export default function VocabularyManagement() {
       
       <div style={{ marginBottom: '20px' }}>
         <label style={{ marginRight: '15px' }}>
+          Filter by Chapter: 
+          <select 
+            value={selectedChapter || ''} 
+            onChange={(e) => setSelectedChapter(e.target.value ? parseInt(e.target.value) : null)}
+            disabled={!!selectedChapterLabel}
+            style={{ marginLeft: '10px' }}
+          >
+            <option value="">All Chapters</option>
+            {availableChapters.map(chapter => (
+              <option key={chapter} value={chapter}>Chapter {chapter}</option>
+            ))}
+          </select>
+        </label>
+      </div>
+
+      <div style={{ marginBottom: '20px' }}>
+        <label style={{ marginRight: '15px', opacity: selectedChapterLabel ? 1 : 0.7 }}>
           Filter by Chapter Label: 
           <select 
             value={selectedChapterLabel || ''} 
@@ -383,24 +441,13 @@ export default function VocabularyManagement() {
             ))}
           </select>
         </label>
-        <label style={{ marginRight: '15px', opacity: selectedChapterLabel ? 0.5 : 1 }}>
-          Filter by Chapter: 
-          <select 
-            value={selectedChapter || ''} 
-            onChange={(e) => setSelectedChapter(e.target.value ? parseInt(e.target.value) : null)}
-            disabled={!!selectedChapterLabel}
-            style={{ marginLeft: '10px' }}
-          >
-            <option value="">All Chapters</option>
-            {availableChapters.map(chapter => (
-              <option key={chapter} value={chapter}>Chapter {chapter}</option>
-            ))}
-          </select>
-        </label>
+      </div>
+
+      <div style={{ marginBottom: '20px' }}>
         <button
           onClick={() => setShowFavoritesOnly(!showFavoritesOnly)}
           style={{
-            marginLeft: '15px',
+            marginRight: '15px',
             backgroundColor: showFavoritesOnly ? '#ffc107' : '#f8f9fa',
             color: showFavoritesOnly ? 'white' : '#333',
             border: '1px solid #dee2e6',
@@ -493,30 +540,28 @@ export default function VocabularyManagement() {
             onChange={(e) => setBatchText(e.target.value)}
             placeholder="例如: 你,好,世,界 or 你;好;世;界 or one per line"
             rows={4}
-            style={{ width: '100%', marginBottom: '10px' }}
+            style={{ width: '100%', boxSizing: 'border-box', marginBottom: '10px' }}
             disabled={batchUploading}
           />
-          <div style={{ marginBottom: '10px' }}>
-            <label>
+          <div style={{ marginBottom: '10px', display: 'flex', flexWrap: 'wrap', gap: '15px' }}>
+            <label style={{ flex: '0 1 auto' }}>
               Chapter: 
               <input
                 type="number"
                 value={batchChapter}
                 onChange={(e) => setBatchChapter(e.target.value)}
-                style={{ marginLeft: '10px', width: '80px' }}
+                style={{ marginLeft: '10px', width: 'clamp(60px, 100%, 100px)', boxSizing: 'border-box' }}
                 disabled={batchUploading}
                 placeholder="Chapter"
               />
             </label>
-          </div>
-          <div style={{ marginBottom: '10px' }}>
-            <label>
+            <label style={{ flex: '0 1 auto' }}>
               Chapter Label (optional): 
               <input
                 type="text"
                 value={batchChapterLabel}
                 onChange={(e) => setBatchChapterLabel(e.target.value)}
-                style={{ marginLeft: '10px', width: '200px' }}
+                style={{ marginLeft: '10px', width: 'clamp(150px, 100%, 250px)', boxSizing: 'border-box' }}
                 disabled={batchUploading}
                 placeholder="e.g., Introduction, Review"
               />
@@ -536,143 +581,173 @@ export default function VocabularyManagement() {
         </div>
       )}
 
-      <table>
+      <div style={{ marginBottom: '20px' }}>
+      <table style={{
+        width: '100%',
+        borderCollapse: 'collapse',
+        fontSize: '12px',
+        tableLayout: 'fixed'
+      }}>
+        <colgroup>
+          <col style={{ width: '30px' }} />
+          <col style={{ width: '30px' }} />
+          <col style={{ width: '30px' }} />
+          <col style={{ width: '60px' }} />
+          <col style={{ width: '70px' }} />
+          <col style={{ width: '80px' }} />
+          <col style={{ width: '90px' }} />
+          <col style={{ width: '100px' }} />
+          <col style={{ width: '50px' }} />
+          <col style={{ width: '80px' }} />
+          <col style={{ width: '120px' }} />
+          <col style={{ width: '80px' }} />
+        </colgroup>
         <thead>
           <tr>
-            <th>
+            <th style={{ padding: '4px 2px', textAlign: 'center' }}>#</th>
+            <th style={{ padding: '4px 2px', textAlign: 'center' }}>
               <input 
                 type="checkbox" 
                 checked={selectedIds.size === entries.length && entries.length > 0}
                 onChange={toggleSelectAll}
               />
             </th>
-            <th>Favorite</th>
-            <th>Chinese</th>
-            <th>Pinyin</th>
-            <th>Han Vietnamese</th>
-            <th>Modern Vietnamese</th>
-            <th>English</th>
-            <th>Note</th>
-            <th>Chapter</th>
-            <th>Chapter Label</th>
-            <th>Actions</th>
+            <th style={{ padding: '4px 2px', textAlign: 'center' }}>★</th>
+            <th style={{ padding: '4px 2px' }}>Chinese</th>
+            <th style={{ padding: '4px 2px' }}>Pinyin</th>
+            <th style={{ padding: '4px 2px' }}>Han Viet</th>
+            <th style={{ padding: '4px 2px' }}>Mod Viet</th>
+            <th style={{ padding: '4px 2px' }}>English</th>
+            <th style={{ padding: '4px 2px', textAlign: 'center', display: isSmallScreen ? 'none' : 'table-cell' }}>Ch</th>
+            <th style={{ padding: '4px 2px', display: isSmallScreen ? 'none' : 'table-cell' }}>Label</th>
+            <th style={{ padding: '4px 2px', display: isSmallScreen ? 'none' : 'table-cell' }}>Note</th>
+            <th style={{ padding: '4px 2px' }}>Actions</th>
           </tr>
           <tr style={{ backgroundColor: '#f8f9fa' }}>
-            <th></th>
-            <th>
+            <th style={{ padding: '2px' }}></th>
+            <th style={{ padding: '2px' }}></th>
+            <th style={{ padding: '2px' }}>
               <select
                 value={columnFilters.favorite}
                 onChange={(e) => setColumnFilters({ ...columnFilters, favorite: e.target.value })}
                 style={{
                   width: '100%',
-                  padding: '4px',
-                  fontSize: '12px',
+                  padding: '2px',
+                  fontSize: '11px',
                   border: '1px solid #ccc',
-                  borderRadius: '3px'
+                  borderRadius: '3px',
+                  boxSizing: 'border-box'
                 }}
               >
                 <option value="all">All</option>
-                <option value="favorites">★ Only</option>
-                <option value="non-favorites">☆ Only</option>
+                <option value="favorites">★</option>
+                <option value="non-favorites">☆</option>
               </select>
             </th>
-            <th>
+            <th style={{ padding: '2px' }}>
               <input
                 type="text"
-                placeholder="Filter..."
+                placeholder="..."
                 value={columnFilters.chinese}
                 onChange={(e) => setColumnFilters({ ...columnFilters, chinese: e.target.value })}
                 style={{
                   width: '100%',
-                  padding: '4px',
-                  fontSize: '12px',
+                  padding: '2px',
+                  fontSize: '11px',
                   border: '1px solid #ccc',
-                  borderRadius: '3px'
+                  borderRadius: '3px',
+                  boxSizing: 'border-box'
                 }}
               />
             </th>
-            <th>
+            <th style={{ padding: '2px' }}>
               <input
                 type="text"
-                placeholder="Filter..."
+                placeholder="..."
                 value={columnFilters.pinyin}
                 onChange={(e) => setColumnFilters({ ...columnFilters, pinyin: e.target.value })}
                 style={{
                   width: '100%',
-                  padding: '4px',
-                  fontSize: '12px',
+                  padding: '2px',
+                  fontSize: '11px',
                   border: '1px solid #ccc',
-                  borderRadius: '3px'
+                  borderRadius: '3px',
+                  boxSizing: 'border-box'
                 }}
               />
             </th>
-            <th>
+            <th style={{ padding: '2px' }}>
               <input
                 type="text"
-                placeholder="Filter..."
+                placeholder="..."
                 value={columnFilters.hanVietnamese}
                 onChange={(e) => setColumnFilters({ ...columnFilters, hanVietnamese: e.target.value })}
                 style={{
                   width: '100%',
-                  padding: '4px',
-                  fontSize: '12px',
+                  padding: '2px',
+                  fontSize: '11px',
                   border: '1px solid #ccc',
-                  borderRadius: '3px'
+                  borderRadius: '3px',
+                  boxSizing: 'border-box'
                 }}
               />
             </th>
-            <th>
+            <th style={{ padding: '2px' }}>
               <input
                 type="text"
-                placeholder="Filter..."
+                placeholder="..."
                 value={columnFilters.modernVietnamese}
                 onChange={(e) => setColumnFilters({ ...columnFilters, modernVietnamese: e.target.value })}
                 style={{
                   width: '100%',
-                  padding: '4px',
-                  fontSize: '12px',
+                  padding: '2px',
+                  fontSize: '11px',
                   border: '1px solid #ccc',
-                  borderRadius: '3px'
+                  borderRadius: '3px',
+                  boxSizing: 'border-box'
                 }}
               />
             </th>
-            <th>
+            <th style={{ padding: '2px' }}>
               <input
                 type="text"
-                placeholder="Filter..."
+                placeholder="..."
                 value={columnFilters.english}
                 onChange={(e) => setColumnFilters({ ...columnFilters, english: e.target.value })}
                 style={{
                   width: '100%',
-                  padding: '4px',
-                  fontSize: '12px',
+                  padding: '2px',
+                  fontSize: '11px',
                   border: '1px solid #ccc',
-                  borderRadius: '3px'
+                  borderRadius: '3px',
+                  boxSizing: 'border-box'
                 }}
               />
             </th>
-            <th>
+            <th style={{ padding: '2px' }}></th>
+            <th style={{ padding: '2px', display: isSmallScreen ? 'none' : 'table-cell' }}></th>
+            <th style={{ padding: '2px', display: isSmallScreen ? 'none' : 'table-cell' }}>
               <input
                 type="text"
-                placeholder="Filter..."
+                placeholder="..."
                 value={columnFilters.note}
                 onChange={(e) => setColumnFilters({ ...columnFilters, note: e.target.value })}
                 style={{
                   width: '100%',
-                  padding: '4px',
-                  fontSize: '12px',
+                  padding: '2px',
+                  fontSize: '11px',
                   border: '1px solid #ccc',
-                  borderRadius: '3px'
+                  borderRadius: '3px',
+                  boxSizing: 'border-box'
                 }}
               />
             </th>
-            <th></th>
-            <th></th>
-            <th></th>
+            <th style={{ padding: '2px' }}></th>
           </tr>
         </thead>
         <tbody>
-          {displayedEntries.map((entry) => (
+          {displayedEntries.map((entry, index) => (
+            <>
             <tr 
               key={entry.id}
               onClick={(e) => !batchEditMode && editingId !== entry.id && handleRowClick(entry.id, e)}
@@ -681,6 +756,9 @@ export default function VocabularyManagement() {
                 backgroundColor: selectedIds.has(entry.id) ? '#e3f2fd' : 'transparent'
               }}
             >
+              <td style={{ textAlign: 'center', color: '#999', fontSize: '11px', padding: '4px 2px', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                {index + 1}
+              </td>
               {batchEditMode ? (
                 // Batch edit mode - all fields editable
                 <>
@@ -717,50 +795,59 @@ export default function VocabularyManagement() {
                     <input
                       value={batchEditForms.get(entry.id)?.chineseCharacter || ''}
                       onChange={(e) => updateBatchEditForm(entry.id, 'chineseCharacter', e.target.value)}
+                      style={{ width: '100%', boxSizing: 'border-box', padding: '2px', fontSize: '12px' }}
                     />
                   </td>
                   <td>
                     <input
                       value={batchEditForms.get(entry.id)?.pinyin || ''}
                       onChange={(e) => updateBatchEditForm(entry.id, 'pinyin', e.target.value)}
+                      style={{ width: '100%', boxSizing: 'border-box', padding: '2px', fontSize: '12px' }}
                     />
                   </td>
                   <td>
                     <input
                       value={batchEditForms.get(entry.id)?.hanVietnamese || ''}
                       onChange={(e) => updateBatchEditForm(entry.id, 'hanVietnamese', e.target.value)}
+                      style={{ width: '100%', boxSizing: 'border-box', padding: '2px', fontSize: '12px' }}
                     />
                   </td>
                   <td>
                     <input
                       value={batchEditForms.get(entry.id)?.modernVietnamese || ''}
                       onChange={(e) => updateBatchEditForm(entry.id, 'modernVietnamese', e.target.value)}
+                      style={{ width: '100%', boxSizing: 'border-box', padding: '2px', fontSize: '12px' }}
                     />
                   </td>
                   <td>
                     <input
                       value={batchEditForms.get(entry.id)?.englishMeaning || ''}
                       onChange={(e) => updateBatchEditForm(entry.id, 'englishMeaning', e.target.value)}
+                      style={{ width: '100%', boxSizing: 'border-box', padding: '2px', fontSize: '12px' }}
                     />
                   </td>
-                  <td>
-                    <input
-                      value={batchEditForms.get(entry.id)?.learningNote || ''}
-                      onChange={(e) => updateBatchEditForm(entry.id, 'learningNote', e.target.value)}
-                    />
-                  </td>
-                  <td>
+                  <td style={{ display: isSmallScreen ? 'none' : 'table-cell' }}>
                     <input
                       type="number"
                       value={batchEditForms.get(entry.id)?.chapter || ''}
                       onChange={(e) => updateBatchEditForm(entry.id, 'chapter', parseInt(e.target.value))}
+                      style={{ width: '100%', boxSizing: 'border-box', padding: '2px', fontSize: '12px' }}
                     />
                   </td>
-                  <td>
+                  <td style={{ display: isSmallScreen ? 'none' : 'table-cell' }}>
                     <input
                       value={batchEditForms.get(entry.id)?.chapterLabel || ''}
                       onChange={(e) => updateBatchEditForm(entry.id, 'chapterLabel', e.target.value)}
                       placeholder="Optional"
+                      style={{ width: '100%', boxSizing: 'border-box', padding: '2px', fontSize: '12px' }}
+                    />
+                  </td>
+                  <td style={{ display: isSmallScreen ? 'none' : 'table-cell' }}>
+                    <input
+                      value={batchEditForms.get(entry.id)?.learningNote || ''}
+                      onChange={(e) => updateBatchEditForm(entry.id, 'learningNote', e.target.value)}
+                      placeholder="Note"
+                      style={{ width: '100%', boxSizing: 'border-box', padding: '2px', fontSize: '12px' }}
                     />
                   </td>
                   <td>
@@ -797,6 +884,7 @@ export default function VocabularyManagement() {
                       onChange={(e) =>
                         setEditForm({ ...editForm, chineseCharacter: e.target.value })
                       }
+                      style={{ width: '100%', boxSizing: 'border-box', padding: '2px', fontSize: '12px' }}
                     />
                   </td>
                   <td>
@@ -805,6 +893,7 @@ export default function VocabularyManagement() {
                       onChange={(e) =>
                         setEditForm({ ...editForm, pinyin: e.target.value })
                       }
+                      style={{ width: '100%', boxSizing: 'border-box', padding: '2px', fontSize: '12px' }}
                     />
                   </td>
                   <td>
@@ -813,6 +902,7 @@ export default function VocabularyManagement() {
                       onChange={(e) =>
                         setEditForm({ ...editForm, hanVietnamese: e.target.value })
                       }
+                      style={{ width: '100%', boxSizing: 'border-box', padding: '2px', fontSize: '12px' }}
                     />
                   </td>
                   <td>
@@ -821,6 +911,7 @@ export default function VocabularyManagement() {
                       onChange={(e) =>
                         setEditForm({ ...editForm, modernVietnamese: e.target.value })
                       }
+                      style={{ width: '100%', boxSizing: 'border-box', padding: '2px', fontSize: '12px' }}
                     />
                   </td>
                   <td>
@@ -829,84 +920,142 @@ export default function VocabularyManagement() {
                       onChange={(e) =>
                         setEditForm({ ...editForm, englishMeaning: e.target.value })
                       }
+                      style={{ width: '100%', boxSizing: 'border-box', padding: '2px', fontSize: '12px' }}
                     />
                   </td>
-                  <td>
-                    <input
-                      value={editForm.learningNote || ''}
-                      onChange={(e) =>
-                        setEditForm({ ...editForm, learningNote: e.target.value })
-                      }
-                    />
-                  </td>
-                  <td>
+                  <td style={{ display: isSmallScreen ? 'none' : 'table-cell' }}>
                     <input
                       type="number"
                       value={editForm.chapter || ''}
                       onChange={(e) =>
                         setEditForm({ ...editForm, chapter: parseInt(e.target.value) })
                       }
+                      style={{ width: '100%', boxSizing: 'border-box', padding: '2px', fontSize: '12px' }}
                     />
                   </td>
-                  <td>
+                  <td style={{ display: isSmallScreen ? 'none' : 'table-cell' }}>
                     <input
                       value={editForm.chapterLabel || ''}
                       onChange={(e) =>
                         setEditForm({ ...editForm, chapterLabel: e.target.value })
                       }
                       placeholder="Optional"
+                      style={{ width: '100%', boxSizing: 'border-box', padding: '2px', fontSize: '12px' }}
+                    />
+                  </td>
+                  <td style={{ display: isSmallScreen ? 'none' : 'table-cell' }}>
+                    <input
+                      value={editForm.learningNote || ''}
+                      onChange={(e) =>
+                        setEditForm({ ...editForm, learningNote: e.target.value })
+                      }
+                      placeholder="Note"
+                      style={{ width: '100%', boxSizing: 'border-box', padding: '2px', fontSize: '12px' }}
                     />
                   </td>
                   <td>
-                    <button onClick={handleSave}>Save</button>
-                    <button onClick={() => setEditingId(null)}>Cancel</button>
+                    <button onClick={handleSave} style={{ marginRight: '3px', backgroundColor: '#28a745', color: 'white', padding: '2px 6px', fontSize: '11px' }}>Save</button>
+                    <button onClick={() => setEditingId(null)} style={{ backgroundColor: '#6c757d', color: 'white', padding: '2px 6px', fontSize: '11px' }}>Cancel</button>
                   </td>
                 </>
               ) : (
                 <>
-                  <td onClick={(e) => e.stopPropagation()}>
+                  <td>
                     <input 
                       type="checkbox" 
                       checked={selectedIds.has(entry.id)}
-                      onChange={() => toggleSelection(entry.id)}
+                      onChange={(e) => {
+                        e.stopPropagation();
+                        handleCheckboxChange(entry.id);
+                      }}
                     />
                   </td>
                   <td 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleToggleFavorite(entry.id);
+                    }}
                     style={{ 
                       textAlign: 'center', 
                       fontSize: '20px', 
                       color: entry.isFavorite ? '#ffc107' : '#ccc',
+                      cursor: 'pointer',
                       userSelect: 'none'
                     }}
+                    title={entry.isFavorite ? 'Click to remove from favorites' : 'Click to add to favorites'}
                   >
                     {entry.isFavorite ? '★' : '☆'}
                   </td>
                   <td>{entry.chineseCharacter}</td>
                   <td>{entry.pinyin}</td>
-                  <td>{entry.hanVietnamese}</td>
-                  <td>{entry.modernVietnamese}</td>
-                  <td>{entry.englishMeaning}</td>
-                  <td>{entry.learningNote}</td>
-                  <td>{entry.chapter}</td>
-                  <td>{entry.chapterLabel || '-'}</td>
-                  <td onClick={(e) => e.stopPropagation()}>
-                    <button 
-                      onClick={() => handlePronounce(entry.chineseCharacter, entry.id)}
-                      disabled={playingAudio === entry.id}
-                      style={{ marginRight: '5px', fontSize: '12px' }}
-                      title="Pronounce"
-                    >
-                      {playingAudio === entry.id ? '🔊' : '🔉'}
-                    </button>
-                    <button onClick={() => handleEdit(entry)}>Edit</button>
-                    <button onClick={() => handleDelete(entry.id)}>Delete</button>
+                  <td>{entry.hanVietnamese || '-'}</td>
+                  <td>{entry.modernVietnamese || '-'}</td>
+                  <td>{entry.englishMeaning || '-'}</td>
+                  <td style={{ display: isSmallScreen ? 'none' : 'table-cell' }}>{entry.chapter}</td>
+                  <td style={{ display: isSmallScreen ? 'none' : 'table-cell' }}>{entry.chapterLabel || '-'}</td>
+                  <td style={{ display: isSmallScreen ? 'none' : 'table-cell', fontSize: '11px', color: '#666', maxHeight: '30px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{entry.learningNote || '-'}</td>
+                  <td>
+                    <button onClick={() => handleEdit(entry)} style={{ marginRight: '3px', padding: '2px 6px', fontSize: '11px' }}>Edit</button>
+                    <button onClick={() => handleDelete(entry.id)} style={{ backgroundColor: '#dc3545', color: 'white', padding: '2px 6px', fontSize: '11px' }}>Del</button>
                   </td>
                 </>
               )}
             </tr>
+            {isSmallScreen && editingId !== entry.id && !batchEditMode && (
+              <tr style={{ backgroundColor: '#f5f5f5', borderTop: '1px solid #e0e0e0' }}>
+                <td colSpan={9} style={{ padding: '8px 12px', fontSize: '11px' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
+                    <div>
+                      <strong>Ch:</strong> {entry.chapter}
+                    </div>
+                    <div>
+                      <strong>Label:</strong> {entry.chapterLabel || '-'}
+                    </div>
+                    <div>
+                      <strong>Note:</strong> <span style={{ color: '#666', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>{entry.learningNote || '-'}</span>
+                    </div>
+                  </div>
+                </td>
+              </tr>
+            )}
+            {(editingId === entry.id || batchEditMode) && (
+              <tr style={{ backgroundColor: '#f8f9fa', borderTop: '2px solid #dee2e6' }}>
+                <td colSpan={12} style={{ padding: '12px' }}>
+                  <div style={{ marginBottom: '8px' }}>
+                    <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', fontSize: '12px' }}>
+                      Learning Note:
+                    </label>
+                    <textarea
+                      value={batchEditMode ? (batchEditForms.get(entry.id)?.learningNote || '') : (editForm.learningNote || '')}
+                      onChange={(e) => {
+                        if (batchEditMode) {
+                          updateBatchEditForm(entry.id, 'learningNote', e.target.value);
+                        } else {
+                          setEditForm({ ...editForm, learningNote: e.target.value });
+                        }
+                      }}
+                      rows={3}
+                      style={{
+                        width: '100%',
+                        padding: '6px',
+                        fontSize: '12px',
+                        borderRadius: '4px',
+                        border: '1px solid #dee2e6',
+                        fontFamily: 'inherit',
+                        resize: 'vertical',
+                        boxSizing: 'border-box'
+                      }}
+                      placeholder="Add learning notes here..."
+                    />
+                  </div>
+                </td>
+              </tr>
+            )}
+            </>
           ))}
         </tbody>
       </table>
+      </div>
 
       {/* Scroll to Top Button */}
       {showScrollTop && (
