@@ -181,7 +181,7 @@ export default function ChapterFlashcardPage() {
       // Cancel any ongoing speech
       window.speechSynthesis.cancel();
       
-      // Small delay to ensure cancellation is complete (helps with mobile)
+      // Longer delay to ensure cancellation is complete and speech synthesis is ready
       setTimeout(() => {
         const utterance = new SpeechSynthesisUtterance(currentWord.chineseCharacter);
         utterance.lang = 'zh-CN';
@@ -217,7 +217,7 @@ export default function ChapterFlashcardPage() {
           setPlaying(false);
           alert('Failed to play pronunciation. Your browser may not support Chinese speech.');
         }
-      }, 100);
+      }, 200);
     } else {
       alert('Text-to-speech is not supported in your browser');
     }
