@@ -217,7 +217,7 @@ export default function ChapterFlashcardPage() {
           setPlaying(false);
           alert('Failed to play pronunciation. Your browser may not support Chinese speech.');
         }
-      }, 200);
+      }, 300);
     } else {
       alert('Text-to-speech is not supported in your browser');
     }
