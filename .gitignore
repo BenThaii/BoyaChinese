@@ -34,3 +34,4 @@ coverage/
 *.tmp
 .cache/
 packages/backend/temp/parsing-log.txt
+info.txt
