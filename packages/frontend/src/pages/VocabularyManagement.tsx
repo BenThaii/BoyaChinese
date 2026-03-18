@@ -970,7 +970,7 @@ export default function VocabularyManagement() {
                   <td>{entry.englishMeaning || '-'}</td>
                   <td style={{ display: isSmallScreen ? 'none' : 'table-cell' }}>{entry.chapter}</td>
                   <td style={{ display: isSmallScreen ? 'none' : 'table-cell' }}>{entry.chapterLabel || '-'}</td>
-                  <td style={{ display: isSmallScreen ? 'none' : 'table-cell', fontSize: '11px', color: '#666', maxHeight: '30px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{entry.learningNote || '-'}</td>
+                  <td style={{ display: isSmallScreen ? 'none' : 'table-cell', fontSize: '11px', color: '#666', maxHeight: '80px', overflow: 'auto', whiteSpace: 'pre-wrap', wordBreak: 'break-word', padding: '8px 4px' }}>{entry.learningNote || '-'}</td>
                   <td>
                     <button onClick={() => handleEdit(entry)} style={{ marginRight: '3px', padding: '2px 6px', fontSize: '11px' }}>Edit</button>
                     <button onClick={() => handleDelete(entry.id)} style={{ backgroundColor: '#dc3545', color: 'white', padding: '2px 6px', fontSize: '11px' }}>Del</button>
@@ -989,7 +989,7 @@ export default function VocabularyManagement() {
                       <strong>Label:</strong> {entry.chapterLabel || '-'}
                     </div>
                     <div>
-                      <strong>Note:</strong> <span style={{ color: '#666', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>{entry.learningNote || '-'}</span>
+                      <strong>Note:</strong> <span style={{ color: '#666', whiteSpace: 'pre-wrap', wordBreak: 'break-word', display: 'block', marginTop: '4px' }}>{entry.learningNote || '-'}</span>
                     </div>
                   </div>
                 </td>
