@@ -584,7 +584,7 @@ export default function ChapterFlashcardPage() {
                     {currentWord.learningNote && (
                       <div style={{ marginBottom: '10px' }}>
                         <strong style={{ fontSize: '12px', color: '#666' }}>Learning Note:</strong>
-                        <div style={{ fontSize: '13px', marginTop: '3px', fontStyle: 'italic' }}>
+                        <div style={{ fontSize: '13px', marginTop: '3px', fontStyle: 'italic', whiteSpace: 'pre-wrap', wordBreak: 'break-word', lineHeight: '1.5' }}>
                           {currentWord.learningNote}
                         </div>
                       </div>

@@ -455,7 +455,7 @@ export default function FlashcardPage() {
                   {currentWord.learningNote && (
                     <div style={{ marginBottom: '15px' }}>
                       <strong style={{ fontSize: '14px', color: '#666' }}>Learning Note:</strong>
-                      <div style={{ fontSize: '16px', marginTop: '5px', fontStyle: 'italic' }}>
+                      <div style={{ fontSize: '16px', marginTop: '5px', fontStyle: 'italic', whiteSpace: 'pre-wrap', wordBreak: 'break-word', lineHeight: '1.5' }}>
                         {currentWord.learningNote}
                       </div>
                     </div>
