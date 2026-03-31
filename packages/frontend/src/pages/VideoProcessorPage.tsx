@@ -26,7 +26,6 @@ export default function VideoProcessorPage() {
   const [audioFile, setAudioFile] = useState<File | null>(null);
   const [aiEnhancement, setAiEnhancement] = useState(false);
   const [uploading, setUploading] = useState(false);
-  const [jobId, setJobId] = useState<string | null>(null);
   const [jobStatus, setJobStatus] = useState<JobStatus | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [processedVideos, setProcessedVideos] = useState<ProcessedVideo[]>([]);
@@ -98,10 +97,10 @@ export default function VideoProcessorPage() {
         }
       });
 
-      setJobId(response.data.jobId);
+      const jobId = response.data.jobId;
       
       // Start polling for status
-      pollJobStatus(response.data.jobId);
+      pollJobStatus(jobId);
     } catch (err: any) {
       setError(err.response?.data?.error || err.message || 'Upload failed');
       setUploading(false);
@@ -142,7 +141,6 @@ export default function VideoProcessorPage() {
     setMediaFiles([]);
     setAudioFile(null);
     setAiEnhancement(false);
-    setJobId(null);
     setJobStatus(null);
     setError(null);
     setUploading(false);
