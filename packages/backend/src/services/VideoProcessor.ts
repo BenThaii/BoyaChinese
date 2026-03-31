@@ -5,7 +5,7 @@ import { v4 as uuidv4 } from 'uuid';
 
 interface VideoJob {
   id: string;
-  mediaFiles: string[]; // Can be videos or images
+  mediaFiles: string[]; // Paths to uploaded videos/images
   mediaTypes: ('video' | 'image')[]; // Track type of each file
   mediaSettings: MediaSettings[]; // Trim and speed settings for each media
   audioFile?: string;
@@ -21,6 +21,7 @@ interface MediaSettings {
   trimStart: number;
   trimEnd: number;
   videoSpeed: number;
+  imageDuration?: number; // Duration for images (in seconds)
 }
 
 class VideoProcessor {
@@ -128,23 +129,20 @@ class VideoProcessor {
     const convertedVideos: string[] = [];
 
     try {
-      // Step 1: Apply user settings (trim, speed), preprocess videos (crop and zoom), and convert images to 3-second videos
+      // Step 1: Process media files - convert images and apply all settings to videos in one pass
       for (let i = 0; i < job.mediaFiles.length; i++) {
         if (job.mediaTypes[i] === 'image') {
+          // Images: just convert to video with specified duration
+          const imageDuration = job.mediaSettings[i]?.imageDuration || 3;
           const videoPath = path.join(this.tempDir, `${job.id}_img_${i}.mp4`);
-          await this.convertImageToVideo(job.mediaFiles[i], videoPath, 3);
+          await this.convertImageToVideo(job.mediaFiles[i], videoPath, imageDuration);
           convertedVideos.push(videoPath);
           job.mediaFiles[i] = videoPath;
           job.mediaTypes[i] = 'video';
         } else if (job.mediaTypes[i] === 'video') {
-          // Apply user settings (trim and speed) first
-          const userSettingsPath = path.join(this.tempDir, `${job.id}_usersettings_${i}.mp4`);
-          await this.applyUserSettings(job.mediaFiles[i], userSettingsPath, job.mediaSettings[i]);
-          convertedVideos.push(userSettingsPath);
-          
-          // Then crop and zoom video
+          // Videos: apply trim + speed + crop/zoom in ONE pass (faster!)
           const processedPath = path.join(this.tempDir, `${job.id}_processed_${i}.mp4`);
-          await this.cropAndZoomVideo(userSettingsPath, processedPath);
+          await this.applyAllVideoSettings(job.mediaFiles[i], processedPath, job.mediaSettings[i]);
           convertedVideos.push(processedPath);
           job.mediaFiles[i] = processedPath;
         }
@@ -364,16 +362,28 @@ class VideoProcessor {
 
       const ffprobe = spawn('ffprobe', args);
       let output = '';
+      let errorOutput = '';
 
       ffprobe.stdout.on('data', (data) => {
         output += data.toString();
       });
 
+      ffprobe.stderr.on('data', (data) => {
+        errorOutput += data.toString();
+      });
+
       ffprobe.on('close', (code) => {
         if (code === 0) {
           const duration = parseFloat(output.trim());
-          resolve(duration);
+          if (isNaN(duration)) {
+            console.error(`[VideoProcessor] Invalid duration for ${filePath}: ${output.trim()}`);
+            console.error(`[VideoProcessor] FFprobe error output: ${errorOutput}`);
+            reject(new Error(`Failed to get valid duration for ${filePath}`));
+          } else {
+            resolve(duration);
+          }
         } else {
+          console.error(`[VideoProcessor] FFprobe failed for ${filePath}: ${errorOutput}`);
           reject(new Error(`Failed to get duration for ${filePath}`));
         }
       });
@@ -387,6 +397,7 @@ class VideoProcessor {
   private async runFFmpegCommand(args: string[], description: string): Promise<void> {
     return new Promise((resolve, reject) => {
       console.log(`[VideoProcessor] ${description}...`);
+      console.log(`[VideoProcessor] FFmpeg command: ffmpeg ${args.join(' ')}`);
       
       const ffmpeg = spawn('ffmpeg', args);
       let errorOutput = '';
@@ -406,7 +417,8 @@ class VideoProcessor {
         if (code === 0) {
           resolve();
         } else {
-          reject(new Error(`FFmpeg failed: ${errorOutput}`));
+          console.error(`[VideoProcessor] FFmpeg error output:\n${errorOutput}`);
+          reject(new Error(`FFmpeg failed with code ${code}: ${errorOutput.slice(-500)}`));
         }
       });
 
@@ -449,50 +461,102 @@ class VideoProcessor {
     ], 'Cropping and zooming video (10% zoom)');
   }
 
-  private async applyUserSettings(videoPath: string, outputPath: string, settings: MediaSettings): Promise<void> {
-    const filters: string[] = [];
-    const args: string[] = ['-i', videoPath];
+  /**
+   * Apply crop and zoom to a video (used for images converted to video)
+   */
+  private async applyCropZoom(videoPath: string, outputPath: string): Promise<void> {
+    return this.runFFmpegCommand([
+      '-i', videoPath,
+      '-vf', 'crop=in_w*0.9:in_h*0.9,scale=in_w/0.9:in_h/0.9',
+      '-c:v', 'libx264',
+      '-preset', 'fast',
+      '-crf', '23',
+      '-c:a', 'aac',
+      '-b:a', '128k',
+      '-y',
+      outputPath
+    ], 'Applying crop and zoom');
+  }
+
+  private async applyAllVideoSettings(videoPath: string, outputPath: string, settings: MediaSettings): Promise<void> {
+    const videoFilters: string[] = [];
+    const args: string[] = [];
     
-    // Trim video (use -ss and -to for fast seeking)
-    if (settings.trimStart > 0) {
-      args.push('-ss', settings.trimStart.toString());
+    // Get video duration first to handle trimEnd properly
+    const videoDuration = await this.getMediaDuration(videoPath);
+    const effectiveTrimStart = settings.trimStart || 0;
+    const effectiveTrimEnd = (settings.trimEnd && settings.trimEnd > 0) ? settings.trimEnd : videoDuration;
+    
+    // Calculate the actual duration we want
+    const trimDuration = effectiveTrimEnd - effectiveTrimStart;
+    
+    // Validate trim duration
+    if (trimDuration <= 0) {
+      throw new Error(`Invalid trim duration: ${trimDuration}s (start: ${effectiveTrimStart}s, end: ${effectiveTrimEnd}s)`);
     }
-    if (settings.trimEnd > settings.trimStart) {
-      args.push('-to', settings.trimEnd.toString());
+    
+    // Input file first
+    args.push('-i', videoPath);
+    
+    // Apply trim using -ss and -t AFTER input
+    if (effectiveTrimStart > 0) {
+      args.push('-ss', effectiveTrimStart.toFixed(3));
+    }
+    if (trimDuration < videoDuration) {
+      args.push('-t', trimDuration.toFixed(3));
     }
     
     // Apply video speed if not 1.0
     if (settings.videoSpeed !== 1.0) {
       const pts = 1 / settings.videoSpeed;
-      filters.push(`setpts=${pts}*PTS`);
+      videoFilters.push(`setpts=${pts.toFixed(6)}*PTS`);
     }
     
-    // Add video filters if any
-    if (filters.length > 0) {
-      args.push('-vf', filters.join(','));
+    // Always apply crop and zoom (10% zoom)
+    videoFilters.push('crop=in_w*0.9:in_h*0.9');
+    videoFilters.push('scale=in_w/0.9:in_h/0.9');
+    
+    // Add all video filters in one pass
+    if (videoFilters.length > 0) {
+      args.push('-vf', videoFilters.join(','));
     }
     
     // Apply audio speed if video speed changed
     if (settings.videoSpeed !== 1.0) {
       // atempo filter only works between 0.5 and 2.0
-      // For values outside this range, we need to chain filters
       const speed = settings.videoSpeed;
       if (speed >= 0.5 && speed <= 2.0) {
-        args.push('-filter:a', `atempo=${speed}`);
+        args.push('-filter:a', `atempo=${speed.toFixed(6)}`);
       } else if (speed < 0.5) {
-        // Chain atempo filters for very slow speeds
-        args.push('-filter:a', `atempo=0.5,atempo=${speed / 0.5}`);
+        args.push('-filter:a', `atempo=0.5,atempo=${(speed / 0.5).toFixed(6)}`);
       } else {
-        // Chain atempo filters for very fast speeds
-        args.push('-filter:a', `atempo=2.0,atempo=${speed / 2.0}`);
+        args.push('-filter:a', `atempo=2.0,atempo=${(speed / 2.0).toFixed(6)}`);
       }
     } else {
-      args.push('-c:a', 'copy');
+      args.push('-c:a', 'aac', '-b:a', '128k');
     }
     
+    // Video encoding settings
+    args.push('-c:v', 'libx264');
+    args.push('-preset', 'fast');
+    args.push('-crf', '23');
     args.push('-y', outputPath);
     
-    await this.runFFmpegCommand(args, `Applying user settings (trim: ${settings.trimStart}s-${settings.trimEnd}s, speed: ${settings.videoSpeed}x)`);
+    await this.runFFmpegCommand(
+      args, 
+      `Processing video (trim: ${effectiveTrimStart.toFixed(1)}s-${effectiveTrimEnd.toFixed(1)}s [${trimDuration.toFixed(1)}s], speed: ${settings.videoSpeed}x, crop+zoom)`
+    );
+    
+    // Verify the output file was created and has content
+    try {
+      const stats = await fs.stat(outputPath);
+      if (stats.size === 0) {
+        throw new Error(`Processed video file is empty: ${outputPath}`);
+      }
+      console.log(`[VideoProcessor] Processed video size: ${(stats.size / 1024 / 1024).toFixed(2)} MB`);
+    } catch (error: any) {
+      throw new Error(`Failed to verify processed video: ${error.message}`);
+    }
   }
 
   private async applyAudioSpeed(audioPath: string, outputPath: string, speed: number): Promise<void> {

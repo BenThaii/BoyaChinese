@@ -2,6 +2,7 @@ import express, { Request, Response } from 'express';
 import multer from 'multer';
 import path from 'path';
 import { v4 as uuidv4 } from 'uuid';
+import fs from 'fs/promises';
 import { videoProcessor } from '../services/VideoProcessor';
 
 const router = express.Router();
@@ -73,7 +74,7 @@ router.post('/process', upload.fields([
     if (mediaSettings.length !== mediaFiles.length) {
       // Fill with default settings if missing
       while (mediaSettings.length < mediaFiles.length) {
-        mediaSettings.push({ trimStart: 0, trimEnd: 0, videoSpeed: 1.0 });
+        mediaSettings.push({ trimStart: 0, trimEnd: 0, videoSpeed: 1.0, imageDuration: 3 });
       }
     }
 

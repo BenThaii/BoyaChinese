@@ -25,6 +25,7 @@ interface MediaSettings {
   trimStart: number;
   trimEnd: number;
   videoSpeed: number;
+  imageDuration?: number; // Duration for images (in seconds)
 }
 
 export default function VideoProcessorPage() {
@@ -48,10 +49,11 @@ export default function VideoProcessorPage() {
       setMediaFiles(prev => [...prev, ...files]);
       
       // Initialize settings for new files
-      const newSettings = files.map(() => ({
+      const newSettings = files.map((file) => ({
         trimStart: 0,
         trimEnd: 0, // Will be set when duration is loaded
-        videoSpeed: 1.0
+        videoSpeed: 1.0,
+        imageDuration: 3 // Default 3 seconds for images
       }));
       setMediaSettings(prev => [...prev, ...newSettings]);
       
@@ -64,7 +66,7 @@ export default function VideoProcessorPage() {
         if (file.type.startsWith('video/')) {
           loadVideoDuration(file, mediaFiles.length + index);
         } else {
-          // Images are 3 seconds
+          // Images default to 3 seconds
           const globalIndex = mediaFiles.length + index;
           setMediaDurations(prev => {
             const updated = [...prev];
@@ -221,10 +223,12 @@ export default function VideoProcessorPage() {
 
   const handleDownload = () => {
     if (jobStatus?.downloadUrl) {
-      // downloadUrl already includes the full path from API root
+      // downloadUrl is like "/api/video/download/xxx"
+      // We need to use the base URL without /api since downloadUrl already has it
+      const baseUrl = API_URL.replace('/api', '');
       const fullUrl = jobStatus.downloadUrl.startsWith('http') 
         ? jobStatus.downloadUrl 
-        : `${API_URL}${jobStatus.downloadUrl}`;
+        : `${baseUrl}${jobStatus.downloadUrl}`;
       window.open(fullUrl, '_blank');
     }
   };
@@ -240,6 +244,14 @@ export default function VideoProcessorPage() {
     setError(null);
     setUploading(false);
     loadProcessedVideos(); // Refresh the list
+  };
+
+  const handleKeepAndAdjust = () => {
+    // Keep all files and settings, just clear the job status
+    setJobStatus(null);
+    setError(null);
+    setUploading(false);
+    // Don't clear files, settings, or durations - user can adjust and reprocess
   };
 
   const loadProcessedVideos = async () => {
@@ -271,9 +283,12 @@ export default function VideoProcessorPage() {
   };
 
   const handleDownloadVideo = (downloadUrl: string) => {
+    // downloadUrl is like "/api/video/download/xxx"
+    // We need to use the base URL without /api since downloadUrl already has it
+    const baseUrl = API_URL.replace('/api', '');
     const fullUrl = downloadUrl.startsWith('http') 
       ? downloadUrl 
-      : `${API_URL}${downloadUrl}`;
+      : `${baseUrl}${downloadUrl}`;
     window.open(fullUrl, '_blank');
   };
 
@@ -293,9 +308,12 @@ export default function VideoProcessorPage() {
   };
 
   const handlePreviewProcessedVideo = (streamUrl: string, filename: string) => {
+    // streamUrl is like "/api/video/stream/xxx"
+    // We need to use the base URL without /api since streamUrl already has it
+    const baseUrl = API_URL.replace('/api', '');
     const fullUrl = streamUrl.startsWith('http') 
       ? streamUrl 
-      : `${API_URL}${streamUrl}`;
+      : `${baseUrl}${streamUrl}`;
     console.log('[Preview] Opening video preview:', { streamUrl, fullUrl, filename });
     setPreviewMedia({ url: fullUrl, type: 'video', name: filename });
   };
@@ -511,8 +529,47 @@ export default function VideoProcessorPage() {
 
                   {/* Info for images */}
                   {fileType === 'image' && (
-                    <div style={{ fontSize: '12px', color: '#666', fontStyle: 'italic', marginTop: '5px' }}>
-                      Will be displayed for 3 seconds
+                    <div style={{ marginTop: '10px', padding: '10px', backgroundColor: '#fff', borderRadius: '4px' }}>
+                      <div style={{ fontSize: '13px', color: '#666', marginBottom: '8px' }}>
+                        Image Display Duration
+                      </div>
+                      
+                      {/* Image Duration */}
+                      <div>
+                        <label style={{ fontSize: '13px', display: 'block', marginBottom: '4px' }}>
+                          Duration: {(settings.imageDuration || 3).toFixed(1)}s
+                        </label>
+                        <input
+                          type="range"
+                          min={0.5}
+                          max={10}
+                          step={0.5}
+                          value={settings.imageDuration || 3}
+                          onChange={(e) => {
+                            const newDuration = parseFloat(e.target.value);
+                            updateMediaSetting(index, 'imageDuration', newDuration);
+                            // Also update the duration in mediaDurations for calculation
+                            setMediaDurations(prev => {
+                              const updated = [...prev];
+                              updated[index] = newDuration;
+                              return updated;
+                            });
+                            // Update trimEnd to match duration
+                            setMediaSettings(prev => {
+                              const updated = [...prev];
+                              updated[index] = { ...updated[index], trimEnd: newDuration };
+                              return updated;
+                            });
+                          }}
+                          disabled={uploading}
+                          style={{ width: '100%' }}
+                        />
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: '#999' }}>
+                          <span>0.5s</span>
+                          <span>5s</span>
+                          <span>10s</span>
+                        </div>
+                      </div>
                     </div>
                   )}
                 </div>
@@ -604,6 +661,16 @@ export default function VideoProcessorPage() {
         </label>
       </div>
 
+      {/* Success message after adjustment */}
+      {jobStatus?.status === 'completed' && mediaFiles.length > 0 && (
+        <div style={{ marginTop: '20px', padding: '15px', backgroundColor: '#d1ecf1', color: '#0c5460', borderRadius: '4px', border: '1px solid #bee5eb' }}>
+          <strong>✓ Video processed successfully!</strong>
+          <p style={{ margin: '10px 0 0 0', fontSize: '14px' }}>
+            You can now adjust the settings below (trim, speed, duration, etc.) and click "Process Video" again to create a new version.
+          </p>
+        </div>
+      )}
+
       {/* Error Display */}
       {error && (
         <div style={{ padding: '15px', marginBottom: '20px', backgroundColor: '#f8d7da', color: '#721c24', borderRadius: '4px' }}>
@@ -651,7 +718,7 @@ export default function VideoProcessorPage() {
 
       {/* Action Buttons */}
       <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-        {!jobStatus || jobStatus.status === 'failed' ? (
+        {(!jobStatus || jobStatus.status === 'failed') && (
           <button
             onClick={handleUpload}
             disabled={uploading || mediaFiles.length === 0}
@@ -668,7 +735,7 @@ export default function VideoProcessorPage() {
           >
             {uploading ? 'Processing...' : (audioFile ? 'Process Video' : 'Concatenate Media')}
           </button>
-        ) : null}
+        )}
 
         {jobStatus?.status === 'completed' && (
           <>
@@ -685,7 +752,7 @@ export default function VideoProcessorPage() {
                 whiteSpace: 'nowrap'
               }}
             >
-              Preview Video
+              Preview Result
             </button>
             <button
               onClick={handleDownload}
@@ -700,7 +767,23 @@ export default function VideoProcessorPage() {
                 whiteSpace: 'nowrap'
               }}
             >
-              Download Video
+              Download
+            </button>
+            <button
+              onClick={handleKeepAndAdjust}
+              style={{
+                padding: '12px 24px',
+                fontSize: '16px',
+                backgroundColor: '#ffc107',
+                color: '#000',
+                border: 'none',
+                borderRadius: '4px',
+                cursor: 'pointer',
+                whiteSpace: 'nowrap',
+                fontWeight: 'bold'
+              }}
+            >
+              {audioFile ? 'Process Again' : 'Concatenate Again'}
             </button>
             <button
               onClick={handleReset}
@@ -715,7 +798,7 @@ export default function VideoProcessorPage() {
                 whiteSpace: 'nowrap'
               }}
             >
-              Process Another Video
+              Clear All
             </button>
           </>
         )}
@@ -734,7 +817,7 @@ export default function VideoProcessorPage() {
               whiteSpace: 'nowrap'
             }}
           >
-            Reset
+            Clear All
           </button>
         )}
       </div>
