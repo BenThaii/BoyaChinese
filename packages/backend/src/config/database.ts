@@ -48,6 +48,7 @@ async function createTables() {
         modern_vietnamese TEXT,
         english_meaning TEXT,
         learning_note TEXT,
+        is_favorite TINYINT(1) DEFAULT 0,
         chapter INTEGER NOT NULL,
         chapter_label VARCHAR(255),
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -71,6 +72,22 @@ async function createTables() {
         console.log('chapter_label column already exists');
       } else {
         console.error('Error adding chapter_label column:', error.message);
+      }
+    }
+
+    // Add is_favorite column if it doesn't exist (for existing databases)
+    try {
+      await connection.query(`
+        ALTER TABLE vocabulary_entries 
+        ADD COLUMN is_favorite TINYINT(1) DEFAULT 0 AFTER learning_note;
+      `);
+      console.log('is_favorite column added successfully');
+    } catch (error: any) {
+      // Column might already exist (error code 1060), ignore error
+      if (error.errno === 1060) {
+        console.log('is_favorite column already exists');
+      } else {
+        console.error('Error adding is_favorite column:', error.message);
       }
     }
 
