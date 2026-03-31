@@ -40,7 +40,25 @@ const PORT = process.env.PORT || 3000;
 
 // Middleware
 app.use(cors());
+
+// Log all incoming requests
+app.use((req, res, next) => {
+  console.log(`[Request] ${req.method} ${req.path}`);
+  console.log(`[Request] Content-Type: ${req.headers['content-type']}`);
+  console.log(`[Request] Content-Length: ${req.headers['content-length']}`);
+  next();
+});
+
 app.use(express.json({ limit: '50mb' })); // Increased limit for database imports and large payloads
+
+// Log JSON parsing errors
+app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+  if (err instanceof SyntaxError && 'body' in err) {
+    console.error('[JSON Parse Error]', err.message);
+    return res.status(400).json({ error: 'Invalid JSON format' });
+  }
+  next(err);
+});
 
 // Create temp audio directory if it doesn't exist
 const audioDir = join(process.cwd(), 'temp', 'audio');
