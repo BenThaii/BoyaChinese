@@ -198,15 +198,52 @@ print_success "Environment variables configured"
 
 # Step 10: Build application
 print_info "Building application..."
+
+# Build backend first
+cd packages/backend
 npm run build
+cd ../..
+
+# Build frontend with explicit API URL to avoid caching issues
+cd packages/frontend
+print_info "Building frontend with API URL: ${PROTOCOL}://${DOMAIN}/api"
+# Set environment variable inline during build to ensure it's used
+VITE_API_URL="${PROTOCOL}://${DOMAIN}/api" npm run build
+
+# Verify the API URL is correctly embedded in the build
+if grep -q "${DOMAIN}" dist/assets/*.js 2>/dev/null; then
+    print_success "Frontend built with correct API URL"
+else
+    print_error "Warning: Could not verify API URL in frontend build"
+fi
+cd ../..
+
 print_success "Application built"
 
-# Step 11: Initialize database
-print_info "Initializing database..."
+# Step 11: Initialize database with proper schema
+print_info "Initializing database with complete schema..."
+
+# First, let the backend create the basic tables
 cd packages/backend
 timeout 10 node dist/index.js || true
 cd ../..
-print_success "Database initialized"
+
+# Then ensure all required columns exist (in case of schema updates)
+print_info "Verifying database schema..."
+mysql -u $DB_USER -p"$DB_PASSWORD" $DB_NAME << 'EOSQL'
+-- Ensure is_favorite column exists
+ALTER TABLE vocabulary_entries 
+ADD COLUMN IF NOT EXISTS is_favorite TINYINT(1) DEFAULT 0 AFTER learning_note;
+
+-- Ensure chapter_label column exists
+ALTER TABLE vocabulary_entries 
+ADD COLUMN IF NOT EXISTS chapter_label VARCHAR(255) AFTER chapter;
+
+-- Show final schema
+DESCRIBE vocabulary_entries;
+EOSQL
+
+print_success "Database initialized with complete schema"
 
 # Step 12: Create PM2 ecosystem file
 print_info "Creating PM2 configuration..."
@@ -265,6 +302,9 @@ server {
         proxy_set_header X-Real-IP \$remote_addr;
         proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto \$scheme;
+        
+        # Increase body size limit for database imports
+        client_max_body_size 100M;
     }
 
     # Audio files
@@ -323,6 +363,33 @@ echo "=========================================="
 print_success "Deployment completed successfully!"
 echo "=========================================="
 echo ""
+
+# Validation checks
+print_info "Running post-deployment validation..."
+echo ""
+
+# Check backend is running
+if pm2 list | grep -q "chinese-learning-backend.*online"; then
+    print_success "Backend is running"
+else
+    print_error "Backend is not running - check logs with: pm2 logs chinese-learning-backend"
+fi
+
+# Check database connection
+if mysql -u $DB_USER -p"$DB_PASSWORD" $DB_NAME -e "SELECT COUNT(*) FROM vocabulary_entries;" &>/dev/null; then
+    print_success "Database connection working"
+else
+    print_error "Database connection failed"
+fi
+
+# Check Nginx is serving
+if curl -s -o /dev/null -w "%{http_code}" http://localhost | grep -q "200"; then
+    print_success "Nginx is serving content"
+else
+    print_error "Nginx is not responding correctly"
+fi
+
+echo ""
 echo "Your application is now running at:"
 if [ "$ENABLE_SSL" = "y" ]; then
     echo "  https://$DOMAIN"
@@ -330,7 +397,20 @@ else
     echo "  http://$DOMAIN"
 fi
 echo ""
+echo "Important URLs:"
+echo "  Main app:           ${PROTOCOL}://${DOMAIN}/"
+echo "  User admin:         ${PROTOCOL}://${DOMAIN}/user1/admin"
+echo "  Database admin:     ${PROTOCOL}://${DOMAIN}/database-admin"
+echo "  API endpoint:       ${PROTOCOL}://${DOMAIN}/api"
+echo ""
 echo "Useful commands:"
 echo "  View backend logs:    pm2 logs chinese-learning-backend"
 echo "  Restart backend:      pm2 restart chinese-learning-backend"
+echo "  Check database:       mysql -u $DB_USER -p $DB_NAME"
+echo "  Reload Nginx:         sudo systemctl reload nginx"
+echo ""
+echo "Database credentials:"
+echo "  Database: $DB_NAME"
+echo "  Username: $DB_USER"
+echo "  Password: [hidden]"
 echo ""
