@@ -67,8 +67,6 @@ router.post('/process', upload.fields([
     const imageCount = mediaTypes.filter(t => t === 'image').length;
     const aiEnhancement = req.body.aiEnhancement === 'true';
 
-    console.log(`[VideoRoute] Received ${videoCount} video(s), ${imageCount} image(s)${audioFile ? ', and 1 audio file' : ' (no audio)'}${aiEnhancement ? ' with AI enhancement' : ''}`);
-
     // Add job to processing queue
     const jobId = await videoProcessor.addJob(mediaFiles, mediaTypes, audioFile, aiEnhancement);
 
@@ -79,7 +77,7 @@ router.post('/process', upload.fields([
       queueStatus: videoProcessor.getQueueStatus()
     });
   } catch (error: any) {
-    console.error('[VideoRoute] Error processing video:', error);
+    console.error('Error processing video:', error);
     res.status(500).json({
       error: 'Failed to process video',
       message: error.message
@@ -105,11 +103,11 @@ router.get('/status/:jobId', async (req: Request, res: Response) => {
       status: job.status,
       createdAt: job.createdAt,
       error: job.error,
-      downloadUrl: job.status === 'completed' ? `/video/download/${job.id}` : null,
-      streamUrl: job.status === 'completed' ? `/video/stream/${job.id}` : null
+      downloadUrl: job.status === 'completed' ? `/api/video/download/${job.id}` : null,
+      streamUrl: job.status === 'completed' ? `/api/video/stream/${job.id}` : null
     });
   } catch (error: any) {
-    console.error('[VideoRoute] Error getting job status:', error);
+    console.error('Error getting job status:', error);
     res.status(500).json({
       error: 'Failed to get job status',
       message: error.message
@@ -137,14 +135,14 @@ router.get('/download/:jobId', async (req: Request, res: Response) => {
     // Send the file
     res.download(job.outputPath, `video_${jobId}.mp4`, (err) => {
       if (err) {
-        console.error('[VideoRoute] Error downloading file:', err);
+        console.error('Error downloading file:', err);
         if (!res.headersSent) {
           res.status(500).json({ error: 'Failed to download video' });
         }
       }
     });
   } catch (error: any) {
-    console.error('[VideoRoute] Error downloading video:', error);
+    console.error('Error downloading video:', error);
     res.status(500).json({
       error: 'Failed to download video',
       message: error.message
@@ -167,19 +165,17 @@ router.get('/stream/:jobId', async (req: Request, res: Response) => {
       return res.status(404).json({ error: 'Video not found' });
     }
 
-    console.log(`[VideoRoute] Streaming video: ${videoPath}`);
-
     // Send the file for inline viewing (streaming) with absolute path
     res.sendFile(path.resolve(videoPath), (err) => {
       if (err) {
-        console.error('[VideoRoute] Error streaming file:', err);
+        console.error('Error streaming file:', err);
         if (!res.headersSent) {
           res.status(500).json({ error: 'Failed to stream video' });
         }
       }
     });
   } catch (error: any) {
-    console.error('[VideoRoute] Error streaming video:', error);
+    console.error('Error streaming video:', error);
     res.status(500).json({
       error: 'Failed to stream video',
       message: error.message
@@ -196,7 +192,7 @@ router.get('/queue', (req: Request, res: Response) => {
     const status = videoProcessor.getQueueStatus();
     res.json(status);
   } catch (error: any) {
-    console.error('[VideoRoute] Error getting queue status:', error);
+    console.error('Error getting queue status:', error);
     res.status(500).json({
       error: 'Failed to get queue status',
       message: error.message
@@ -218,12 +214,12 @@ router.get('/list', async (req: Request, res: Response) => {
         filename: v.filename,
         createdAt: v.createdAt,
         size: v.size,
-        downloadUrl: `/video/download/${v.id}`,
-        streamUrl: `/video/stream/${v.id}`
+        downloadUrl: `/api/video/download/${v.id}`,
+        streamUrl: `/api/video/stream/${v.id}`
       }))
     });
   } catch (error: any) {
-    console.error('[VideoRoute] Error listing videos:', error);
+    console.error('Error listing videos:', error);
     res.status(500).json({
       error: 'Failed to list videos',
       message: error.message
