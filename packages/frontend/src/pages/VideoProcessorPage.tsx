@@ -72,7 +72,6 @@ export default function VideoProcessorPage() {
 
     setUploading(true);
     setError(null);
-    setJobId(null);
     setJobStatus(null);
 
     try {
