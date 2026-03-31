@@ -120,7 +120,20 @@ else
     print_success "PM2 already installed"
 fi
 
-# Step 6: Configure MySQL
+# Step 6: Install FFmpeg
+print_info "Installing FFmpeg..."
+if ! command -v ffmpeg &> /dev/null; then
+    sudo apt install -y ffmpeg
+    print_success "FFmpeg installed"
+else
+    print_success "FFmpeg already installed"
+fi
+
+# Verify FFmpeg installation
+FFMPEG_VERSION=$(ffmpeg -version | head -n1)
+print_success "FFmpeg version: $FFMPEG_VERSION"
+
+# Step 7: Configure MySQL
 print_info "Configuring MySQL database..."
 sudo mysql -e "CREATE DATABASE IF NOT EXISTS $DB_NAME;" 2>/dev/null || true
 sudo mysql -e "CREATE USER IF NOT EXISTS '$DB_USER'@'localhost' IDENTIFIED BY '$DB_PASSWORD';" 2>/dev/null || true

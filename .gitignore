@@ -35,3 +35,6 @@ coverage/
 .cache/
 packages/backend/temp/parsing-log.txt
 info.txt
+
+# videos
+packages/backend/uploads/*

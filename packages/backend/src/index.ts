@@ -25,6 +25,7 @@ import comprehensionRoutes from './routes/comprehension.routes';
 import ttsRoutes from './routes/tts.routes';
 import adminRoutes from './routes/admin.routes';
 import phrasesRoutes from './routes/phrases.routes';
+import videoRoutes from './routes/video.routes';
 
 // Import config AFTER dotenv has loaded
 import { config } from './config/env';
@@ -32,6 +33,7 @@ import { config } from './config/env';
 // Import scheduler and phrase generator services
 import { GenerationScheduler } from './services/GenerationScheduler';
 import { PhraseGeneratorService } from './services/PhraseGeneratorService';
+import { videoProcessor } from './services/VideoProcessor';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -65,12 +67,23 @@ app.use('/api', comprehensionRoutes);
 app.use('/api', ttsRoutes);
 app.use('/api', adminRoutes);
 app.use('/api', phrasesRoutes);
+app.use('/api/video', videoRoutes);
 
 // Initialize database and start server
 async function startServer() {
   try {
     await initDatabase();
     console.log('Database initialized successfully');
+    
+    // Initialize video processor
+    try {
+      console.log('[VideoProcessor] Initializing video processor...');
+      await videoProcessor.initialize();
+      console.log('[VideoProcessor] Video processor initialized successfully');
+    } catch (videoError) {
+      console.error('[VideoProcessor] Failed to initialize video processor:', videoError);
+      console.error('[VideoProcessor] Video processing features will be unavailable');
+    }
     
     // Initialize and start the generation scheduler
     try {

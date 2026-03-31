@@ -9,6 +9,7 @@ import PhrasesPage from './pages/PhrasesPage';
 import EnglishPhrasesPage from './pages/EnglishPhrasesPage';
 import FlashcardPage from './pages/FlashcardPage';
 import ChapterFlashcardPage from './pages/ChapterFlashcardPage';
+import VideoProcessorPage from './pages/VideoProcessorPage';
 
 function Navigation() {
   const username = 'user1'; // Always use user1
@@ -273,6 +274,24 @@ function Navigation() {
                   📖 Flashcards (Chapters)
                 </Link>
               </li>
+              <li>
+                <Link
+                  to="/video-processor"
+                  onClick={closeMenu}
+                  style={{
+                    display: 'block',
+                    padding: '15px 20px',
+                    color: '#333',
+                    textDecoration: 'none',
+                    borderBottom: '1px solid #eee',
+                    transition: 'background-color 0.2s'
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f8f9fa'}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                >
+                  🎬 Video Processor
+                </Link>
+              </li>
             </ul>
           </div>
         </>
@@ -301,6 +320,7 @@ function App() {
                   <li>Phrases (English) - Practice by reading English translations</li>
                   <li>Flashcards (Favorites) - Practice your favorite words with flashcards</li>
                   <li>Flashcards (Chapters) - Practice words by chapter range</li>
+                  <li>Video Processor - Concatenate videos and overlay audio</li>
                 </ul>
               </div>
             } />
@@ -313,6 +333,7 @@ function App() {
             <Route path="/english-phrases" element={<EnglishPhrasesPage />} />
             <Route path="/flashcards" element={<FlashcardPage />} />
             <Route path="/chapter-flashcards" element={<ChapterFlashcardPage />} />
+            <Route path="/video-processor" element={<VideoProcessorPage />} />
           </Routes>
         </main>
       </div>
