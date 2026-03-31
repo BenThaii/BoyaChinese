@@ -21,25 +21,89 @@ interface ProcessedVideo {
   streamUrl: string;
 }
 
+interface MediaSettings {
+  trimStart: number;
+  trimEnd: number;
+  videoSpeed: number;
+}
+
 export default function VideoProcessorPage() {
   const [mediaFiles, setMediaFiles] = useState<File[]>([]);
+  const [mediaSettings, setMediaSettings] = useState<MediaSettings[]>([]);
+  const [mediaDurations, setMediaDurations] = useState<number[]>([]);
   const [audioFile, setAudioFile] = useState<File | null>(null);
+  const [audioSpeed, setAudioSpeed] = useState(1.0);
   const [aiEnhancement, setAiEnhancement] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [jobStatus, setJobStatus] = useState<JobStatus | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [processedVideos, setProcessedVideos] = useState<ProcessedVideo[]>([]);
   const [loadingVideos, setLoadingVideos] = useState(false);
-  const [previewMedia, setPreviewMedia] = useState<{ url: string; type: 'video' | 'image'; name: string } | null>(null);
+  const [previewMedia, setPreviewMedia] = useState<{ url: string; type: 'video' | 'image' | 'audio'; name: string; settings?: MediaSettings; duration?: number; audioSpeed?: number } | null>(null);
 
   const handleMediaChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
       const files = Array.from(e.target.files);
       // Append new files to existing ones instead of replacing
       setMediaFiles(prev => [...prev, ...files]);
+      
+      // Initialize settings for new files
+      const newSettings = files.map(() => ({
+        trimStart: 0,
+        trimEnd: 0, // Will be set when duration is loaded
+        videoSpeed: 1.0
+      }));
+      setMediaSettings(prev => [...prev, ...newSettings]);
+      
+      // Initialize durations (will be loaded asynchronously)
+      const newDurations = files.map(() => 0);
+      setMediaDurations(prev => [...prev, ...newDurations]);
+      
+      // Load durations for video files
+      files.forEach((file, index) => {
+        if (file.type.startsWith('video/')) {
+          loadVideoDuration(file, mediaFiles.length + index);
+        } else {
+          // Images are 3 seconds
+          const globalIndex = mediaFiles.length + index;
+          setMediaDurations(prev => {
+            const updated = [...prev];
+            updated[globalIndex] = 3;
+            return updated;
+          });
+          setMediaSettings(prev => {
+            const updated = [...prev];
+            updated[globalIndex] = { ...updated[globalIndex], trimEnd: 3 };
+            return updated;
+          });
+        }
+      });
+      
       // Clear the input so the same file can be selected again if needed
       e.target.value = '';
     }
+  };
+
+  const loadVideoDuration = (file: File, index: number) => {
+    const video = document.createElement('video');
+    video.preload = 'metadata';
+    
+    video.onloadedmetadata = () => {
+      const duration = video.duration;
+      setMediaDurations(prev => {
+        const updated = [...prev];
+        updated[index] = duration;
+        return updated;
+      });
+      setMediaSettings(prev => {
+        const updated = [...prev];
+        updated[index] = { ...updated[index], trimEnd: duration };
+        return updated;
+      });
+      URL.revokeObjectURL(video.src);
+    };
+    
+    video.src = URL.createObjectURL(file);
   };
 
   const handleAudioChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -50,14 +114,22 @@ export default function VideoProcessorPage() {
 
   const removeMedia = (index: number) => {
     setMediaFiles(prev => prev.filter((_, i) => i !== index));
+    setMediaSettings(prev => prev.filter((_, i) => i !== index));
+    setMediaDurations(prev => prev.filter((_, i) => i !== index));
   };
 
   const moveMedia = (index: number, direction: 'up' | 'down') => {
     const newFiles = [...mediaFiles];
+    const newSettings = [...mediaSettings];
+    const newDurations = [...mediaDurations];
     const newIndex = direction === 'up' ? index - 1 : index + 1;
     if (newIndex >= 0 && newIndex < newFiles.length) {
       [newFiles[index], newFiles[newIndex]] = [newFiles[newIndex], newFiles[index]];
+      [newSettings[index], newSettings[newIndex]] = [newSettings[newIndex], newSettings[index]];
+      [newDurations[index], newDurations[newIndex]] = [newDurations[newIndex], newDurations[index]];
       setMediaFiles(newFiles);
+      setMediaSettings(newSettings);
+      setMediaDurations(newDurations);
     }
   };
 
@@ -65,6 +137,20 @@ export default function VideoProcessorPage() {
     if (file.type.startsWith('video/')) return 'video';
     if (file.type.startsWith('image/')) return 'image';
     return 'video';
+  };
+
+  const updateMediaSetting = (index: number, field: keyof MediaSettings, value: number) => {
+    setMediaSettings(prev => {
+      const updated = [...prev];
+      updated[index] = { ...updated[index], [field]: value };
+      return updated;
+    });
+  };
+
+  const formatTime = (seconds: number): string => {
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
   const handleUpload = async () => {
@@ -85,9 +171,13 @@ export default function VideoProcessorPage() {
         formData.append('media', file);
       });
       
+      // Add media settings as JSON
+      formData.append('mediaSettings', JSON.stringify(mediaSettings));
+      
       // Add audio if provided
       if (audioFile) {
         formData.append('audio', audioFile);
+        formData.append('audioSpeed', audioSpeed.toString());
       }
 
       // Add AI enhancement flag
@@ -141,7 +231,10 @@ export default function VideoProcessorPage() {
 
   const handleReset = () => {
     setMediaFiles([]);
+    setMediaSettings([]);
+    setMediaDurations([]);
     setAudioFile(null);
+    setAudioSpeed(1.0);
     setAiEnhancement(false);
     setJobStatus(null);
     setError(null);
@@ -184,10 +277,19 @@ export default function VideoProcessorPage() {
     window.open(fullUrl, '_blank');
   };
 
-  const handlePreviewUploadedMedia = (file: File) => {
+  const handlePreviewUploadedMedia = (file: File, index?: number) => {
     const url = URL.createObjectURL(file);
     const type = file.type.startsWith('video/') ? 'video' : 'image';
-    setPreviewMedia({ url, type, name: file.name });
+    const settings = index !== undefined ? mediaSettings[index] : undefined;
+    const duration = index !== undefined ? mediaDurations[index] : undefined;
+    setPreviewMedia({ url, type, name: file.name, settings, duration });
+  };
+
+  const handlePreviewAudio = () => {
+    if (audioFile) {
+      const url = URL.createObjectURL(audioFile);
+      setPreviewMedia({ url, type: 'audio', name: audioFile.name, audioSpeed });
+    }
   };
 
   const handlePreviewProcessedVideo = (streamUrl: string, filename: string) => {
@@ -233,7 +335,11 @@ export default function VideoProcessorPage() {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
               <h4 style={{ margin: 0 }}>Selected Media ({mediaFiles.length}):</h4>
               <button
-                onClick={() => setMediaFiles([])}
+                onClick={() => {
+                  setMediaFiles([]);
+                  setMediaSettings([]);
+                  setMediaDurations([]);
+                }}
                 disabled={uploading}
                 style={{
                   padding: '6px 12px',
@@ -251,91 +357,164 @@ export default function VideoProcessorPage() {
             {mediaFiles.map((file, index) => {
               const fileType = getFileType(file);
               const icon = fileType === 'video' ? '🎬' : '🖼️';
+              const duration = mediaDurations[index] || 0;
+              const settings = mediaSettings[index] || { trimStart: 0, trimEnd: duration, videoSpeed: 1.0 };
+              const trimmedDuration = settings.trimEnd - settings.trimStart;
+              const finalDuration = trimmedDuration / settings.videoSpeed;
+              
               return (
                 <div
                   key={index}
                   style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    padding: '10px',
-                    marginBottom: '8px',
+                    padding: '15px',
+                    marginBottom: '12px',
                     backgroundColor: '#f5f5f5',
                     borderRadius: '4px',
-                    flexWrap: 'wrap',
-                    gap: '8px'
+                    border: '1px solid #ddd'
                   }}
                 >
-                  <span style={{ 
-                    flex: '1 1 200px',
-                    fontSize: '14px',
-                    wordBreak: 'break-word',
-                    minWidth: '0'
-                  }}>
-                    {index + 1}. {icon} {file.name} ({formatFileSize(file.size)})
-                    {fileType === 'image' && <span style={{ color: '#666', marginLeft: '8px' }}>(3s)</span>}
-                  </span>
-                  <div style={{ 
-                    display: 'flex', 
-                    gap: '5px',
-                    flexWrap: 'wrap'
-                  }}>
-                    <button
-                      onClick={() => handlePreviewUploadedMedia(file)}
-                      disabled={uploading}
-                      style={{ 
-                        padding: '4px 8px', 
-                        fontSize: '12px', 
-                        backgroundColor: '#17a2b8', 
-                        color: 'white', 
-                        border: 'none', 
-                        borderRadius: '3px', 
-                        cursor: uploading ? 'not-allowed' : 'pointer',
-                        whiteSpace: 'nowrap'
-                      }}
-                    >
-                      Preview
-                    </button>
-                    <button
-                      onClick={() => moveMedia(index, 'up')}
-                      disabled={index === 0 || uploading}
-                      style={{ 
-                        padding: '4px 8px', 
-                        fontSize: '12px', 
-                        cursor: (index === 0 || uploading) ? 'not-allowed' : 'pointer',
-                        minWidth: '32px'
-                      }}
-                    >
-                      ↑
-                    </button>
-                    <button
-                      onClick={() => moveMedia(index, 'down')}
-                      disabled={index === mediaFiles.length - 1 || uploading}
-                      style={{ 
-                        padding: '4px 8px', 
-                        fontSize: '12px', 
-                        cursor: (index === mediaFiles.length - 1 || uploading) ? 'not-allowed' : 'pointer',
-                        minWidth: '32px'
-                      }}
-                    >
-                      ↓
-                    </button>
-                    <button
-                      onClick={() => removeMedia(index)}
-                      disabled={uploading}
-                      style={{ 
-                        padding: '4px 8px', 
-                        fontSize: '12px', 
-                        backgroundColor: '#dc3545', 
-                        color: 'white', 
-                        border: 'none', 
-                        borderRadius: '3px', 
-                        cursor: uploading ? 'not-allowed' : 'pointer',
-                        whiteSpace: 'nowrap'
-                      }}
-                    >
-                      Remove
-                    </button>
+                  {/* File info and action buttons */}
+                  <div style={{ display: 'flex', alignItems: 'center', marginBottom: '10px', flexWrap: 'wrap', gap: '8px' }}>
+                    <span style={{ 
+                      flex: '1 1 200px',
+                      fontSize: '14px',
+                      fontWeight: 'bold',
+                      wordBreak: 'break-word',
+                      minWidth: '0'
+                    }}>
+                      {index + 1}. {icon} {file.name} ({formatFileSize(file.size)})
+                    </span>
+                    <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap' }}>
+                      <button
+                        onClick={() => handlePreviewUploadedMedia(file, index)}
+                        disabled={uploading}
+                        style={{ 
+                          padding: '4px 8px', 
+                          fontSize: '12px', 
+                          backgroundColor: '#17a2b8', 
+                          color: 'white', 
+                          border: 'none', 
+                          borderRadius: '3px', 
+                          cursor: uploading ? 'not-allowed' : 'pointer',
+                          whiteSpace: 'nowrap'
+                        }}
+                      >
+                        Preview
+                      </button>
+                      <button
+                        onClick={() => moveMedia(index, 'up')}
+                        disabled={index === 0 || uploading}
+                        style={{ 
+                          padding: '4px 8px', 
+                          fontSize: '12px', 
+                          cursor: (index === 0 || uploading) ? 'not-allowed' : 'pointer',
+                          minWidth: '32px'
+                        }}
+                      >
+                        ↑
+                      </button>
+                      <button
+                        onClick={() => moveMedia(index, 'down')}
+                        disabled={index === mediaFiles.length - 1 || uploading}
+                        style={{ 
+                          padding: '4px 8px', 
+                          fontSize: '12px', 
+                          cursor: (index === mediaFiles.length - 1 || uploading) ? 'not-allowed' : 'pointer',
+                          minWidth: '32px'
+                        }}
+                      >
+                        ↓
+                      </button>
+                      <button
+                        onClick={() => removeMedia(index)}
+                        disabled={uploading}
+                        style={{ 
+                          padding: '4px 8px', 
+                          fontSize: '12px', 
+                          backgroundColor: '#dc3545', 
+                          color: 'white', 
+                          border: 'none', 
+                          borderRadius: '3px', 
+                          cursor: uploading ? 'not-allowed' : 'pointer',
+                          whiteSpace: 'nowrap'
+                        }}
+                      >
+                        Remove
+                      </button>
+                    </div>
                   </div>
+
+                  {/* Trim and speed controls for videos */}
+                  {fileType === 'video' && duration > 0 && (
+                    <div style={{ marginTop: '10px', padding: '10px', backgroundColor: '#fff', borderRadius: '4px' }}>
+                      <div style={{ fontSize: '13px', color: '#666', marginBottom: '8px' }}>
+                        Duration: {formatTime(duration)} → After trim & speed: {formatTime(finalDuration)}
+                      </div>
+                      
+                      {/* Trim Start */}
+                      <div style={{ marginBottom: '10px' }}>
+                        <label style={{ fontSize: '13px', display: 'block', marginBottom: '4px' }}>
+                          Trim Start: {formatTime(settings.trimStart)}
+                        </label>
+                        <input
+                          type="range"
+                          min={0}
+                          max={settings.trimEnd}
+                          step={0.1}
+                          value={settings.trimStart}
+                          onChange={(e) => updateMediaSetting(index, 'trimStart', parseFloat(e.target.value))}
+                          disabled={uploading}
+                          style={{ width: '100%' }}
+                        />
+                      </div>
+
+                      {/* Trim End */}
+                      <div style={{ marginBottom: '10px' }}>
+                        <label style={{ fontSize: '13px', display: 'block', marginBottom: '4px' }}>
+                          Trim End: {formatTime(settings.trimEnd)}
+                        </label>
+                        <input
+                          type="range"
+                          min={settings.trimStart}
+                          max={duration}
+                          step={0.1}
+                          value={settings.trimEnd}
+                          onChange={(e) => updateMediaSetting(index, 'trimEnd', parseFloat(e.target.value))}
+                          disabled={uploading}
+                          style={{ width: '100%' }}
+                        />
+                      </div>
+
+                      {/* Video Speed */}
+                      <div>
+                        <label style={{ fontSize: '13px', display: 'block', marginBottom: '4px' }}>
+                          Video Speed: {settings.videoSpeed.toFixed(1)}x
+                        </label>
+                        <input
+                          type="range"
+                          min={0.5}
+                          max={2.0}
+                          step={0.1}
+                          value={settings.videoSpeed}
+                          onChange={(e) => updateMediaSetting(index, 'videoSpeed', parseFloat(e.target.value))}
+                          disabled={uploading}
+                          style={{ width: '100%' }}
+                        />
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: '#999' }}>
+                          <span>0.5x (Slow)</span>
+                          <span>1.0x (Normal)</span>
+                          <span>2.0x (Fast)</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Info for images */}
+                  {fileType === 'image' && (
+                    <div style={{ fontSize: '12px', color: '#666', fontStyle: 'italic', marginTop: '5px' }}>
+                      Will be displayed for 3 seconds
+                    </div>
+                  )}
                 </div>
               );
             })}
@@ -358,8 +537,50 @@ export default function VideoProcessorPage() {
         />
 
         {audioFile && (
-          <div style={{ marginTop: '15px', padding: '10px', backgroundColor: '#f5f5f5', borderRadius: '4px' }}>
-            <strong>Selected Audio:</strong> {audioFile.name} ({formatFileSize(audioFile.size)})
+          <div style={{ marginTop: '15px' }}>
+            <div style={{ padding: '10px', backgroundColor: '#f5f5f5', borderRadius: '4px', marginBottom: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
+              <div>
+                <strong>Selected Audio:</strong> {audioFile.name} ({formatFileSize(audioFile.size)})
+              </div>
+              <button
+                onClick={handlePreviewAudio}
+                disabled={uploading}
+                style={{
+                  padding: '6px 12px',
+                  fontSize: '13px',
+                  backgroundColor: '#17a2b8',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '4px',
+                  cursor: uploading ? 'not-allowed' : 'pointer',
+                  whiteSpace: 'nowrap'
+                }}
+              >
+                Preview Audio
+              </button>
+            </div>
+            
+            {/* Audio Speed Control */}
+            <div style={{ padding: '10px', backgroundColor: '#fff', borderRadius: '4px', border: '1px solid #ddd' }}>
+              <label style={{ fontSize: '13px', display: 'block', marginBottom: '8px' }}>
+                Audio Speed: {audioSpeed.toFixed(1)}x
+              </label>
+              <input
+                type="range"
+                min={0.5}
+                max={2.0}
+                step={0.1}
+                value={audioSpeed}
+                onChange={(e) => setAudioSpeed(parseFloat(e.target.value))}
+                disabled={uploading}
+                style={{ width: '100%' }}
+              />
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: '#999', marginTop: '4px' }}>
+                <span>0.5x (Slow)</span>
+                <span>1.0x (Normal)</span>
+                <span>2.0x (Fast)</span>
+              </div>
+            </div>
           </div>
         )}
       </div>
@@ -670,17 +891,86 @@ export default function VideoProcessorPage() {
             
             <div style={{ marginBottom: '10px', color: 'white', textAlign: 'center', position: 'absolute', top: '-40px', left: '0' }}>
               {previewMedia.name}
+              {previewMedia.settings && (
+                <span style={{ marginLeft: '10px', fontSize: '14px', color: '#aaa' }}>
+                  (Trim: {formatTime(previewMedia.settings.trimStart)}-{formatTime(previewMedia.settings.trimEnd)}, Speed: {previewMedia.settings.videoSpeed}x)
+                </span>
+              )}
+              {previewMedia.audioSpeed && previewMedia.audioSpeed !== 1.0 && (
+                <span style={{ marginLeft: '10px', fontSize: '14px', color: '#aaa' }}>
+                  (Speed: {previewMedia.audioSpeed}x)
+                </span>
+              )}
             </div>
 
-            {previewMedia.type === 'video' ? (
+            {previewMedia.type === 'audio' ? (
+              <div style={{ padding: '40px', backgroundColor: '#1a1a1a', borderRadius: '8px', minWidth: '400px' }}>
+                <div style={{ textAlign: 'center', marginBottom: '20px', color: '#fff', fontSize: '18px' }}>
+                  🎵 Audio Preview
+                </div>
+                <audio
+                  src={previewMedia.url}
+                  controls
+                  autoPlay
+                  style={{
+                    width: '100%',
+                    display: 'block'
+                  }}
+                  onLoadedMetadata={(e) => {
+                    const audio = e.currentTarget;
+                    audio.volume = 1.0;
+                    if (previewMedia.audioSpeed) {
+                      audio.playbackRate = previewMedia.audioSpeed;
+                    }
+                    audio.play().catch(err => {
+                      console.log('Autoplay prevented:', err);
+                    });
+                  }}
+                />
+                <div style={{ marginTop: '15px', textAlign: 'center', color: '#aaa', fontSize: '14px' }}>
+                  Playing at {previewMedia.audioSpeed || 1.0}x speed
+                </div>
+              </div>
+            ) : previewMedia.type === 'video' ? (
               <video
                 src={previewMedia.url}
                 controls
                 autoPlay
+                muted={false}
                 style={{
                   maxWidth: '100%',
                   maxHeight: '80vh',
                   display: 'block'
+                }}
+                onLoadedMetadata={(e) => {
+                  const video = e.currentTarget;
+                  // Ensure audio is enabled
+                  video.muted = false;
+                  video.volume = 1.0;
+                  
+                  // Apply trim and speed settings
+                  if (previewMedia.settings) {
+                    video.currentTime = previewMedia.settings.trimStart;
+                    video.playbackRate = previewMedia.settings.videoSpeed;
+                    
+                    // Set up event listener to loop within trim range
+                    const handleTimeUpdate = () => {
+                      if (previewMedia.settings && video.currentTime >= previewMedia.settings.trimEnd) {
+                        video.currentTime = previewMedia.settings.trimStart;
+                      }
+                    };
+                    video.addEventListener('timeupdate', handleTimeUpdate);
+                    
+                    // Cleanup listener when component unmounts or preview closes
+                    video.addEventListener('pause', () => {
+                      video.removeEventListener('timeupdate', handleTimeUpdate);
+                    }, { once: true });
+                  }
+                  
+                  // Try to play with audio (some browsers require user interaction)
+                  video.play().catch(err => {
+                    console.log('Autoplay prevented, user needs to click play:', err);
+                  });
                 }}
               />
             ) : (

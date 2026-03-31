@@ -61,14 +61,28 @@ router.post('/process', upload.fields([
       return 'video' as const; // fallback
     });
 
-    const audioFile = files.audio && files.audio.length > 0 ? files.audio[0].path : undefined;
+    // Parse media settings from JSON
+    let mediaSettings = [];
+    try {
+      mediaSettings = JSON.parse(req.body.mediaSettings || '[]');
+    } catch (error) {
+      return res.status(400).json({ error: 'Invalid mediaSettings JSON' });
+    }
 
-    const videoCount = mediaTypes.filter(t => t === 'video').length;
-    const imageCount = mediaTypes.filter(t => t === 'image').length;
+    // Ensure we have settings for each media file
+    if (mediaSettings.length !== mediaFiles.length) {
+      // Fill with default settings if missing
+      while (mediaSettings.length < mediaFiles.length) {
+        mediaSettings.push({ trimStart: 0, trimEnd: 0, videoSpeed: 1.0 });
+      }
+    }
+
+    const audioFile = files.audio && files.audio.length > 0 ? files.audio[0].path : undefined;
+    const audioSpeed = parseFloat(req.body.audioSpeed || '1.0');
     const aiEnhancement = req.body.aiEnhancement === 'true';
 
     // Add job to processing queue
-    const jobId = await videoProcessor.addJob(mediaFiles, mediaTypes, audioFile, aiEnhancement);
+    const jobId = await videoProcessor.addJob(mediaFiles, mediaTypes, mediaSettings, audioFile, audioSpeed, aiEnhancement);
 
     res.json({
       success: true,

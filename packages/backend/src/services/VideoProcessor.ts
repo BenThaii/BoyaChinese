@@ -7,12 +7,20 @@ interface VideoJob {
   id: string;
   mediaFiles: string[]; // Can be videos or images
   mediaTypes: ('video' | 'image')[]; // Track type of each file
+  mediaSettings: MediaSettings[]; // Trim and speed settings for each media
   audioFile?: string;
+  audioSpeed: number; // Audio speed adjustment
   aiEnhancement: boolean; // Whether to apply AI enhancement
   outputPath: string;
   status: 'queued' | 'processing' | 'completed' | 'failed';
   createdAt: Date;
   error?: string;
+}
+
+interface MediaSettings {
+  trimStart: number;
+  trimEnd: number;
+  videoSpeed: number;
 }
 
 class VideoProcessor {
@@ -39,7 +47,14 @@ class VideoProcessor {
     console.log('[VideoProcessor] Initialized');
   }
 
-  async addJob(mediaFiles: string[], mediaTypes: ('video' | 'image')[], audioFile?: string, aiEnhancement: boolean = false): Promise<string> {
+  async addJob(
+    mediaFiles: string[], 
+    mediaTypes: ('video' | 'image')[], 
+    mediaSettings: MediaSettings[],
+    audioFile?: string, 
+    audioSpeed: number = 1.0,
+    aiEnhancement: boolean = false
+  ): Promise<string> {
     const jobId = uuidv4();
     const outputPath = path.join(this.outputDir, `${jobId}.mp4`);
 
@@ -47,7 +62,9 @@ class VideoProcessor {
       id: jobId,
       mediaFiles,
       mediaTypes,
+      mediaSettings,
       audioFile,
+      audioSpeed,
       aiEnhancement,
       outputPath,
       status: 'queued',
@@ -111,7 +128,7 @@ class VideoProcessor {
     const convertedVideos: string[] = [];
 
     try {
-      // Step 1: Preprocess videos (crop and zoom) and convert images to 3-second videos
+      // Step 1: Apply user settings (trim, speed), preprocess videos (crop and zoom), and convert images to 3-second videos
       for (let i = 0; i < job.mediaFiles.length; i++) {
         if (job.mediaTypes[i] === 'image') {
           const videoPath = path.join(this.tempDir, `${job.id}_img_${i}.mp4`);
@@ -120,9 +137,14 @@ class VideoProcessor {
           job.mediaFiles[i] = videoPath;
           job.mediaTypes[i] = 'video';
         } else if (job.mediaTypes[i] === 'video') {
-          // Crop and zoom video
+          // Apply user settings (trim and speed) first
+          const userSettingsPath = path.join(this.tempDir, `${job.id}_usersettings_${i}.mp4`);
+          await this.applyUserSettings(job.mediaFiles[i], userSettingsPath, job.mediaSettings[i]);
+          convertedVideos.push(userSettingsPath);
+          
+          // Then crop and zoom video
           const processedPath = path.join(this.tempDir, `${job.id}_processed_${i}.mp4`);
-          await this.cropAndZoomVideo(job.mediaFiles[i], processedPath);
+          await this.cropAndZoomVideo(userSettingsPath, processedPath);
           convertedVideos.push(processedPath);
           job.mediaFiles[i] = processedPath;
         }
@@ -157,6 +179,20 @@ class VideoProcessor {
       // Step 2: Get audio duration
       const audioDuration = await this.getMediaDuration(job.audioFile);
       console.log(`[VideoProcessor] Audio duration: ${audioDuration}s`);
+      
+      // Apply audio speed if needed
+      let finalAudioFile = job.audioFile;
+      let finalAudioDuration = audioDuration;
+      
+      if (job.audioSpeed !== 1.0) {
+        console.log(`[VideoProcessor] Applying audio speed: ${job.audioSpeed}x`);
+        const speedAdjustedAudioPath = path.join(this.tempDir, `${job.id}_audio_speed.mp3`);
+        await this.applyAudioSpeed(job.audioFile, speedAdjustedAudioPath, job.audioSpeed);
+        convertedVideos.push(speedAdjustedAudioPath);
+        finalAudioFile = speedAdjustedAudioPath;
+        finalAudioDuration = audioDuration / job.audioSpeed;
+        console.log(`[VideoProcessor] Audio duration after speed adjustment: ${finalAudioDuration}s`);
+      }
 
       // Step 3: Calculate total video duration
       let totalVideoDuration = 0;
@@ -178,7 +214,7 @@ class VideoProcessor {
         // Videos are longer than audio - trim to audio length
         // But ensure the final segment is at least 3 seconds
         for (let i = 0; i < job.mediaFiles.length; i++) {
-          const remainingAudioTime = audioDuration - currentDuration;
+          const remainingAudioTime = finalAudioDuration - currentDuration;
           
           if (remainingAudioTime <= 0) break;
           
@@ -207,7 +243,7 @@ class VideoProcessor {
                 convertedVideos.push(extendedPath);
                 // Replace the last video in the list with the extended version
                 finalVideoList[finalVideoList.length - 1] = extendedPath;
-                currentDuration = audioDuration;
+                currentDuration = finalAudioDuration;
               } else {
                 // First video, just trim it even if short
                 const trimmedPath = path.join(this.tempDir, `${job.id}_trim_${i}.mp4`);
@@ -225,8 +261,8 @@ class VideoProcessor {
         finalVideoList = [...job.mediaFiles];
         currentDuration = totalVideoDuration;
 
-        while (currentDuration < audioDuration) {
-          const remainingTime = audioDuration - currentDuration;
+        while (currentDuration < finalAudioDuration) {
+          const remainingTime = finalAudioDuration - currentDuration;
           
           // Shuffle and add videos again
           const shuffled = this.shuffleArray([...job.mediaFiles]);
@@ -235,9 +271,9 @@ class VideoProcessor {
             const idx = job.mediaFiles.indexOf(video);
             const videoDuration = videoDurations[idx];
             
-            if (currentDuration >= audioDuration) break;
+            if (currentDuration >= finalAudioDuration) break;
             
-            const remainingAudioTime = audioDuration - currentDuration;
+            const remainingAudioTime = finalAudioDuration - currentDuration;
             
             if (videoDuration <= remainingAudioTime) {
               // Video fits completely
@@ -261,7 +297,7 @@ class VideoProcessor {
                 await this.extendVideoWithLastFrame(lastVideo, extendedPath, remainingAudioTime);
                 convertedVideos.push(extendedPath);
                 finalVideoList[finalVideoList.length - 1] = extendedPath;
-                currentDuration = audioDuration;
+                currentDuration = finalAudioDuration;
               }
               break;
             }
@@ -287,8 +323,8 @@ class VideoProcessor {
       // Step 7: Overlay audio and trim to audio duration
       await this.runFFmpegCommand([
         '-i', concatenatedPath,
-        '-i', job.audioFile,
-        '-t', audioDuration.toString(),
+        '-i', finalAudioFile,
+        '-t', finalAudioDuration.toString(),
         '-c:v', 'libx264',
         '-preset', 'fast',
         '-crf', '23',
@@ -411,6 +447,71 @@ class VideoProcessor {
       '-y',
       outputPath
     ], 'Cropping and zooming video (10% zoom)');
+  }
+
+  private async applyUserSettings(videoPath: string, outputPath: string, settings: MediaSettings): Promise<void> {
+    const filters: string[] = [];
+    const args: string[] = ['-i', videoPath];
+    
+    // Trim video (use -ss and -to for fast seeking)
+    if (settings.trimStart > 0) {
+      args.push('-ss', settings.trimStart.toString());
+    }
+    if (settings.trimEnd > settings.trimStart) {
+      args.push('-to', settings.trimEnd.toString());
+    }
+    
+    // Apply video speed if not 1.0
+    if (settings.videoSpeed !== 1.0) {
+      const pts = 1 / settings.videoSpeed;
+      filters.push(`setpts=${pts}*PTS`);
+    }
+    
+    // Add video filters if any
+    if (filters.length > 0) {
+      args.push('-vf', filters.join(','));
+    }
+    
+    // Apply audio speed if video speed changed
+    if (settings.videoSpeed !== 1.0) {
+      // atempo filter only works between 0.5 and 2.0
+      // For values outside this range, we need to chain filters
+      const speed = settings.videoSpeed;
+      if (speed >= 0.5 && speed <= 2.0) {
+        args.push('-filter:a', `atempo=${speed}`);
+      } else if (speed < 0.5) {
+        // Chain atempo filters for very slow speeds
+        args.push('-filter:a', `atempo=0.5,atempo=${speed / 0.5}`);
+      } else {
+        // Chain atempo filters for very fast speeds
+        args.push('-filter:a', `atempo=2.0,atempo=${speed / 2.0}`);
+      }
+    } else {
+      args.push('-c:a', 'copy');
+    }
+    
+    args.push('-y', outputPath);
+    
+    await this.runFFmpegCommand(args, `Applying user settings (trim: ${settings.trimStart}s-${settings.trimEnd}s, speed: ${settings.videoSpeed}x)`);
+  }
+
+  private async applyAudioSpeed(audioPath: string, outputPath: string, speed: number): Promise<void> {
+    const args: string[] = ['-i', audioPath];
+    
+    // atempo filter only works between 0.5 and 2.0
+    if (speed >= 0.5 && speed <= 2.0) {
+      args.push('-filter:a', `atempo=${speed}`);
+    } else if (speed < 0.5) {
+      // Chain atempo filters for very slow speeds
+      args.push('-filter:a', `atempo=0.5,atempo=${speed / 0.5}`);
+    } else {
+      // Chain atempo filters for very fast speeds
+      args.push('-filter:a', `atempo=2.0,atempo=${speed / 2.0}`);
+    }
+    
+    args.push('-y', outputPath);
+    
+    await this.runFFmpegCommand(args, `Applying audio speed: ${speed}x`);
   }
 
   private async trimVideo(videoPath: string, outputPath: string, duration: number): Promise<void> {
