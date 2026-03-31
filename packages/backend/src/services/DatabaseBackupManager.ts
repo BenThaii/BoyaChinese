@@ -272,10 +272,11 @@ export class DatabaseBackupManager {
       learningNote: row.learning_note || undefined,
       isFavorite: row.is_favorite === 1,
       chapter: row.chapter,
+      chapterLabel: row.chapter_label || undefined,
       createdAt: new Date(row.created_at),
       updatedAt: new Date(row.updated_at),
       sharedFrom: row.shared_from || undefined
-    }));
+    } as any));
   }
 
   /**
@@ -339,8 +340,8 @@ export class DatabaseBackupManager {
       await pool.query(
         `INSERT INTO vocabulary_entries 
          (id, username, chinese_character, pinyin, han_vietnamese, modern_vietnamese, 
-          english_meaning, learning_note, is_favorite, chapter, created_at, updated_at, shared_from)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          english_meaning, learning_note, is_favorite, chapter, chapter_label, created_at, updated_at, shared_from)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           entry.id,
           entry.username,
@@ -352,6 +353,7 @@ export class DatabaseBackupManager {
           entry.learningNote || null,
           entry.isFavorite ? 1 : 0,
           entry.chapter,
+          (entry as any).chapterLabel || null,
           createdAt,
           updatedAt,
           entry.sharedFrom || null

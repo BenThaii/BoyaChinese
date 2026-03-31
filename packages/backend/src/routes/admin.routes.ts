@@ -153,26 +153,34 @@ router.post('/admin/restore', requireAuth, async (req: Request, res: Response) =
   try {
     const backupFile = req.body;
 
+    console.log('[Admin] Restore request received');
+    console.log('[Admin] Backup file keys:', Object.keys(backupFile || {}));
+    console.log('[Admin] Backup file version:', backupFile?.version);
+    console.log('[Admin] Vocabulary entries count:', backupFile?.vocabularyEntries?.length);
+
     if (!backupFile || typeof backupFile !== 'object') {
+      console.error('[Admin] Invalid backup file format - not an object');
       return res.status(400).json({ error: 'Invalid backup file format' });
     }
 
     const result = await backupManager.importDatabase(backupFile);
 
     if (!result.success) {
+      console.error('[Admin] Restore failed:', result.errors);
       return res.status(400).json({ 
         error: 'Failed to restore database',
         details: result.errors
       });
     }
 
+    console.log('[Admin] Restore successful:', result.entriesRestored, 'entries');
     res.json({
       success: true,
       message: 'Database restored successfully',
       entriesRestored: result.entriesRestored
     });
   } catch (error) {
-    console.error('Error restoring database:', error);
+    console.error('[Admin] Error restoring database:', error);
     res.status(500).json({ error: 'Failed to restore database' });
   }
 });
