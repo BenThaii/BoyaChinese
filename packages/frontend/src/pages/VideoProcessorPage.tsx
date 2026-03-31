@@ -35,7 +35,10 @@ export default function VideoProcessorPage() {
   const handleMediaChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
       const files = Array.from(e.target.files);
-      setMediaFiles(files);
+      // Append new files to existing ones instead of replacing
+      setMediaFiles(prev => [...prev, ...files]);
+      // Clear the input so the same file can be selected again if needed
+      e.target.value = '';
     }
   };
 
@@ -213,7 +216,7 @@ export default function VideoProcessorPage() {
       <div style={{ marginBottom: '30px', padding: '20px', border: '1px solid #ddd', borderRadius: '8px' }}>
         <h3>1. Upload Videos and/or Images</h3>
         <p style={{ fontSize: '14px', color: '#666', marginBottom: '15px' }}>
-          Select video files (MP4, MOV) and/or image files (JPG, PNG, WEBP). Images will be displayed for 3 seconds each. They will be processed in the order shown below.
+          Select video files (MP4, MOV) and/or image files (JPG, PNG, WEBP). Images will be displayed for 3 seconds each. They will be processed in the order shown below. You can upload multiple times to add more files.
         </p>
         
         <input
@@ -227,7 +230,24 @@ export default function VideoProcessorPage() {
 
         {mediaFiles.length > 0 && (
           <div style={{ marginTop: '15px' }}>
-            <h4>Selected Media ({mediaFiles.length}):</h4>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+              <h4 style={{ margin: 0 }}>Selected Media ({mediaFiles.length}):</h4>
+              <button
+                onClick={() => setMediaFiles([])}
+                disabled={uploading}
+                style={{
+                  padding: '6px 12px',
+                  fontSize: '13px',
+                  backgroundColor: '#dc3545',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '4px',
+                  cursor: uploading ? 'not-allowed' : 'pointer'
+                }}
+              >
+                Clear All
+              </button>
+            </div>
             {mediaFiles.map((file, index) => {
               const fileType = getFileType(file);
               const icon = fileType === 'video' ? '🎬' : '🖼️';
@@ -250,28 +270,28 @@ export default function VideoProcessorPage() {
                   <button
                     onClick={() => handlePreviewUploadedMedia(file)}
                     disabled={uploading}
-                    style={{ marginRight: '5px', padding: '4px 8px', fontSize: '12px', backgroundColor: '#17a2b8', color: 'white', border: 'none', borderRadius: '3px' }}
+                    style={{ marginRight: '5px', padding: '4px 8px', fontSize: '12px', backgroundColor: '#17a2b8', color: 'white', border: 'none', borderRadius: '3px', cursor: uploading ? 'not-allowed' : 'pointer' }}
                   >
                     Preview
                   </button>
                   <button
                     onClick={() => moveMedia(index, 'up')}
                     disabled={index === 0 || uploading}
-                    style={{ marginRight: '5px', padding: '4px 8px', fontSize: '12px' }}
+                    style={{ marginRight: '5px', padding: '4px 8px', fontSize: '12px', cursor: (index === 0 || uploading) ? 'not-allowed' : 'pointer' }}
                   >
                     ↑
                   </button>
                   <button
                     onClick={() => moveMedia(index, 'down')}
                     disabled={index === mediaFiles.length - 1 || uploading}
-                    style={{ marginRight: '5px', padding: '4px 8px', fontSize: '12px' }}
+                    style={{ marginRight: '5px', padding: '4px 8px', fontSize: '12px', cursor: (index === mediaFiles.length - 1 || uploading) ? 'not-allowed' : 'pointer' }}
                   >
                     ↓
                   </button>
                   <button
                     onClick={() => removeMedia(index)}
                     disabled={uploading}
-                    style={{ padding: '4px 8px', fontSize: '12px', backgroundColor: '#dc3545', color: 'white', border: 'none', borderRadius: '3px' }}
+                    style={{ padding: '4px 8px', fontSize: '12px', backgroundColor: '#dc3545', color: 'white', border: 'none', borderRadius: '3px', cursor: uploading ? 'not-allowed' : 'pointer' }}
                   >
                     Remove
                   </button>
