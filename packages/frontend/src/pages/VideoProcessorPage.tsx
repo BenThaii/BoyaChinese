@@ -49,7 +49,7 @@ export default function VideoProcessorPage() {
       setMediaFiles(prev => [...prev, ...files]);
       
       // Initialize settings for new files
-      const newSettings = files.map((file) => ({
+      const newSettings = files.map(() => ({
         trimStart: 0,
         trimEnd: 0, // Will be set when duration is loaded
         videoSpeed: 1.0,
