@@ -260,41 +260,82 @@ export default function VideoProcessorPage() {
                     padding: '10px',
                     marginBottom: '8px',
                     backgroundColor: '#f5f5f5',
-                    borderRadius: '4px'
+                    borderRadius: '4px',
+                    flexWrap: 'wrap',
+                    gap: '8px'
                   }}
                 >
-                  <span style={{ flex: 1, fontSize: '14px' }}>
+                  <span style={{ 
+                    flex: '1 1 200px',
+                    fontSize: '14px',
+                    wordBreak: 'break-word',
+                    minWidth: '0'
+                  }}>
                     {index + 1}. {icon} {file.name} ({formatFileSize(file.size)})
                     {fileType === 'image' && <span style={{ color: '#666', marginLeft: '8px' }}>(3s)</span>}
                   </span>
-                  <button
-                    onClick={() => handlePreviewUploadedMedia(file)}
-                    disabled={uploading}
-                    style={{ marginRight: '5px', padding: '4px 8px', fontSize: '12px', backgroundColor: '#17a2b8', color: 'white', border: 'none', borderRadius: '3px', cursor: uploading ? 'not-allowed' : 'pointer' }}
-                  >
-                    Preview
-                  </button>
-                  <button
-                    onClick={() => moveMedia(index, 'up')}
-                    disabled={index === 0 || uploading}
-                    style={{ marginRight: '5px', padding: '4px 8px', fontSize: '12px', cursor: (index === 0 || uploading) ? 'not-allowed' : 'pointer' }}
-                  >
-                    ↑
-                  </button>
-                  <button
-                    onClick={() => moveMedia(index, 'down')}
-                    disabled={index === mediaFiles.length - 1 || uploading}
-                    style={{ marginRight: '5px', padding: '4px 8px', fontSize: '12px', cursor: (index === mediaFiles.length - 1 || uploading) ? 'not-allowed' : 'pointer' }}
-                  >
-                    ↓
-                  </button>
-                  <button
-                    onClick={() => removeMedia(index)}
-                    disabled={uploading}
-                    style={{ padding: '4px 8px', fontSize: '12px', backgroundColor: '#dc3545', color: 'white', border: 'none', borderRadius: '3px', cursor: uploading ? 'not-allowed' : 'pointer' }}
-                  >
-                    Remove
-                  </button>
+                  <div style={{ 
+                    display: 'flex', 
+                    gap: '5px',
+                    flexWrap: 'wrap'
+                  }}>
+                    <button
+                      onClick={() => handlePreviewUploadedMedia(file)}
+                      disabled={uploading}
+                      style={{ 
+                        padding: '4px 8px', 
+                        fontSize: '12px', 
+                        backgroundColor: '#17a2b8', 
+                        color: 'white', 
+                        border: 'none', 
+                        borderRadius: '3px', 
+                        cursor: uploading ? 'not-allowed' : 'pointer',
+                        whiteSpace: 'nowrap'
+                      }}
+                    >
+                      Preview
+                    </button>
+                    <button
+                      onClick={() => moveMedia(index, 'up')}
+                      disabled={index === 0 || uploading}
+                      style={{ 
+                        padding: '4px 8px', 
+                        fontSize: '12px', 
+                        cursor: (index === 0 || uploading) ? 'not-allowed' : 'pointer',
+                        minWidth: '32px'
+                      }}
+                    >
+                      ↑
+                    </button>
+                    <button
+                      onClick={() => moveMedia(index, 'down')}
+                      disabled={index === mediaFiles.length - 1 || uploading}
+                      style={{ 
+                        padding: '4px 8px', 
+                        fontSize: '12px', 
+                        cursor: (index === mediaFiles.length - 1 || uploading) ? 'not-allowed' : 'pointer',
+                        minWidth: '32px'
+                      }}
+                    >
+                      ↓
+                    </button>
+                    <button
+                      onClick={() => removeMedia(index)}
+                      disabled={uploading}
+                      style={{ 
+                        padding: '4px 8px', 
+                        fontSize: '12px', 
+                        backgroundColor: '#dc3545', 
+                        color: 'white', 
+                        border: 'none', 
+                        borderRadius: '3px', 
+                        cursor: uploading ? 'not-allowed' : 'pointer',
+                        whiteSpace: 'nowrap'
+                      }}
+                    >
+                      Remove
+                    </button>
+                  </div>
                 </div>
               );
             })}
@@ -388,7 +429,7 @@ export default function VideoProcessorPage() {
       )}
 
       {/* Action Buttons */}
-      <div style={{ display: 'flex', gap: '10px' }}>
+      <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
         {!jobStatus || jobStatus.status === 'failed' ? (
           <button
             onClick={handleUpload}
@@ -400,7 +441,8 @@ export default function VideoProcessorPage() {
               color: 'white',
               border: 'none',
               borderRadius: '4px',
-              cursor: uploading || mediaFiles.length === 0 ? 'not-allowed' : 'pointer'
+              cursor: uploading || mediaFiles.length === 0 ? 'not-allowed' : 'pointer',
+              whiteSpace: 'nowrap'
             }}
           >
             {uploading ? 'Processing...' : (audioFile ? 'Process Video' : 'Concatenate Media')}
@@ -419,7 +461,7 @@ export default function VideoProcessorPage() {
                 border: 'none',
                 borderRadius: '4px',
                 cursor: 'pointer',
-                marginRight: '10px'
+                whiteSpace: 'nowrap'
               }}
             >
               Preview Video
@@ -434,7 +476,7 @@ export default function VideoProcessorPage() {
                 border: 'none',
                 borderRadius: '4px',
                 cursor: 'pointer',
-                marginRight: '10px'
+                whiteSpace: 'nowrap'
               }}
             >
               Download Video
@@ -448,7 +490,8 @@ export default function VideoProcessorPage() {
                 color: 'white',
                 border: 'none',
                 borderRadius: '4px',
-                cursor: 'pointer'
+                cursor: 'pointer',
+                whiteSpace: 'nowrap'
               }}
             >
               Process Another Video
@@ -466,7 +509,8 @@ export default function VideoProcessorPage() {
               color: 'white',
               border: 'none',
               borderRadius: '4px',
-              cursor: 'pointer'
+              cursor: 'pointer',
+              whiteSpace: 'nowrap'
             }}
           >
             Reset
@@ -526,46 +570,51 @@ export default function VideoProcessorPage() {
                   padding: '15px',
                   backgroundColor: '#f8f9fa',
                   borderRadius: '4px',
-                  border: '1px solid #dee2e6'
+                  border: '1px solid #dee2e6',
+                  flexWrap: 'wrap',
+                  gap: '10px'
                 }}
               >
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: '14px', fontWeight: 'bold', marginBottom: '5px' }}>
+                <div style={{ flex: '1 1 200px', minWidth: '0' }}>
+                  <div style={{ fontSize: '14px', fontWeight: 'bold', marginBottom: '5px', wordBreak: 'break-word' }}>
                     {video.filename}
                   </div>
-                  <div style={{ fontSize: '12px', color: '#666' }}>
+                  <div style={{ fontSize: '12px', color: '#666', wordBreak: 'break-word' }}>
                     Created: {formatDate(video.createdAt)} • Size: {formatFileSize(video.size)}
                   </div>
                 </div>
-                <button
-                  onClick={() => handlePreviewProcessedVideo(video.streamUrl, video.filename)}
-                  style={{
-                    padding: '8px 16px',
-                    fontSize: '14px',
-                    backgroundColor: '#17a2b8',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '4px',
-                    cursor: 'pointer',
-                    marginRight: '10px'
-                  }}
-                >
-                  Preview
-                </button>
-                <button
-                  onClick={() => handleDownloadVideo(video.downloadUrl)}
-                  style={{
-                    padding: '8px 16px',
-                    fontSize: '14px',
-                    backgroundColor: '#28a745',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '4px',
-                    cursor: 'pointer'
-                  }}
-                >
-                  Download
-                </button>
+                <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                  <button
+                    onClick={() => handlePreviewProcessedVideo(video.streamUrl, video.filename)}
+                    style={{
+                      padding: '8px 16px',
+                      fontSize: '14px',
+                      backgroundColor: '#17a2b8',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '4px',
+                      cursor: 'pointer',
+                      whiteSpace: 'nowrap'
+                    }}
+                  >
+                    Preview
+                  </button>
+                  <button
+                    onClick={() => handleDownloadVideo(video.downloadUrl)}
+                    style={{
+                      padding: '8px 16px',
+                      fontSize: '14px',
+                      backgroundColor: '#28a745',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '4px',
+                      cursor: 'pointer',
+                      whiteSpace: 'nowrap'
+                    }}
+                  >
+                    Download
+                  </button>
+                </div>
               </div>
             ))}
           </div>
