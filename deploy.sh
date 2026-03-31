@@ -48,6 +48,7 @@ DB_USER=${DB_USER:-chinese_app}
 
 read -p "MySQL password for $DB_USER: " DB_PASSWORD
 
+read -p "Google Translate API Key: " GOOGLE_TRANSLATE_KEY
 read -p "Google AI API Key: " GOOGLE_AI_KEY
 
 # Auto-detect public IP address
@@ -175,7 +176,8 @@ DB_USER=$DB_USER
 DB_PASSWORD=$DB_PASSWORD
 DB_NAME=$DB_NAME
 
-# Google AI API Key
+# Google API Keys
+GOOGLE_TRANSLATE_API_KEY=$GOOGLE_TRANSLATE_KEY
 GOOGLE_AI_API_KEY=$GOOGLE_AI_KEY
 
 # Server Port

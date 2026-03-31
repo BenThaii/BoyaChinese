@@ -37,8 +37,8 @@ ssh -i your-key.pem ubuntu@YOUR_SERVER_IP
 
 ```bash
 cd ~
-git clone https://github.com/YOUR_USERNAME/chinese-learning-app.git
-cd chinese-learning-app
+git clone https://github.com/BenThaii/BoyaChinese.git
+cd BoyaChinese
 ```
 
 ### 4. Run Deployment Script
