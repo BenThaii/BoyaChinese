@@ -268,8 +268,12 @@ EOF
 pm2 delete chinese-learning-backend 2>/dev/null || true
 pm2 start ecosystem.config.js
 pm2 save
-sudo env PATH=$PATH:/usr/bin pm2 startup systemd -u $USER --hp /home/$USER
 print_success "Backend started with PM2"
+
+# Configure PM2 to start on boot
+print_info "Configuring PM2 auto-start on boot..."
+sudo env PATH=$PATH:/usr/bin pm2 startup systemd -u $USER --hp /home/$USER
+print_success "PM2 auto-start configured"
 
 # Step 13: Deploy frontend
 print_info "Deploying frontend..."
