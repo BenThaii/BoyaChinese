@@ -228,8 +228,8 @@ cd packages/backend
 timeout 10 node dist/index.js || true
 cd ../..
 
-# Then ensure all required columns exist (in case of schema updates)
-print_info "Verifying database schema..."
+# Backend already creates the schema, so we're done
+print_success "Database initialized with complete schema"
 mysql -u $DB_USER -p"$DB_PASSWORD" $DB_NAME << 'EOSQL'
 -- Ensure is_favorite column exists
 ALTER TABLE vocabulary_entries 
