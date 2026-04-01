@@ -230,20 +230,6 @@ cd ../..
 
 # Backend already creates the schema, so we're done
 print_success "Database initialized with complete schema"
-mysql -u $DB_USER -p"$DB_PASSWORD" $DB_NAME << 'EOSQL'
--- Ensure is_favorite column exists
-ALTER TABLE vocabulary_entries 
-ADD COLUMN IF NOT EXISTS is_favorite TINYINT(1) DEFAULT 0 AFTER learning_note;
-
--- Ensure chapter_label column exists
-ALTER TABLE vocabulary_entries 
-ADD COLUMN IF NOT EXISTS chapter_label VARCHAR(255) AFTER chapter;
-
--- Show final schema
-DESCRIBE vocabulary_entries;
-EOSQL
-
-print_success "Database initialized with complete schema"
 
 # Step 12: Create PM2 ecosystem file
 print_info "Creating PM2 configuration..."
