@@ -77,7 +77,7 @@ sudo apt install -y ffmpeg
 ssh -i your-key.pem ubuntu@NEW_SERVER_IP
 
 # Clone repository
-git clone https://github.com/your-repo/chinese-learning-app.git
+git clone https://github.com/BenThaii/BoyaChinese.git
 cd chinese-learning-app
 
 # Run deployment

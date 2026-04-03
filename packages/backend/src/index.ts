@@ -26,6 +26,7 @@ import ttsRoutes from './routes/tts.routes';
 import adminRoutes from './routes/admin.routes';
 import phrasesRoutes from './routes/phrases.routes';
 import videoRoutes from './routes/video.routes';
+import imagenRoutes from './routes/imagen.routes';
 
 // Import config AFTER dotenv has loaded
 import { config } from './config/env';
@@ -49,6 +50,11 @@ mkdir(audioDir, { recursive: true }).catch(console.error);
 // Serve static audio files
 app.use('/audio', express.static(audioDir));
 
+// Serve static imagen workspaces
+const imagenWorkspacesDir = join(process.cwd(), 'public', 'imagen-workspaces');
+mkdir(imagenWorkspacesDir, { recursive: true }).catch(console.error);
+app.use('/imagen-workspaces', express.static(imagenWorkspacesDir));
+
 // Log API key status (without revealing the actual key)
 console.log('=== API Configuration ===');
 console.log('Google Translate API Key:', config.google.translateApiKey ? `Set (${config.google.translateApiKey.substring(0, 10)}...)` : 'NOT SET');
@@ -68,6 +74,7 @@ app.use('/api', ttsRoutes);
 app.use('/api', adminRoutes);
 app.use('/api', phrasesRoutes);
 app.use('/api/video', videoRoutes);
+app.use('/api/imagen', imagenRoutes);
 
 // Initialize database and start server
 async function startServer() {

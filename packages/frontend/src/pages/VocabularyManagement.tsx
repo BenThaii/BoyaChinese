@@ -376,6 +376,16 @@ export default function VocabularyManagement() {
     );
   }
 
+  // Sort entries by chapter first, then alphabetically by Pinyin within each chapter
+  displayedEntries = displayedEntries.sort((a, b) => {
+    // First sort by chapter
+    if (a.chapter !== b.chapter) {
+      return a.chapter - b.chapter;
+    }
+    // Then sort alphabetically by Pinyin within the same chapter
+    return a.pinyin.localeCompare(b.pinyin, 'zh-CN');
+  });
+
   return (
     <div className="vocabulary-management">
       <h2>Vocabulary Management - {username}</h2>

@@ -1,0 +1,29 @@
+{
+  "id": "f8a3de42-44ae-476a-9ba7-33a02f08a04d",
+  "promptPhotoPath": "D:\\Chinese\\custom_app\\packages\\backend\\public\\imagen-workspaces\\f8a3de42-44ae-476a-9ba7-33a02f08a04d\\prompt.jpg",
+  "promptPhotoUrl": "/imagen-workspaces/f8a3de42-44ae-476a-9ba7-33a02f08a04d/prompt.jpg",
+  "generatedImages": [
+    {
+      "id": "e40191ce-143e-485b-b6df-ea75d4b19d32",
+      "path": "D:\\Chinese\\custom_app\\packages\\backend\\public\\imagen-workspaces\\f8a3de42-44ae-476a-9ba7-33a02f08a04d\\generated\\e40191ce-143e-485b-b6df-ea75d4b19d32.png",
+      "url": "/imagen-workspaces/f8a3de42-44ae-476a-9ba7-33a02f08a04d/generated/e40191ce-143e-485b-b6df-ea75d4b19d32.png",
+      "model": "gemini-3.1-flash-image-preview",
+      "prompt": "tạo hình một cô gái châu á tóc dài đen, mượt và thẳng, xinh xắn, da trắng hồng, dịu dàng, mỉm cười, mặc bộ váy ren trong ảnh, dịu dàng selfie\ntrong gương trong 1 quán cafe style minimalist như ảnh đằng sau, giữ nguyên các chi tiết và màu sắc của bộ váy, \n\n1. không giữ lại những chi tiết tôi dùng để gợi ý background và phối màu trong hình cuối cùng\n2. đảm bảo người mẫu sử dụng đủ tất cả những vật dụng thời trang có trong hình\n \nsize ảnh là 9:16.",
+      "timestamp": "2026-04-02T14:46:18.562Z"
+    }
+  ],
+  "conversationHistory": [
+    {
+      "role": "user",
+      "text": "tạo hình một cô gái châu á tóc dài đen, mượt và thẳng, xinh xắn, da trắng hồng, dịu dàng, mỉm cười, mặc bộ váy ren trong ảnh, dịu dàng selfie\ntrong gương trong 1 quán cafe style minimalist như ảnh đằng sau, giữ nguyên các chi tiết và màu sắc của bộ váy, \n\n1. không giữ lại những chi tiết tôi dùng để gợi ý background và phối màu trong hình cuối cùng\n2. đảm bảo người mẫu sử dụng đủ tất cả những vật dụng thời trang có trong hình\n \nsize ảnh là 9:16.",
+      "timestamp": "2026-04-02T14:46:18.562Z"
+    },
+    {
+      "role": "model",
+      "imageUrl": "/imagen-workspaces/f8a3de42-44ae-476a-9ba7-33a02f08a04d/generated/e40191ce-143e-485b-b6df-ea75d4b19d32.png",
+      "timestamp": "2026-04-02T14:46:18.562Z"
+    }
+  ],
+  "createdAt": "2026-04-02T14:45:53.001Z",
+  "updatedAt": "2026-04-02T14:46:18.562Z"
+}

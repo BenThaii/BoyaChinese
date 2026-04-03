@@ -1,0 +1,34 @@
+{
+  "config": {
+    "modelName": "gemini-3.1-flash-image-preview",
+    "exchangeRate": {
+      "usdToVnd": 27000,
+      "currency": "VND"
+    },
+    "pricing": {
+      "inputTextCostPerMillion": 0.5,
+      "outputTextCostPerMillion": 3,
+      "outputImageCostPerMillion": 60,
+      "currency": "USD"
+    },
+    "budget": {
+      "totalBudgetVnd": 4000000,
+      "description": "Total budget for API usage"
+    },
+    "reference": {
+      "image1024px": {
+        "tokens": 1120,
+        "costUsd": 0.067,
+        "description": "Cost for 1024x1024px output image"
+      }
+    }
+  },
+  "usage": {
+    "totalCalls": 1,
+    "successfulCalls": 1,
+    "failedCalls": 0,
+    "totalInputTokens": 387,
+    "totalOutputTokens": 1550,
+    "lastUpdated": "2026-04-02T16:05:42.782Z"
+  }
+}

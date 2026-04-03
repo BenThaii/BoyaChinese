@@ -10,6 +10,8 @@ import EnglishPhrasesPage from './pages/EnglishPhrasesPage';
 import FlashcardPage from './pages/FlashcardPage';
 import ChapterFlashcardPage from './pages/ChapterFlashcardPage';
 import VideoProcessorPage from './pages/VideoProcessorPage';
+import ImagenGeneratorPage from './pages/ImagenGeneratorPage';
+import ImagenWorkspaceDetailPage from './pages/ImagenWorkspaceDetailPage';
 
 function Navigation() {
   const username = 'user1'; // Always use user1
@@ -292,6 +294,24 @@ function Navigation() {
                   🎬 Video Processor
                 </Link>
               </li>
+              <li>
+                <Link
+                  to="/imagen-generator"
+                  onClick={closeMenu}
+                  style={{
+                    color: 'white',
+                    textDecoration: 'none',
+                    padding: '10px 15px',
+                    display: 'block',
+                    borderRadius: '4px',
+                    transition: 'background-color 0.2s',
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.1)'}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                >
+                  🎨 AI Image Generator
+                </Link>
+              </li>
             </ul>
           </div>
         </>
@@ -334,6 +354,8 @@ function App() {
             <Route path="/flashcards" element={<FlashcardPage />} />
             <Route path="/chapter-flashcards" element={<ChapterFlashcardPage />} />
             <Route path="/video-processor" element={<VideoProcessorPage />} />
+            <Route path="/imagen-generator" element={<ImagenGeneratorPage />} />
+            <Route path="/imagen-workspace/:workspaceId" element={<ImagenWorkspaceDetailPage />} />
           </Routes>
         </main>
       </div>
