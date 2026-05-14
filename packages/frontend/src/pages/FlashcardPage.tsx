@@ -289,26 +289,26 @@ export default function FlashcardPage() {
 
   return (
     <div style={{
-      padding: '20px',
-      paddingTop: '50px',
+      padding: '10px 16px',
+      paddingTop: '56px',
       maxWidth: '800px',
       margin: '0 auto',
-      minHeight: '100vh',
+      height: '100dvh',
       display: 'flex',
       flexDirection: 'column',
       alignItems: 'center',
-      justifyContent: 'space-between',
-      boxSizing: 'border-box'
+      boxSizing: 'border-box',
+      overflow: 'hidden'
     }}>
-      <h1 style={{ marginBottom: '20px', marginTop: '0', textAlign: 'center', fontSize: '24px' }}>
+      <h1 style={{ marginBottom: '10px', marginTop: '0', textAlign: 'center', fontSize: 'clamp(16px, 4vw, 24px)' }}>
         Flashcard Practice
         {chapterLabel && (
-          <div style={{ fontSize: '14px', color: '#666', marginTop: '5px' }}>
+          <div style={{ fontSize: 'clamp(11px, 3vw, 14px)', color: '#666', marginTop: '5px' }}>
             Chapter Label: "{chapterLabel}"
           </div>
         )}
         {!chapterLabel && chapterStart !== null && chapterEnd !== null && (
-          <div style={{ fontSize: '14px', color: '#666', marginTop: '5px' }}>
+          <div style={{ fontSize: 'clamp(11px, 3vw, 14px)', color: '#666', marginTop: '5px' }}>
             Chapters {chapterStart}-{chapterEnd}
           </div>
         )}
@@ -410,18 +410,19 @@ export default function FlashcardPage() {
           display: 'flex',
           flexDirection: 'column',
           justifyContent: 'flex-start',
-          overflow: 'auto'
+          overflow: 'auto',
+          paddingBottom: '10px'
         }}>
           {/* Details Section - Now appears ABOVE the flashcard */}
           {showDetails && (
             <div style={{
-              padding: '20px',
+              padding: '12px 16px',
               backgroundColor: 'white',
               border: '2px solid #dee2e6',
               borderRadius: '12px',
-              marginBottom: '20px',
+              marginBottom: '12px',
               textAlign: 'left',
-              maxHeight: '30vh',
+              maxHeight: '40dvh',
               overflow: 'auto'
             }}>
               {!isEditing ? (
@@ -738,14 +739,13 @@ export default function FlashcardPage() {
 
           {/* Chinese Character Card - Now appears BELOW the details */}
           <div style={{
-            padding: '30px 20px',
+            padding: 'clamp(16px, 4vw, 30px) clamp(12px, 3vw, 20px)',
             backgroundColor: '#f8f9fa',
             border: '3px solid #007bff',
             borderRadius: '16px',
             marginBottom: '10px',
             boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
             position: 'relative',
-            marginTop: 'auto'
           }}>
             {currentWord.isFavorite && (
               <div style={{
@@ -783,10 +783,11 @@ export default function FlashcardPage() {
             </button>
             
             <div style={{
-              fontSize: '60px',
+              fontSize: 'clamp(48px, 15vw, 80px)',
               fontWeight: 'bold',
               color: '#333',
-              marginBottom: '15px'
+              marginBottom: '10px',
+              lineHeight: 1.2
             }}>
               {currentWord.chineseCharacter}
             </div>
@@ -812,7 +813,7 @@ export default function FlashcardPage() {
           </div>
 
           {/* Next Button */}
-          <div style={{ display: 'flex', justifyContent: 'center', width: '100%' }}>
+          <div style={{ display: 'flex', justifyContent: 'center', width: '100%', marginTop: '10px' }}>
             <button
               onClick={handleNext}
               disabled={isEditing}
@@ -823,8 +824,9 @@ export default function FlashcardPage() {
                 border: 'none',
                 borderRadius: '8px',
                 cursor: isEditing ? 'not-allowed' : 'pointer',
-                fontSize: '18px',
+                fontSize: 'clamp(15px, 4vw, 18px)',
                 fontWeight: 'bold',
+                width: '100%',
                 maxWidth: '300px',
                 opacity: isEditing ? 0.6 : 1
               }}

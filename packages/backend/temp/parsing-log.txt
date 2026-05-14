@@ -7,93 +7,93 @@ Target after rejection (30 per batch): 240
   Batch 1: Starting at matchIndex 0
   Batch 1 RESULTS:
     - Candidates parsed: 75
-    - Valid sentences: 57
-    - Invalid sentences: 18
+    - Valid sentences: 67
+    - Invalid sentences: 8
     - Ended at matchIndex: 75
-    ⚠️  Rejected 18 sentences:
-      - "他是我的老师。" [Invalid: 老, 师]
-      - "这里的路很好。" [Invalid: 里]
-      - "这里的风比较冷。" [Invalid: 里]
-      ... and 15 more
+    ⚠️  Rejected 8 sentences:
+      - "这个主意特别好。" [Invalid: 个]
+      - "我丢了课本。" [Invalid: 了]
+      - "我见到老师了。" [Invalid: 了]
+      ... and 5 more
   Batch 2: Starting at matchIndex 75
   Batch 2 RESULTS:
     - Candidates parsed: 75
-    - Valid sentences: 47
-    - Invalid sentences: 28
+    - Valid sentences: 38
+    - Invalid sentences: 37
     - Ended at matchIndex: 150
-    ⚠️  Rejected 28 sentences:
-      - "认识你很高兴。" [Invalid: 高, 兴]
-      - "我想去图书馆买书。" [Invalid: 想]
-      - "老师在教室里。" [Invalid: 教, 室]
-      ... and 25 more
+    ⚠️  Rejected 37 sentences:
+      - "这儿有五位客人。" [Invalid: 五, 位]
+      - "这件衣服漂亮。" [Invalid: 衣, 服]
+      - "这里的味道好。" [Invalid: 里, 好]
+      ... and 34 more
   Batch 3: Starting at matchIndex 150
   Batch 3 RESULTS:
     - Candidates parsed: 75
-    - Valid sentences: 35
-    - Invalid sentences: 40
+    - Valid sentences: 13
+    - Invalid sentences: 62
     - Ended at matchIndex: 225
-    ⚠️  Rejected 40 sentences:
-      - "认识你很高兴。" [Invalid: 你]
-      - "今天的天气怎么样？" [Invalid: 今, 天]
-      - "我们去电影院看电影。" [Invalid: 电, 影]
-      ... and 37 more
+    ⚠️  Rejected 62 sentences:
+      - "我去银行。" [Invalid: 我]
+      - "我想买这件衣服。" [Invalid: 我, 想, 买]
+      - "这里的质量好。" [Invalid: 里, 好]
+      ... and 59 more
   Batch 4: Starting at matchIndex 225
   Batch 4 RESULTS:
     - Candidates parsed: 75
-    - Valid sentences: 21
-    - Invalid sentences: 54
+    - Valid sentences: 3
+    - Invalid sentences: 72
     - Ended at matchIndex: 300
-    ⚠️  Rejected 54 sentences:
-      - "您好，请问您姓什么？" [Invalid: 姓]
-      - "我姓王，叫王小。" [Invalid: 姓, 叫]
-      - "他是你的老师吗？" [Invalid: 他]
-      ... and 51 more
-Vocab Group 1 COMPLETE: 111 sentences
+    ⚠️  Rejected 72 sentences:
+      - "今天我非常忙。" [Invalid: 我]
+      - "我想买一本书。" [Invalid: 我, 想, 买, 一]
+      - "他正在洗澡。" [Invalid: 澡]
+      ... and 69 more
+Vocab Group 1 COMPLETE: 76 sentences
 
 ----- Processing Vocab Group 2 -----
   Batch 1: Starting at matchIndex 300
   Batch 1 RESULTS:
     - Candidates parsed: 75
-    - Valid sentences: 27
-    - Invalid sentences: 48
+    - Valid sentences: 9
+    - Invalid sentences: 66
     - Ended at matchIndex: 375
-    ⚠️  Rejected 48 sentences:
-      - "谢谢。" [Invalid: 谢]
-      - "我是美国人。" [Invalid: 我]
-      - "我叫李军。" [Invalid: 我]
-      ... and 45 more
+    ⚠️  Rejected 66 sentences:
+      - "爸爸在工作。" [Invalid: 在]
+      - "哥哥喝啤酒。" [Invalid: 啤, 酒]
+      - "这里非常挤。" [Invalid: 里, 非, 常]
+      ... and 63 more
   Batch 2: Starting at matchIndex 375
   Batch 2 RESULTS:
     - Candidates parsed: 75
-    - Valid sentences: 19
-    - Invalid sentences: 56
+    - Valid sentences: 9
+    - Invalid sentences: 66
     - Ended at matchIndex: 450
-    ⚠️  Rejected 56 sentences:
-      - "我不是老师，我是学生。" [Invalid: 学, 生]
-      - "认识你很高兴。" [Invalid: 认, 识, 很]
-      - "这里的校园很美。" [Invalid: 很, 美]
-      ... and 53 more
+    ⚠️  Rejected 66 sentences:
+      - "小姐，您好。" [Invalid: 好]
+      - "大卫想喝咖啡。" [Invalid: 喝]
+      - "这里很热闹。" [Invalid: 很, 闹]
+      ... and 63 more
   Batch 3: Starting at matchIndex 450
   Batch 3 RESULTS:
     - Candidates parsed: 75
-    - Valid sentences: 21
-    - Invalid sentences: 54
+    - Valid sentences: 3
+    - Invalid sentences: 72
     - Ended at matchIndex: 525
-    ⚠️  Rejected 54 sentences:
-      - "谢谢。" [Invalid: 谢]
-      - "没关系。" [Invalid: 没]
-      - "很高兴认识你。" [Invalid: 认, 识, 你]
-      ... and 51 more
+    ⚠️  Rejected 72 sentences:
+      - "我在看书。" [Invalid: 在, 书]
+      - "谁在唱歌？" [Invalid: 在]
+      - "妈妈在做饭。" [Invalid: 在]
+      ... and 69 more
   Batch 4: Starting at matchIndex 525
   Batch 4 RESULTS:
     - Candidates parsed: 75
-    - Valid sentences: 27
-    - Invalid sentences: 48
+    - Valid sentences: 5
+    - Invalid sentences: 70
     - Ended at matchIndex: 600
-    ⚠️  Rejected 48 sentences:
-      - "现在的天气很热。" [Invalid: 天, 气]
-      - "我觉得不舒服。" [Invalid: 觉, 得]
-      - "今天下雨了。" [Invalid: 今, 天, 了]
-      ... and 45 more
-Vocab Group 2 COMPLETE: 94 sentences
+    ⚠️  Rejected 70 sentences:
+      - "我在吃饭。" [Invalid: 在, 饭]
+      - "我们去学校。" [Invalid: 学, 校]
+      - "他在睡觉。" [Invalid: 在]
+      ... and 67 more
+Vocab Group 2 COMPLETE: 26 sentences
 

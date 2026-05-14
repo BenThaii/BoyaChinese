@@ -347,27 +347,68 @@ export class PhraseGeneratorService {
         }> = [];
 
         for (const group of vocabGroups) {
-          // Fetch all vocabulary characters for the chapter range (1 to chapterEndpoint)
+          // Fetch all vocabulary characters with favorite status for the chapter range
           const [rows] = await pool.query<RowDataPacket[]>(
-            `SELECT chinese_character FROM vocabulary_entries 
+            `SELECT chinese_character, chapter, is_favorite FROM vocabulary_entries 
              WHERE chapter >= ? AND chapter <= ?`,
             [group.chapterStart, group.chapterEndpoint]
           );
 
-          const allCharacters = rows.map(row => row.chinese_character as string);
-
-          if (allCharacters.length === 0) {
+          if (rows.length === 0) {
             throw new Error(`No vocabulary found for vocab group ${group.id} (chapters ${group.chapterStart}-${group.chapterEndpoint})`);
           }
 
-          // Prepare 4 batches of 300 characters each
+          // Separate favorites and non-favorites (same logic as generateSentencesForGroup)
+          const favorites = rows
+            .filter(row => row.is_favorite === 1)
+            .map(row => row.chinese_character as string);
+
+          const nonFavorites = rows
+            .filter(row => row.is_favorite !== 1)
+            .map(row => ({
+              character: row.chinese_character as string,
+              chapter: row.chapter as number
+            }));
+
+          console.log(`[PhraseGenerator] Group ${group.id}: ${favorites.length} favorites, ${nonFavorites.length} non-favorites`);
+
+          // Prepare 4 batches of 300 characters each, always including all favorites
           const batches: string[][] = [];
           for (let i = 0; i < 4; i++) {
-            const selectedCharacters: string[] = [];
-            for (let j = 0; j < 300; j++) {
-              const randomIndex = Math.floor(Math.random() * allCharacters.length);
-              selectedCharacters.push(allCharacters[randomIndex]);
+            const selectedCharacters: string[] = [...favorites]; // Always include ALL favorites
+
+            const remainingSlots = 300 - favorites.length;
+
+            if (remainingSlots > 0 && nonFavorites.length > 0) {
+              // Exponentially weighted selection from non-favorites (recent chapters weighted higher)
+              const maxChapter = Math.max(...nonFavorites.map(v => v.chapter));
+              const minChapter = Math.min(...nonFavorites.map(v => v.chapter));
+
+              const weightedPool: string[] = [];
+              for (const vocab of nonFavorites) {
+                const normalizedChapter = maxChapter === minChapter
+                  ? 1
+                  : (vocab.chapter - minChapter) / (maxChapter - minChapter);
+                const exponentialWeight = Math.exp(normalizedChapter);
+                const linearWeight = 1 + normalizedChapter * (Math.E - 1);
+                const blendedWeight = 0.5 * exponentialWeight + 0.5 * linearWeight;
+                const copies = Math.max(1, Math.round(blendedWeight * 10));
+                for (let j = 0; j < copies; j++) {
+                  weightedPool.push(vocab.character);
+                }
+              }
+
+              for (let j = 0; j < remainingSlots; j++) {
+                const randomIndex = Math.floor(Math.random() * weightedPool.length);
+                selectedCharacters.push(weightedPool[randomIndex]);
+              }
+            } else if (remainingSlots > 0 && nonFavorites.length === 0) {
+              // Only favorites — sample with replacement to fill slots
+              for (let j = 0; j < remainingSlots; j++) {
+                selectedCharacters.push(favorites[Math.floor(Math.random() * favorites.length)]);
+              }
             }
+
             batches.push(selectedCharacters);
           }
 

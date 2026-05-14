@@ -108,3 +108,34 @@ The backend will run on http://localhost:3000 and the frontend on http://localho
 ## License
 
 Private project
+
+---
+
+## Deploying to Production
+
+### Update Production Server
+
+SSH into the server and run:
+
+```bash
+cd /var/www/chinese-learning-app
+./update.sh
+```
+
+This pulls the latest code from GitHub, rebuilds the frontend and backend, and restarts the backend via PM2.
+
+### Local Development
+
+Start both servers:
+
+```bash
+# Backend (port 3000)
+cd packages/backend && npm start
+
+# Frontend (port 5173)
+cd packages/frontend && npm run dev
+```
+
+### First-Time Production Setup
+
+See `DEPLOYMENT.md` for full instructions on setting up a new server from scratch.

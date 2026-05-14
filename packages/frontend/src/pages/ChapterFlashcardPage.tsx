@@ -298,18 +298,18 @@ export default function ChapterFlashcardPage() {
 
   return (
     <div style={{
-      padding: '10px',
-      paddingTop: '50px',
+      padding: '10px 16px',
+      paddingTop: '56px',
       maxWidth: '800px',
       margin: '0 auto',
-      minHeight: '100vh',
+      height: '100dvh',
       display: 'flex',
       flexDirection: 'column',
       alignItems: 'center',
-      justifyContent: 'space-between',
-      boxSizing: 'border-box'
+      boxSizing: 'border-box',
+      overflow: 'hidden'
     }}>
-      <h1 style={{ marginBottom: '10px', marginTop: '0', textAlign: 'center', fontSize: '20px' }}>
+      <h1 style={{ marginBottom: '10px', marginTop: '0', textAlign: 'center', fontSize: 'clamp(16px, 4vw, 20px)' }}>
         Chapter Flashcards
       </h1>
 
@@ -507,7 +507,8 @@ export default function ChapterFlashcardPage() {
           display: 'flex',
           flexDirection: 'column',
           justifyContent: 'flex-start',
-          overflow: 'hidden'
+          overflow: 'auto',
+          paddingBottom: '10px'
         }}>
           {/* Chapter info banner */}
           <div style={{
@@ -543,13 +544,13 @@ export default function ChapterFlashcardPage() {
           {/* Details Section - Now appears ABOVE the flashcard */}
           {showDetails && (
               <div style={{
-                padding: '12px',
+                padding: '12px 16px',
                 backgroundColor: 'white',
                 border: '2px solid #dee2e6',
                 borderRadius: '12px',
                 marginBottom: '10px',
                 textAlign: 'left',
-                maxHeight: '35vh',
+                maxHeight: '40dvh',
                 overflow: 'auto',
                 fontSize: '14px'
               }}>
@@ -867,14 +868,13 @@ export default function ChapterFlashcardPage() {
 
             {/* Chinese Character Card - Now appears BELOW the details */}
             <div style={{
-              padding: '20px 15px',
+              padding: 'clamp(14px, 4vw, 20px) clamp(12px, 3vw, 15px)',
               backgroundColor: '#f8f9fa',
               border: '3px solid #007bff',
               borderRadius: '16px',
               marginBottom: '10px',
               boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
               position: 'relative',
-              marginTop: 'auto'
             }}>
               {currentWord.isFavorite && (
                 <div style={{
@@ -912,10 +912,11 @@ export default function ChapterFlashcardPage() {
               </button>
               
               <div style={{
-                fontSize: '60px',
+                fontSize: 'clamp(48px, 15vw, 80px)',
                 fontWeight: 'bold',
                 color: '#333',
-                marginBottom: '10px'
+                marginBottom: '10px',
+                lineHeight: 1.2
               }}>
                 {currentWord.chineseCharacter}
               </div>
@@ -941,7 +942,7 @@ export default function ChapterFlashcardPage() {
             </div>
 
           {/* Next Button */}
-          <div style={{ display: 'flex', justifyContent: 'center', width: '100%' }}>
+          <div style={{ display: 'flex', justifyContent: 'center', width: '100%', marginTop: '10px' }}>
             <button
               onClick={handleNext}
               disabled={isEditing}
@@ -952,8 +953,9 @@ export default function ChapterFlashcardPage() {
                 border: 'none',
                 borderRadius: '8px',
                 cursor: isEditing ? 'not-allowed' : 'pointer',
-                fontSize: '16px',
+                fontSize: 'clamp(14px, 4vw, 16px)',
                 fontWeight: 'bold',
+                width: '100%',
                 maxWidth: '300px',
                 opacity: isEditing ? 0.6 : 1
               }}
