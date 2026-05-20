@@ -172,6 +172,14 @@ export default function PhrasesPage() {
     setSelectedSentenceNumber(sentenceNumber);
     setCharacterDetails([]);
     fetchCharacterDetails(sentence.usedCharacters);
+    // Lock background scroll
+    document.body.style.overflow = 'hidden';
+  };
+
+  const handleCloseModal = () => {
+    setSelectedSentence(null);
+    // Restore background scroll
+    document.body.style.overflow = '';
   };
 
   const fetchCharacterDetails = async (characters: string[], retryCount = 0) => {
@@ -617,31 +625,34 @@ export default function PhrasesPage() {
             bottom: 0,
             backgroundColor: 'rgba(0, 0, 0, 0.5)',
             display: 'flex',
-            alignItems: 'center',
+            alignItems: 'flex-end',
             justifyContent: 'center',
             zIndex: 1000,
-            padding: '20px'
           }}
-          onClick={() => setSelectedSentence(null)}
+          onClick={handleCloseModal}
         >
           <div
             style={{
               backgroundColor: 'white',
-              borderRadius: '8px',
-              padding: '30px',
+              borderRadius: '16px 16px 0 0',
+              padding: '16px',
+              width: '100%',
               maxWidth: '900px',
-              maxHeight: '90vh',
+              maxHeight: '92dvh',
               overflow: 'auto',
-              width: '100%'
+              WebkitOverflowScrolling: 'touch',
             }}
             onClick={(e) => e.stopPropagation()}
           >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-              <h2 style={{ margin: 0 }}>Sentence #{selectedSentenceNumber}</h2>
+            {/* Handle bar */}
+            <div style={{ width: '40px', height: '4px', backgroundColor: '#dee2e6', borderRadius: '2px', margin: '0 auto 12px' }} />
+
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+              <h2 style={{ margin: 0, fontSize: 'clamp(16px, 4vw, 20px)' }}>Sentence #{selectedSentenceNumber}</h2>
               <button
-                onClick={() => setSelectedSentence(null)}
+                onClick={handleCloseModal}
                 style={{
-                  padding: '8px 16px',
+                  padding: '6px 14px',
                   backgroundColor: '#dc3545',
                   color: 'white',
                   border: 'none',
@@ -654,52 +665,53 @@ export default function PhrasesPage() {
               </button>
             </div>
 
-            <div style={{ marginBottom: '20px' }}>
-              <strong>Chinese Text:</strong>
+            <div style={{ marginBottom: '12px' }}>
+              <strong style={{ fontSize: '13px', color: '#666' }}>Chinese Text:</strong>
               <div style={{
-                fontSize: '24px',
-                padding: '15px',
+                fontSize: 'clamp(18px, 5vw, 24px)',
+                padding: '10px 12px',
                 backgroundColor: '#f8f9fa',
                 borderRadius: '4px',
-                marginTop: '5px',
+                marginTop: '4px',
                 lineHeight: '1.6',
                 display: 'flex',
                 justifyContent: 'space-between',
-                alignItems: 'center'
+                alignItems: 'center',
+                gap: '8px',
+                flexWrap: 'wrap'
               }}>
-                <span>{selectedSentence.chineseText}</span>
+                <span style={{ flex: 1 }}>{selectedSentence.chineseText}</span>
                 <button
                   onClick={handlePronounceSentence}
                   disabled={playingSentence}
                   style={{
-                    padding: '8px 16px',
+                    padding: '6px 12px',
                     backgroundColor: playingSentence ? '#6c757d' : '#28a745',
                     color: 'white',
                     border: 'none',
                     borderRadius: '4px',
                     cursor: playingSentence ? 'not-allowed' : 'pointer',
-                    fontSize: '16px',
+                    fontSize: '14px',
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '8px',
-                    minWidth: '120px',
-                    justifyContent: 'center'
+                    gap: '6px',
+                    whiteSpace: 'nowrap'
                   }}
                 >
-                  <span style={{ fontSize: '20px' }}>{playingSentence ? '🔊' : '🔉'}</span>
+                  <span>{playingSentence ? '🔊' : '🔉'}</span>
                   <span>{playingSentence ? 'Playing...' : 'Pronounce'}</span>
                 </button>
               </div>
             </div>
 
-            <div style={{ marginBottom: '20px' }}>
-              <strong>Pinyin:</strong>
+            <div style={{ marginBottom: '12px' }}>
+              <strong style={{ fontSize: '13px', color: '#666' }}>Pinyin:</strong>
               <div style={{
-                fontSize: '18px',
-                padding: '15px',
+                fontSize: 'clamp(14px, 4vw, 18px)',
+                padding: '10px 12px',
                 backgroundColor: '#f8f9fa',
                 borderRadius: '4px',
-                marginTop: '5px',
+                marginTop: '4px',
                 color: selectedSentence.pinyin ? '#000' : '#999',
                 fontStyle: selectedSentence.pinyin ? 'normal' : 'italic'
               }}>
@@ -708,15 +720,14 @@ export default function PhrasesPage() {
             </div>
 
             {selectedSentence.englishMeaning && (
-              <div style={{ marginBottom: '20px' }}>
-                <strong>English Translation:</strong>
+              <div style={{ marginBottom: '12px' }}>
+                <strong style={{ fontSize: '13px', color: '#666' }}>English Translation:</strong>
                 <div style={{
-                  fontSize: '18px',
-                  padding: '15px',
+                  fontSize: 'clamp(14px, 4vw, 18px)',
+                  padding: '10px 12px',
                   backgroundColor: '#e7f3ff',
                   borderRadius: '4px',
-                  marginTop: '5px',
-                  color: '#000'
+                  marginTop: '4px',
                 }}>
                   {selectedSentence.englishMeaning}
                 </div>
@@ -724,115 +735,105 @@ export default function PhrasesPage() {
             )}
 
             <div>
-              <strong>Characters Used:</strong>
+              <strong style={{ fontSize: '13px', color: '#666' }}>Characters Used:</strong>
               {loadingDetails ? (
                 <div style={{ padding: '20px', textAlign: 'center', color: '#666' }}>
                   Loading character details...
                 </div>
               ) : characterDetails.length > 0 ? (
-                <div style={{ marginTop: '10px', overflowX: 'auto' }}>
+                <div style={{ marginTop: '8px', overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
                   <table style={{
                     width: '100%',
                     borderCollapse: 'collapse',
                     backgroundColor: 'white',
                     borderRadius: '4px',
-                    overflow: 'hidden'
+                    overflow: 'hidden',
+                    fontSize: 'clamp(12px, 3vw, 14px)'
                   }}>
                     <thead>
                       <tr style={{ backgroundColor: '#f8f9fa' }}>
-                        <th style={{ padding: '10px', border: '1px solid #dee2e6', textAlign: 'left' }}>Chinese</th>
-                        <th style={{ padding: '10px', border: '1px solid #dee2e6', textAlign: 'left' }}>Pinyin</th>
-                        <th style={{ padding: '10px', border: '1px solid #dee2e6', textAlign: 'left' }}>Han Vietnamese</th>
-                        <th style={{ padding: '10px', border: '1px solid #dee2e6', textAlign: 'left' }}>Modern Vietnamese</th>
-                        <th style={{ padding: '10px', border: '1px solid #dee2e6', textAlign: 'left' }}>English</th>
-                        <th style={{ padding: '10px', border: '1px solid #dee2e6', textAlign: 'center' }}>Favorite</th>
-                        <th style={{ padding: '10px', border: '1px solid #dee2e6', textAlign: 'center' }}>Pronounce</th>
-                        <th style={{ padding: '10px', border: '1px solid #dee2e6', textAlign: 'center' }}>Edit</th>
+                        <th style={{ padding: '8px 6px', border: '1px solid #dee2e6', textAlign: 'left', whiteSpace: 'nowrap' }}>Chinese</th>
+                        <th style={{ padding: '8px 6px', border: '1px solid #dee2e6', textAlign: 'left', whiteSpace: 'nowrap' }}>Pinyin</th>
+                        <th style={{ padding: '8px 6px', border: '1px solid #dee2e6', textAlign: 'left', whiteSpace: 'nowrap' }}>Han Viet</th>
+                        <th style={{ padding: '8px 6px', border: '1px solid #dee2e6', textAlign: 'left', whiteSpace: 'nowrap' }}>Mod Viet</th>
+                        <th style={{ padding: '8px 6px', border: '1px solid #dee2e6', textAlign: 'left', whiteSpace: 'nowrap' }}>English</th>
+                        <th style={{ padding: '8px 6px', border: '1px solid #dee2e6', textAlign: 'center' }}>★</th>
+                        <th style={{ padding: '8px 6px', border: '1px solid #dee2e6', textAlign: 'center' }}>🔉</th>
+                        <th style={{ padding: '8px 6px', border: '1px solid #dee2e6', textAlign: 'center' }}>✏️</th>
                       </tr>
                     </thead>
                     <tbody>
                       {characterDetails.map((char, index) => (
                         <tr key={index}>
-                          <td style={{ padding: '10px', border: '1px solid #dee2e6', fontSize: '20px' }}>
+                          <td style={{ padding: '8px 6px', border: '1px solid #dee2e6', fontSize: '18px' }}>
                             {char.chineseCharacter}
                           </td>
                           {editingCharacter === char.chineseCharacter ? (
                             <>
-                              <td style={{ padding: '10px', border: '1px solid #dee2e6' }}>
+                              <td style={{ padding: '6px', border: '1px solid #dee2e6' }}>
                                 <input
                                   type="text"
                                   value={editedCharacterData?.pinyin || ''}
                                   onChange={(e) => setEditedCharacterData(editedCharacterData ? { ...editedCharacterData, pinyin: e.target.value } : null)}
-                                  style={{ width: '100%', padding: '4px', fontSize: '14px', border: '1px solid #dee2e6', borderRadius: '4px' }}
+                                  style={{ width: '100%', padding: '4px', fontSize: '13px', border: '1px solid #dee2e6', borderRadius: '4px' }}
                                 />
                               </td>
-                              <td style={{ padding: '10px', border: '1px solid #dee2e6' }}>
+                              <td style={{ padding: '6px', border: '1px solid #dee2e6' }}>
                                 <input
                                   type="text"
                                   value={editedCharacterData?.hanVietnamese || ''}
                                   onChange={(e) => setEditedCharacterData(editedCharacterData ? { ...editedCharacterData, hanVietnamese: e.target.value } : null)}
-                                  style={{ width: '100%', padding: '4px', fontSize: '14px', border: '1px solid #dee2e6', borderRadius: '4px' }}
+                                  style={{ width: '100%', padding: '4px', fontSize: '13px', border: '1px solid #dee2e6', borderRadius: '4px' }}
                                 />
                               </td>
-                              <td style={{ padding: '10px', border: '1px solid #dee2e6' }}>
+                              <td style={{ padding: '6px', border: '1px solid #dee2e6' }}>
                                 <input
                                   type="text"
                                   value={editedCharacterData?.modernVietnamese || ''}
                                   onChange={(e) => setEditedCharacterData(editedCharacterData ? { ...editedCharacterData, modernVietnamese: e.target.value } : null)}
-                                  style={{ width: '100%', padding: '4px', fontSize: '14px', border: '1px solid #dee2e6', borderRadius: '4px' }}
+                                  style={{ width: '100%', padding: '4px', fontSize: '13px', border: '1px solid #dee2e6', borderRadius: '4px' }}
                                 />
                               </td>
-                              <td style={{ padding: '10px', border: '1px solid #dee2e6' }}>
+                              <td style={{ padding: '6px', border: '1px solid #dee2e6' }}>
                                 <input
                                   type="text"
                                   value={editedCharacterData?.englishMeaning || ''}
                                   onChange={(e) => setEditedCharacterData(editedCharacterData ? { ...editedCharacterData, englishMeaning: e.target.value } : null)}
-                                  style={{ width: '100%', padding: '4px', fontSize: '14px', border: '1px solid #dee2e6', borderRadius: '4px' }}
+                                  style={{ width: '100%', padding: '4px', fontSize: '13px', border: '1px solid #dee2e6', borderRadius: '4px' }}
                                 />
                               </td>
                             </>
                           ) : (
                             <>
-                              <td style={{ padding: '10px', border: '1px solid #dee2e6' }}>
-                                {char.pinyin || 'N/A'}
-                              </td>
-                              <td style={{ padding: '10px', border: '1px solid #dee2e6' }}>
-                                {char.hanVietnamese || 'N/A'}
-                              </td>
-                              <td style={{ padding: '10px', border: '1px solid #dee2e6' }}>
-                                {char.modernVietnamese || 'N/A'}
-                              </td>
-                              <td style={{ padding: '10px', border: '1px solid #dee2e6' }}>
-                                {char.englishMeaning || 'N/A'}
-                              </td>
+                              <td style={{ padding: '8px 6px', border: '1px solid #dee2e6' }}>{char.pinyin || 'N/A'}</td>
+                              <td style={{ padding: '8px 6px', border: '1px solid #dee2e6' }}>{char.hanVietnamese || 'N/A'}</td>
+                              <td style={{ padding: '8px 6px', border: '1px solid #dee2e6' }}>{char.modernVietnamese || 'N/A'}</td>
+                              <td style={{ padding: '8px 6px', border: '1px solid #dee2e6' }}>{char.englishMeaning || 'N/A'}</td>
                             </>
                           )}
-                          <td style={{ padding: '10px', border: '1px solid #dee2e6', textAlign: 'center' }}>
+                          <td style={{ padding: '8px 6px', border: '1px solid #dee2e6', textAlign: 'center' }}>
                             <button
                               onClick={() => handleToggleFavorite(char.chineseCharacter, char.isFavorite || false)}
                               disabled={editingCharacter === char.chineseCharacter}
                               style={{
-                                padding: '5px 10px',
+                                padding: '4px 8px',
                                 backgroundColor: 'transparent',
                                 color: char.isFavorite ? '#ffc107' : '#ccc',
                                 border: 'none',
-                                borderRadius: '4px',
                                 cursor: editingCharacter === char.chineseCharacter ? 'not-allowed' : 'pointer',
-                                fontSize: '20px',
-                                transition: 'color 0.2s',
+                                fontSize: '18px',
                                 opacity: editingCharacter === char.chineseCharacter ? 0.5 : 1
                               }}
-                              title={char.isFavorite ? 'Remove from favorites' : 'Add to favorites'}
                             >
                               {char.isFavorite ? '★' : '☆'}
                             </button>
                           </td>
-                          <td style={{ padding: '10px', border: '1px solid #dee2e6', textAlign: 'center' }}>
+                          <td style={{ padding: '8px 6px', border: '1px solid #dee2e6', textAlign: 'center' }}>
                             <button
                               onClick={() => handlePronounceCharacter(char.chineseCharacter)}
                               disabled={playingCharacter === char.chineseCharacter || editingCharacter === char.chineseCharacter}
                               style={{
-                                padding: '5px 10px',
+                                padding: '4px 8px',
                                 backgroundColor: playingCharacter === char.chineseCharacter ? '#ccc' : '#007bff',
                                 color: 'white',
                                 border: 'none',
@@ -845,53 +846,14 @@ export default function PhrasesPage() {
                               {playingCharacter === char.chineseCharacter ? '🔊' : '🔉'}
                             </button>
                           </td>
-                          <td style={{ padding: '10px', border: '1px solid #dee2e6', textAlign: 'center' }}>
+                          <td style={{ padding: '8px 6px', border: '1px solid #dee2e6', textAlign: 'center' }}>
                             {editingCharacter === char.chineseCharacter ? (
-                              <div style={{ display: 'flex', gap: '5px', justifyContent: 'center' }}>
-                                <button
-                                  onClick={handleSaveCharacter}
-                                  style={{
-                                    padding: '5px 10px',
-                                    backgroundColor: '#28a745',
-                                    color: 'white',
-                                    border: 'none',
-                                    borderRadius: '4px',
-                                    cursor: 'pointer',
-                                    fontSize: '12px'
-                                  }}
-                                >
-                                  Save
-                                </button>
-                                <button
-                                  onClick={handleCancelEdit}
-                                  style={{
-                                    padding: '5px 10px',
-                                    backgroundColor: '#6c757d',
-                                    color: 'white',
-                                    border: 'none',
-                                    borderRadius: '4px',
-                                    cursor: 'pointer',
-                                    fontSize: '12px'
-                                  }}
-                                >
-                                  Cancel
-                                </button>
+                              <div style={{ display: 'flex', gap: '4px', justifyContent: 'center' }}>
+                                <button onClick={handleSaveCharacter} style={{ padding: '4px 8px', backgroundColor: '#28a745', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '12px' }}>Save</button>
+                                <button onClick={handleCancelEdit} style={{ padding: '4px 8px', backgroundColor: '#6c757d', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '12px' }}>Cancel</button>
                               </div>
                             ) : (
-                              <button
-                                onClick={() => handleEditCharacter(char)}
-                                style={{
-                                  padding: '5px 10px',
-                                  backgroundColor: '#007bff',
-                                  color: 'white',
-                                  border: 'none',
-                                  borderRadius: '4px',
-                                  cursor: 'pointer',
-                                  fontSize: '14px'
-                                }}
-                              >
-                                ✏️
-                              </button>
+                              <button onClick={() => handleEditCharacter(char)} style={{ padding: '4px 8px', backgroundColor: '#007bff', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '14px' }}>✏️</button>
                             )}
                           </td>
                         </tr>
@@ -908,7 +870,6 @@ export default function PhrasesPage() {
           </div>
         </div>
       )}
-
       {/* Go to Top Button */}
       <button
         onClick={scrollToTop}
