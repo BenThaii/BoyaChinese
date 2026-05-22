@@ -208,14 +208,21 @@ export default function PhrasesPage() {
     setSelectedSentenceNumber(sentenceNumber);
     setCharacterDetails([]);
     fetchCharacterDetails(sentence.usedCharacters);
-    // Lock background scroll
-    document.body.style.overflow = 'hidden';
+    // Lock background scroll (iOS Safari requires position:fixed)
+    const scrollY = window.scrollY;
+    document.body.style.position = 'fixed';
+    document.body.style.top = `-${scrollY}px`;
+    document.body.style.width = '100%';
   };
 
   const handleCloseModal = () => {
     setSelectedSentence(null);
-    // Restore background scroll
-    document.body.style.overflow = '';
+    // Restore background scroll and position
+    const scrollY = document.body.style.top;
+    document.body.style.position = '';
+    document.body.style.top = '';
+    document.body.style.width = '';
+    window.scrollTo(0, parseInt(scrollY || '0') * -1);
   };
 
   const fetchCharacterDetails = async (characters: string[], retryCount = 0) => {
