@@ -43,7 +43,6 @@ export default function PhrasesPage() {
   const [loadingSentences, setLoadingSentences] = useState<Set<number>>(new Set());
   const [playingSentence, setPlayingSentence] = useState<boolean>(false);
   const [refreshing, setRefreshing] = useState(() => {
-    // Check if generation is in progress from localStorage
     const inProgress = localStorage.getItem('phraseGenerationInProgress');
     return inProgress === 'true';
   });
@@ -53,10 +52,19 @@ export default function PhrasesPage() {
   });
   const [editingCharacter, setEditingCharacter] = useState<string | null>(null);
   const [editedCharacterData, setEditedCharacterData] = useState<CharacterInfo | null>(null);
+  const [modelConfig, setModelConfig] = useState<{ preferredModel: string | null; fallbackOrder: string[]; activeOrder: string[] } | null>(null);
+  const [editingModel, setEditingModel] = useState(false);
+  const [modelInput, setModelInput] = useState('');
+  const [modelHistory, setModelHistory] = useState<string[]>(() => {
+    try {
+      return JSON.parse(localStorage.getItem('phraseModelHistory') || '[]');
+    } catch { return []; }
+  });
 
   // Fetch vocab groups on mount
   useEffect(() => {
     fetchVocabGroups();
+    fetchModelConfig();
   }, []);
 
   // Poll for generation completion when refreshing
@@ -106,6 +114,34 @@ export default function PhrasesPage() {
 
     return () => clearInterval(pollInterval);
   }, [refreshing, generationStartTime, vocabGroups]);
+
+  const fetchModelConfig = async () => {
+    try {
+      const response = await apiClient.get('/phrases/model-config');
+      setModelConfig(response.data);
+      setModelInput(response.data.preferredModel || response.data.activeOrder[0] || '');
+    } catch (err) {
+      console.error('Failed to load model config:', err);
+    }
+  };
+
+  const saveModelConfig = async () => {
+    const trimmed = modelInput.trim();
+    try {
+      const response = await apiClient.put('/phrases/model-config', { preferredModel: trimmed });
+      setModelConfig(response.data);
+      setEditingModel(false);
+      // Save to history (deduplicated, most recent first, max 10)
+      if (trimmed) {
+        const updated = [trimmed, ...modelHistory.filter(m => m !== trimmed)].slice(0, 10);
+        setModelHistory(updated);
+        localStorage.setItem('phraseModelHistory', JSON.stringify(updated));
+      }
+    } catch (err) {
+      console.error('Failed to save model config:', err);
+      alert('Failed to save model config');
+    }
+  };
 
   const fetchVocabGroups = async (retryCount = 0) => {
     setLoading(true);
@@ -444,9 +480,65 @@ export default function PhrasesPage() {
           </button>
         </div>
       </div>
-      <p style={{ color: '#666', marginBottom: '30px' }}>
+      <p style={{ color: '#666', marginBottom: '20px' }}>
         Practice Chinese sentences organized by vocabulary groups. Click any sentence to see character details.
       </p>
+
+      {/* AI Model Config */}
+      <div style={{ marginBottom: '20px', padding: '12px 16px', backgroundColor: '#f8f9fa', borderRadius: '8px', border: '1px solid #dee2e6' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+          <span style={{ fontSize: '13px', color: '#666', fontWeight: 'bold', whiteSpace: 'nowrap' }}>🤖 AI Model:</span>
+          {editingModel ? (
+            <>
+              <input
+                type="text"
+                value={modelInput}
+                onChange={(e) => setModelInput(e.target.value)}
+                placeholder="e.g. gemini-flash-latest"
+                style={{ flex: 1, minWidth: '200px', padding: '6px 10px', fontSize: '13px', borderRadius: '4px', border: '1px solid #007bff' }}
+                onKeyDown={(e) => { if (e.key === 'Enter') saveModelConfig(); if (e.key === 'Escape') setEditingModel(false); }}
+                autoFocus
+              />
+              <button onClick={saveModelConfig} style={{ padding: '6px 12px', backgroundColor: '#28a745', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '13px' }}>Save</button>
+              <button onClick={() => setEditingModel(false)} style={{ padding: '6px 12px', backgroundColor: '#6c757d', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '13px' }}>Cancel</button>
+            </>
+          ) : (
+            <>
+              <code style={{ fontSize: '13px', backgroundColor: '#e9ecef', padding: '4px 8px', borderRadius: '4px', flex: 1 }}>
+                {modelConfig ? (modelConfig.preferredModel || modelConfig.activeOrder[0] || 'default') : '...'}
+              </code>
+              {modelConfig && !modelConfig.preferredModel && (
+                <span style={{ fontSize: '11px', color: '#999' }}>(auto-fallback)</span>
+              )}
+              <button onClick={() => { setEditingModel(true); setModelInput(modelConfig?.preferredModel || modelConfig?.activeOrder[0] || ''); }} style={{ padding: '6px 12px', backgroundColor: '#007bff', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '13px' }}>Edit</button>
+            </>
+          )}
+        </div>
+        {/* Model history chips */}
+        {editingModel && modelHistory.length > 0 && (
+          <div style={{ marginTop: '10px', display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+            <span style={{ fontSize: '11px', color: '#999', alignSelf: 'center' }}>Recent:</span>
+            {modelHistory.map(m => (
+              <button
+                key={m}
+                onClick={() => setModelInput(m)}
+                style={{
+                  padding: '3px 10px',
+                  fontSize: '12px',
+                  backgroundColor: modelInput === m ? '#007bff' : '#e9ecef',
+                  color: modelInput === m ? 'white' : '#333',
+                  border: '1px solid #dee2e6',
+                  borderRadius: '12px',
+                  cursor: 'pointer',
+                  whiteSpace: 'nowrap'
+                }}
+              >
+                {m}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
 
       {loading && (
         <div style={{ textAlign: 'center', padding: '40px' }}>

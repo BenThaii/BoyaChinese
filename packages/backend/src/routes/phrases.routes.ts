@@ -228,4 +228,42 @@ router.post('/phrases/translate', async (req: Request, res: Response) => {
   }
 });
 
+/**
+ * GET /api/phrases/model-config
+ * Returns the current AI model configuration (preferred model + fallback list)
+ */
+router.get('/phrases/model-config', async (_req: Request, res: Response) => {
+  try {
+    const { AITextGenerator } = await import('../services/AITextGenerator');
+    const config = AITextGenerator.getModelConfig();
+    res.json(config);
+  } catch (error) {
+    console.error('Error getting model config:', error);
+    res.status(500).json({ error: 'Failed to get model config' });
+  }
+});
+
+/**
+ * PUT /api/phrases/model-config
+ * Update the preferred model and/or fallback list
+ * Body: { preferredModel?: string, fallbackOrder?: string[] }
+ */
+router.put('/phrases/model-config', async (req: Request, res: Response) => {
+  try {
+    const { preferredModel, fallbackOrder } = req.body;
+
+    if (!preferredModel && !fallbackOrder) {
+      return res.status(400).json({ error: 'preferredModel or fallbackOrder is required' });
+    }
+
+    const { AITextGenerator } = await import('../services/AITextGenerator');
+    AITextGenerator.setModelConfig({ preferredModel, fallbackOrder });
+    const updated = AITextGenerator.getModelConfig();
+    res.json(updated);
+  } catch (error) {
+    console.error('Error updating model config:', error);
+    res.status(500).json({ error: 'Failed to update model config' });
+  }
+});
+
 export default router;

@@ -33,13 +33,42 @@ export class AITextGenerator {
   private currentModelName: string = '';
   private translationService: TranslationService;
   
-  // Model fallback order
-  private readonly MODEL_FALLBACK_ORDER = [
+  // Model fallback order — can be overridden at runtime
+  private static _modelFallbackOrder: string[] = [
     'gemini-flash-latest',
     'gemini-3-flash-preview',
     'gemini-2.5-flash',
     'gemini-flash-lite-latest'
   ];
+  private static _preferredModel: string | null = null;
+
+  // Static config accessors
+  static getModelConfig() {
+    return {
+      preferredModel: AITextGenerator._preferredModel,
+      fallbackOrder: [...AITextGenerator._modelFallbackOrder],
+      activeOrder: AITextGenerator._preferredModel
+        ? [AITextGenerator._preferredModel, ...AITextGenerator._modelFallbackOrder.filter(m => m !== AITextGenerator._preferredModel)]
+        : [...AITextGenerator._modelFallbackOrder],
+    };
+  }
+
+  static setModelConfig({ preferredModel, fallbackOrder }: { preferredModel?: string; fallbackOrder?: string[] }) {
+    if (preferredModel !== undefined) {
+      AITextGenerator._preferredModel = preferredModel || null;
+    }
+    if (fallbackOrder !== undefined) {
+      AITextGenerator._modelFallbackOrder = fallbackOrder;
+    }
+    console.log('[AITextGenerator] Model config updated:', AITextGenerator.getModelConfig());
+  }
+
+  private get MODEL_FALLBACK_ORDER(): string[] {
+    const order = AITextGenerator._preferredModel
+      ? [AITextGenerator._preferredModel, ...AITextGenerator._modelFallbackOrder.filter(m => m !== AITextGenerator._preferredModel)]
+      : [...AITextGenerator._modelFallbackOrder];
+    return order;
+  }
 
   constructor(translationService?: TranslationService) {
     this.translationService = translationService || new TranslationService();
