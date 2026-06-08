@@ -206,6 +206,7 @@ STRICT REQUIREMENTS:
 1. only write one sentence
 2. The sentence should connect logically and tell a simple story.
 3. Maximum total characters: ${maxWords} (excluding punctuation).
+4. Prioritize the use of Modal Verbs and Conjunctions
 5. You may use punctuations
 
 
