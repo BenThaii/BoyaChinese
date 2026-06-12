@@ -33,6 +33,43 @@ export interface StoredSentence {
 }
 
 /**
+ * Build a weighted character pool from non-favorite vocabulary.
+ * Uses chapter RANK (sorted position) instead of raw chapter number,
+ * so large gaps between chapters (e.g. 1-30 then 401-402) don't distort weights.
+ * 
+ * Words from the most recently introduced chapters get ~2.7× more copies than
+ * the oldest chapter, using a 50/50 blend of exponential and linear weighting.
+ */
+function buildWeightedPool(nonFavorites: { character: string; chapter: number }[]): string[] {
+  if (nonFavorites.length === 0) return [];
+
+  // Get sorted unique chapters and assign a rank (0-based index)
+  const uniqueChapters = [...new Set(nonFavorites.map(v => v.chapter))].sort((a, b) => a - b);
+  const chapterRank = new Map<number, number>();
+  uniqueChapters.forEach((ch, idx) => chapterRank.set(ch, idx));
+
+  const maxRank = uniqueChapters.length - 1;
+
+  const weightedPool: string[] = [];
+  for (const vocab of nonFavorites) {
+    // Normalize by rank (not raw chapter number) → always 0..1 regardless of chapter gaps
+    const normalizedRank = maxRank === 0
+      ? 1
+      : chapterRank.get(vocab.chapter)! / maxRank;
+
+    const exponentialWeight = Math.exp(normalizedRank);              // 1.0 → e (≈2.718)
+    const linearWeight = 1 + normalizedRank * (Math.E - 1);          // same range, linear
+    const blendedWeight = 0.5 * exponentialWeight + 0.5 * linearWeight;
+    const copies = Math.max(1, Math.round(blendedWeight * 10));
+
+    for (let j = 0; j < copies; j++) {
+      weightedPool.push(vocab.character);
+    }
+  }
+  return weightedPool;
+}
+
+/**
  * Service for generating pre-generated phrases for vocabulary groups
  */
 export class PhraseGeneratorService {
@@ -74,125 +111,6 @@ export class PhraseGeneratorService {
     return vocabGroups;
   }
 
-  /**
-   * Generate one batch of 30 sentences using 300 randomly selected characters.
-   * 
-   * @param characters - Array of exactly 300 characters to use for generation
-   * @returns Array of 30 GeneratedSentence objects
-   */
-  async generateBatch(characters: string[]): Promise<GeneratedSentence[]> {
-    if (characters.length !== 300) {
-      throw new Error(`Expected exactly 300 characters, got ${characters.length}`);
-    }
-
-    const aiGenerator = new AITextGenerator();
-    const sentences = await aiGenerator.generateMultipleSentences(characters, 30);
-
-    return sentences;
-  }
-
-  /**
-   * Generate up to 120 sentences for a vocabulary group (4 batches × up to 30 sentences).
-   * Uses rejection sampling: generates 45 candidates per batch, keeps up to 30 valid ones.
-   * Fetches vocabulary from chapters 1 through chapterEndpoint and randomly selects
-   * 300 characters for each batch.
-   * 
-   * @param group - VocabGroup with chapter range to generate sentences for
-   * @returns Array of up to 120 GeneratedSentence objects (may be less if many invalid sentences)
-   */
-  async generateSentencesForGroup(group: VocabGroup): Promise<GeneratedSentence[]> {
-    const pool = getPool();
-    
-    // Fetch all vocabulary with chapter info and favorite status
-    const [rows] = await pool.query<RowDataPacket[]>(
-      `SELECT chinese_character, chapter, is_favorite FROM vocabulary_entries 
-       WHERE chapter >= ? AND chapter <= ?`,
-      [group.chapterStart, group.chapterEndpoint]
-    );
-
-    if (rows.length === 0) {
-      throw new Error(`No vocabulary found for vocab group ${group.id} (chapters ${group.chapterStart}-${group.chapterEndpoint})`);
-    }
-
-    // Separate favorites and non-favorites
-    const favorites = rows
-      .filter(row => row.is_favorite === 1)
-      .map(row => row.chinese_character as string);
-    
-    const nonFavorites = rows
-      .filter(row => row.is_favorite !== 1)
-      .map(row => ({ 
-        character: row.chinese_character as string, 
-        chapter: row.chapter as number 
-      }));
-
-    console.log(`[PhraseGenerator] Group ${group.id}: ${favorites.length} favorites, ${nonFavorites.length} non-favorites`);
-
-    // Generate 4 batches of 30 sentences each
-    const allSentences: GeneratedSentence[] = [];
-    
-    for (let i = 0; i < 4; i++) {
-      const selectedCharacters: string[] = [];
-      
-      // Step 1: Always include ALL favorite words
-      selectedCharacters.push(...favorites);
-      
-      // Step 2: Fill remaining slots with exponentially weighted selection from non-favorites
-      const remainingSlots = 300 - favorites.length;
-      
-      if (remainingSlots > 0 && nonFavorites.length > 0) {
-        // Calculate smoothed exponential weights (50% exponential + 50% linear)
-        const maxChapter = Math.max(...nonFavorites.map(v => v.chapter));
-        const minChapter = Math.min(...nonFavorites.map(v => v.chapter));
-        
-        // Create weighted array where each word appears multiple times based on its weight
-        const weightedPool: string[] = [];
-        
-        for (const vocab of nonFavorites) {
-          // Normalize chapter to [0, 1] range
-          const normalizedChapter = maxChapter === minChapter 
-            ? 1 
-            : (vocab.chapter - minChapter) / (maxChapter - minChapter);
-          
-          // Exponential weight: e^(normalizedChapter) ranges from 1 to e (≈2.718)
-          const exponentialWeight = Math.exp(normalizedChapter);
-          
-          // Linear weight: normalizedChapter ranges from 0 to 1, scale to [1, 2.718] to match exponential range
-          const linearWeight = 1 + normalizedChapter * (Math.E - 1);
-          
-          // Blend 50% exponential + 50% linear for smoother distribution
-          const blendedWeight = 0.5 * exponentialWeight + 0.5 * linearWeight;
-          
-          // Add word to pool multiple times based on weight (rounded to integer)
-          const copies = Math.max(1, Math.round(blendedWeight * 10)); // Scale by 10 for better granularity
-          
-          for (let j = 0; j < copies; j++) {
-            weightedPool.push(vocab.character);
-          }
-        }
-        
-        // Randomly sample from weighted pool
-        for (let j = 0; j < remainingSlots; j++) {
-          const randomIndex = Math.floor(Math.random() * weightedPool.length);
-          selectedCharacters.push(weightedPool[randomIndex]);
-        }
-      } else if (remainingSlots > 0 && nonFavorites.length === 0) {
-        // Only favorites exist, sample with replacement
-        for (let j = 0; j < remainingSlots; j++) {
-          const randomIndex = Math.floor(Math.random() * favorites.length);
-          selectedCharacters.push(favorites[randomIndex]);
-        }
-      }
-
-      console.log(`[PhraseGenerator] Batch ${i + 1}: Selected ${selectedCharacters.length} characters (${favorites.length} favorites + ${selectedCharacters.length - favorites.length} weighted)`);
-
-      // Generate batch of 30 sentences
-      const batchSentences = await this.generateBatch(selectedCharacters);
-      allSentences.push(...batchSentences);
-    }
-
-    return allSentences;
-  }
 
   /**
    * Delete all existing sentences for a vocabulary group.
@@ -380,27 +298,9 @@ export class PhraseGeneratorService {
             const remainingSlots = 300 - favorites.length;
 
             if (remainingSlots > 0 && nonFavorites.length > 0) {
-              // Exponentially weighted selection from non-favorites (recent chapters weighted higher)
-              const maxChapter = Math.max(...nonFavorites.map(v => v.chapter));
-              const minChapter = Math.min(...nonFavorites.map(v => v.chapter));
-
-              const weightedPool: string[] = [];
-              for (const vocab of nonFavorites) {
-                const normalizedChapter = maxChapter === minChapter
-                  ? 1
-                  : (vocab.chapter - minChapter) / (maxChapter - minChapter);
-                const exponentialWeight = Math.exp(normalizedChapter);
-                const linearWeight = 1 + normalizedChapter * (Math.E - 1);
-                const blendedWeight = 0.5 * exponentialWeight + 0.5 * linearWeight;
-                const copies = Math.max(1, Math.round(blendedWeight * 10));
-                for (let j = 0; j < copies; j++) {
-                  weightedPool.push(vocab.character);
-                }
-              }
-
+              const weightedPool = buildWeightedPool(nonFavorites);
               for (let j = 0; j < remainingSlots; j++) {
-                const randomIndex = Math.floor(Math.random() * weightedPool.length);
-                selectedCharacters.push(weightedPool[randomIndex]);
+                selectedCharacters.push(weightedPool[Math.floor(Math.random() * weightedPool.length)]);
               }
             } else if (remainingSlots > 0 && nonFavorites.length === 0) {
               // Only favorites — sample with replacement to fill slots
