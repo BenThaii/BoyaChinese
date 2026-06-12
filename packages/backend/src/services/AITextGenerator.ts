@@ -301,7 +301,15 @@ REMEMBER: Create MEANINGFUL sentences with proper grammar, NOT random word lists
 
         for (let batchIndex = 0; batchIndex < groupData.batches.length; batchIndex++) {
           const characters = groupData.batches[batchIndex];
-          const requiredWords = ['是', '吗', '的', '呢', '也', '这', '去', '有'];
+          const requiredWords = [
+            '了', '着', '过', '的', '地', '得', '吗', '呢', '啊', '吧', '嘛',
+            '我', '你', '他', '她', '它', '我们', '你们', '他们',
+            '是', '有', '没', '没有', '不', '都', '也', '很', '太', '非常',
+            '和', '或', '但', '但是', '因为', '所以', '如果', '虽然', '还是',
+            '在', '从', '到', '去', '来', '里', '上', '下', '中',
+            '什么', '哪', '谁', '怎么', '为什么', '多少',
+            '这', '那', '这个', '那个', '一', '两', '就', '还', '再', '又'
+          ];
           const allCharacters = [...new Set([...characters, ...requiredWords])];
           const uniqueChars = Array.from(new Set(allCharacters));
           const sortedUniqueChars = [...uniqueChars].sort((a, b) => b.length - a.length);
