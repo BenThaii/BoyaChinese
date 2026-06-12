@@ -26,6 +26,7 @@ interface CharacterInfo {
   modernVietnamese?: string;
   englishMeaning?: string;
   isFavorite?: boolean;
+  chapter?: number;
 }
 
 export default function PhrasesPage() {
@@ -856,6 +857,7 @@ export default function PhrasesPage() {
                         <th style={{ padding: '8px 6px', border: '1px solid #dee2e6', textAlign: 'left', whiteSpace: 'nowrap' }}>Han Viet</th>
                         <th style={{ padding: '8px 6px', border: '1px solid #dee2e6', textAlign: 'left', whiteSpace: 'nowrap' }}>Mod Viet</th>
                         <th style={{ padding: '8px 6px', border: '1px solid #dee2e6', textAlign: 'left', whiteSpace: 'nowrap' }}>English</th>
+                        <th style={{ padding: '8px 6px', border: '1px solid #dee2e6', textAlign: 'center' }}>Ch</th>
                         <th style={{ padding: '8px 6px', border: '1px solid #dee2e6', textAlign: 'center' }}>★</th>
                         <th style={{ padding: '8px 6px', border: '1px solid #dee2e6', textAlign: 'center' }}>🔉</th>
                         <th style={{ padding: '8px 6px', border: '1px solid #dee2e6', textAlign: 'center' }}>✏️</th>
@@ -910,6 +912,9 @@ export default function PhrasesPage() {
                               <td style={{ padding: '8px 6px', border: '1px solid #dee2e6' }}>{char.englishMeaning || 'N/A'}</td>
                             </>
                           )}
+                          <td style={{ padding: '8px 6px', border: '1px solid #dee2e6', textAlign: 'center', fontSize: '12px', color: '#666' }}>
+                            {char.chapter ?? '—'}
+                          </td>
                           <td style={{ padding: '8px 6px', border: '1px solid #dee2e6', textAlign: 'center' }}>
                             <button
                               onClick={() => handleToggleFavorite(char.chineseCharacter, char.isFavorite || false)}

@@ -133,7 +133,7 @@ router.get('/phrases/character-info/:character', async (req: Request, res: Respo
     // Query vocabulary database for character details
     const pool = getPool();
     const [rows] = await pool.query<RowDataPacket[]>(
-      `SELECT chinese_character, pinyin, han_vietnamese, modern_vietnamese, english_meaning, is_favorite
+      `SELECT chinese_character, pinyin, han_vietnamese, modern_vietnamese, english_meaning, is_favorite, chapter
        FROM vocabulary_entries
        WHERE chinese_character = ?
        LIMIT 1`,
@@ -151,7 +151,8 @@ router.get('/phrases/character-info/:character', async (req: Request, res: Respo
       hanVietnamese: row.han_vietnamese,
       modernVietnamese: row.modern_vietnamese,
       englishMeaning: row.english_meaning,
-      isFavorite: row.is_favorite === 1
+      isFavorite: row.is_favorite === 1,
+      chapter: row.chapter
     };
     
     res.json(response);

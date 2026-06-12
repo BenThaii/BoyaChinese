@@ -189,7 +189,22 @@ export class AITextGenerator {
           const characters = groupData.batches[batchIndex];
           
           // Required grammar words
-          const requiredWords = ['是', '吗', '的', '呢', '也', '这', '去', '有'];
+          const requiredWords = [
+            // Particles
+            '了', '着', '过', '的', '地', '得', '吗', '呢', '啊', '吧', '嘛',
+            // Pronouns
+            '我', '你', '他', '她', '它', '我们', '你们', '他们',
+            // Basic verbs/copula
+            '是', '有', '没', '没有', '不', '都', '也', '很', '太', '非常',
+            // Connectives/conjunctions
+            '和', '或', '但', '但是', '因为', '所以', '如果', '虽然', '还是',
+            // Prepositions/location
+            '在', '从', '到', '去', '来', '里', '上', '下', '中',
+            // Question words
+            '什么', '哪', '谁', '怎么', '为什么', '多少',
+            // Common misc
+            '这', '那', '这个', '那个', '一', '两', '就', '还', '再', '又'
+          ];
           const allCharacters = [...new Set([...characters, ...requiredWords])];
           const uniqueChars = Array.from(new Set(allCharacters));
           const enumeratedList = uniqueChars.map((char, index) => `${index + 1}. ${char}`).join('\n');
@@ -215,10 +230,11 @@ SENTENCE_${sentenceCounter + 74}: [sentence]
 CRITICAL RULES:
 1. You can ONLY use characters from the "AVAILABLE CHARACTERS" list for each group/batch
 2. DO NOT combine characters to create new words not in the list
-3. Create REAL, MEANINGFUL sentences with proper grammar
-4. Each sentence should be SHORT (maximum 40 characters excluding punctuation)
-5. Use simple, common sentence patterns
-6. SPECIAL HANDLING FOR PLACEHOLDERS: If a character contains "。。。" (three dots), you can fill in appropriate content:
+3. Create REAL, MEANINGFUL sentences with proper grammar. You may use punctuations.
+4. Each sentence should be have maximum 40 characters excluding punctuation
+5. Sentences sometimes should have complex sentence structure
+6. Prioritize the use of Modal Verbs， Modal Particles and Conjunctions
+7. SPECIAL HANDLING FOR PLACEHOLDERS: If a character contains "。。。" (three dots), you can fill in appropriate content:
    - Example: "太。。。了" → "太冷了", "太热了", "太好了", etc.
    - Example: "很。。。" → "很好", "很冷", "很热", etc.
    - The filled content should use characters from the available list when possible
