@@ -187,19 +187,20 @@ export class AITextGenerator {
         for (let batchIndex = 0; batchIndex < groupData.batches.length; batchIndex++) {
           const characters = groupData.batches[batchIndex];
           
-          // Required grammar words — always allowed regardless of vocab list
-          const requiredWords = [
+          // For the AI prompt: only add essential grammar particles (not common words)
+          // so the AI is encouraged to use the vocabulary we actually want to practice
+          const promptGrammarWords = [
             '了', '着', '过', '的', '地', '得', '吗', '呢', '啊', '吧', '嘛',
             '我', '你', '他', '她', '它', '我们', '你们', '他们',
             '是', '有', '没', '没有', '不', '都', '也', '很', '太', '非常',
             '和', '或', '但', '但是', '因为', '所以', '如果', '虽然', '还是',
             '在', '从', '到', '去', '来', '里', '上', '下', '中',
             '什么', '哪', '谁', '怎么', '为什么', '多少',
-            '这', '那', '这个', '那个', '一', '两', '就', '还', '再', '又'
+            '这', '那', '这个', '那个', '一', '两', '就', '还', '再', '又',
+            '可以', '能', '应该',
           ];
-          const allCharacters = [...new Set([...characters, ...requiredWords])];
-          const uniqueChars = Array.from(new Set(allCharacters));
-          const charList = uniqueChars.join('，');
+          const promptChars = [...new Set([...characters, ...promptGrammarWords])];
+          const charList = promptChars.join('，');
 
           promptSections.push(`=== GROUP ${groupData.vocabGroupId}, BATCH ${batchIndex + 1} ===
 VOCABULARY: ${charList}
@@ -275,13 +276,28 @@ IMPORTANT: Output ONLY "SENTENCE_N: [sentence]" lines. No other text whatsoever.
         for (let batchIndex = 0; batchIndex < groupData.batches.length; batchIndex++) {
           const characters = groupData.batches[batchIndex];
           const requiredWords = [
-            '了', '着', '过', '的', '地', '得', '吗', '呢', '啊', '吧', '嘛',
-            '我', '你', '他', '她', '它', '我们', '你们', '他们',
-            '是', '有', '没', '没有', '不', '都', '也', '很', '太', '非常',
-            '和', '或', '但', '但是', '因为', '所以', '如果', '虽然', '还是',
-            '在', '从', '到', '去', '来', '里', '上', '下', '中',
-            '什么', '哪', '谁', '怎么', '为什么', '多少',
-            '这', '那', '这个', '那个', '一', '两', '就', '还', '再', '又'
+            '了', '着', '过', '的', '地', '得', '吗', '呢', '啊', '吧', '嘛', '呀', '哦',
+            '我', '你', '他', '她', '它', '我们', '你们', '他们', '大家', '自己',
+            '是', '有', '没', '没有', '不', '别', '都', '也', '很', '太', '非常', '真', '更',
+            '和', '或', '但', '但是', '因为', '所以', '如果', '虽然', '还是', '而且', '不但',
+            '在', '从', '到', '去', '来', '里', '上', '下', '中', '前', '后', '左', '右',
+            '什么', '哪', '谁', '怎么', '为什么', '多少', '多', '几',
+            '今天', '明天', '昨天', '现在', '以前', '以后', '时候', '最近',
+            '已经', '已', '经',
+            '吃', '喝', '看', '听', '说', '走', '跑', '坐', '站',
+            '买', '卖', '用', '做', '开', '关', '进', '出', '回',
+            '知道', '觉得', '想', '喜欢', '喜', '欢',
+            '要', '想要', '当', '对', '起', '散', '步',
+            '家', '人', '事', '时间', '地方', '问题', '东西', '间',
+            '妈', '妈妈', '爸', '爸爸', '哥', '哥哥', '姐', '姐姐', '弟弟', '妹妹',
+            '朋友', '老师', '同学', '孩', '孩子',
+            '好', '坏', '大', '小', '少', '新', '旧', '快', '慢',
+            '高兴', '难过', '方便', '冷', '热', '累',
+            '天', '气', '天气', '身', '体', '身体', '门',
+            '这', '那', '这个', '那个', '个', '一', '两', '就', '还', '再', '又',
+            '可以', '能', '应该', '需要', '必须',
+            '有点', '一点', '一下', '一起', '一直',
+            '商', '店', '药',
           ];
           const allCharacters = [...new Set([...characters, ...requiredWords])];
           const uniqueChars = Array.from(new Set(allCharacters));
