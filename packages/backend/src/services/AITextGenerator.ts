@@ -177,8 +177,7 @@ export class AITextGenerator {
       console.log('[AITextGenerator] ===== MULTI-GROUP BATCH API REQUEST =====');
       console.log('[AITextGenerator] Number of vocab groups:', vocabGroupsData.length);
       console.log('[AITextGenerator] Total batches:', vocabGroupsData.length * 4);
-      console.log('[AITextGenerator] Target sentences (after rejection sampling):', vocabGroupsData.length * 4 * 30);
-      console.log('[AITextGenerator] Generating candidates (75 per batch):', vocabGroupsData.length * 4 * 75);
+      console.log('[AITextGenerator] Target sentences:', vocabGroupsData.length * 4 * 30);
 
       // Build the mega prompt for all groups and batches
       let promptSections: string[] = [];
@@ -188,65 +187,41 @@ export class AITextGenerator {
         for (let batchIndex = 0; batchIndex < groupData.batches.length; batchIndex++) {
           const characters = groupData.batches[batchIndex];
           
-          // Required grammar words
+          // Required grammar words — always allowed regardless of vocab list
           const requiredWords = [
-            // Particles
             '了', '着', '过', '的', '地', '得', '吗', '呢', '啊', '吧', '嘛',
-            // Pronouns
             '我', '你', '他', '她', '它', '我们', '你们', '他们',
-            // Basic verbs/copula
             '是', '有', '没', '没有', '不', '都', '也', '很', '太', '非常',
-            // Connectives/conjunctions
             '和', '或', '但', '但是', '因为', '所以', '如果', '虽然', '还是',
-            // Prepositions/location
             '在', '从', '到', '去', '来', '里', '上', '下', '中',
-            // Question words
             '什么', '哪', '谁', '怎么', '为什么', '多少',
-            // Common misc
             '这', '那', '这个', '那个', '一', '两', '就', '还', '再', '又'
           ];
           const allCharacters = [...new Set([...characters, ...requiredWords])];
           const uniqueChars = Array.from(new Set(allCharacters));
-          const enumeratedList = uniqueChars.map((char, index) => `${index + 1}. ${char}`).join('\n');
+          const charList = uniqueChars.join('，');
 
-          promptSections.push(`
-=== GROUP ${groupData.vocabGroupId}, BATCH ${batchIndex + 1} ===
-AVAILABLE CHARACTERS:
-${enumeratedList}
-
-Generate 75 sentences using ONLY the characters listed above.
-Output format:
-SENTENCE_${sentenceCounter}: [sentence]
-SENTENCE_${sentenceCounter + 1}: [sentence]
-...
-SENTENCE_${sentenceCounter + 74}: [sentence]
-`);
-          sentenceCounter += 75;
+          promptSections.push(`=== GROUP ${groupData.vocabGroupId}, BATCH ${batchIndex + 1} ===
+VOCABULARY: ${charList}
+Output exactly 30 sentences numbered ${sentenceCounter} to ${sentenceCounter + 29}:
+SENTENCE_${sentenceCounter}: [Chinese sentence only, no explanations]
+SENTENCE_${sentenceCounter + 1}: [Chinese sentence only, no explanations]
+...continue to SENTENCE_${sentenceCounter + 29}...`);
+          sentenceCounter += 30;
         }
       }
 
-      const megaPrompt = `You are a professional Chinese language teacher creating beginner-level reading passages.
+      const megaPrompt = `You are a Chinese language teacher. Generate short Chinese sentences for practice.
 
-CRITICAL RULES:
-1. You can ONLY use characters from the "AVAILABLE CHARACTERS" list for each group/batch
-2. DO NOT combine characters to create new words not in the list
-3. Create REAL, MEANINGFUL sentences with proper grammar. You may use punctuations.
-4. Each sentence should be have maximum 40 characters excluding punctuation
-5. Sentences sometimes should have complex sentence structure
-6. Prioritize the use of Modal Verbs， Modal Particles and Conjunctions
-7. SPECIAL HANDLING FOR PLACEHOLDERS: If a character contains "。。。" (three dots), you can fill in appropriate content:
-   - Example: "太。。。了" → "太冷了", "太热了", "太好了", etc.
-   - Example: "很。。。" → "很好", "很冷", "很热", etc.
-   - The filled content should use characters from the available list when possible
-   - This allows creating natural sentences with common patterns
+RULES:
+- Output ONLY the sentence after "SENTENCE_N:". NO explanations, NO English, NO parentheses, NO "Wait", NO reasoning.
+- Each sentence: 5-20 Chinese characters, natural grammar, use characters from the VOCABULARY list.
+- You MAY use: 了 着 过 的 地 得 吗 呢 啊 吧 是 有 没 不 都 也 很 太 和 但 因为 所以 在 从 到 来 去 里 上 什么 谁 这 那 一 两 就 还
+- Sentences sometimes should have complex structure. Prioritize modal verbs, modal particles, conjunctions.
 
-TASK:
-Generate sentences for ${vocabGroupsData.length} vocabulary groups, each with 4 batches.
-Total: ${vocabGroupsData.length * 4 * 75} sentences.
+${promptSections.join('\n\n')}
 
-${promptSections.join('\n')}
-
-REMEMBER: Create MEANINGFUL sentences with proper grammar, NOT random word lists!`;
+IMPORTANT: Output ONLY "SENTENCE_N: [sentence]" lines. No other text whatsoever.`;
 
       console.log('[AITextGenerator] Mega prompt length:', megaPrompt.length);
       console.log('[AITextGenerator] Sending mega batch request to Gemini API...');
@@ -278,8 +253,7 @@ REMEMBER: Create MEANINGFUL sentences with proper grammar, NOT random word lists
 
       console.log('[AITextGenerator] ===== PARSING RESULTS =====');
       console.log('[AITextGenerator] Total sentence matches found:', matches.length);
-      console.log('[AITextGenerator] Expected (75 per batch × 4 batches × 5 groups):', vocabGroupsData.length * 4 * 75);
-      console.log('[AITextGenerator] Target after rejection (30 per batch):', vocabGroupsData.length * 4 * 30);
+      console.log('[AITextGenerator] Expected (30 per batch × 4 batches):', vocabGroupsData.length * 4 * 30);
       
       // Write detailed parsing info to file for debugging
       const fs = require('fs');
@@ -287,8 +261,7 @@ REMEMBER: Create MEANINGFUL sentences with proper grammar, NOT random word lists
       const logPath = path.join(__dirname, '../../temp/parsing-log.txt');
       let logContent = `===== PARSING RESULTS =====\n`;
       logContent += `Total sentence matches found: ${matches.length}\n`;
-      logContent += `Expected (75 per batch × 4 batches × 5 groups): ${vocabGroupsData.length * 4 * 75}\n`;
-      logContent += `Target after rejection (30 per batch): ${vocabGroupsData.length * 4 * 30}\n\n`;
+      logContent += `Expected (30 per batch × 4 batches × ${vocabGroupsData.length} groups): ${vocabGroupsData.length * 4 * 30}\n\n`;
 
       // Group sentences by vocab group and batch
       const resultMap = new Map<number, GeneratedSentence[]>();
@@ -317,10 +290,10 @@ REMEMBER: Create MEANINGFUL sentences with proper grammar, NOT random word lists
           console.log(`[AITextGenerator]   Batch ${batchIndex + 1}: Starting at matchIndex ${matchIndex}`);
           logContent += `  Batch ${batchIndex + 1}: Starting at matchIndex ${matchIndex}\n`;
 
-          // Parse up to 75 sentences for this batch (for rejection sampling)
+          // Parse up to 30 sentences for this batch
           const batchCandidates: Array<GeneratedSentence & { invalidCharacters: string[] }> = [];
           
-          for (let i = 0; i < 75 && matchIndex < matches.length; i++, matchIndex++) {
+          for (let i = 0; i < 30 && matchIndex < matches.length; i++, matchIndex++) {
             const chineseText = matches[matchIndex][1].trim();
 
             if (!chineseText) {
