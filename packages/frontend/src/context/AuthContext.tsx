@@ -8,7 +8,7 @@
  * - Provides token to API requests
  */
 
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { jwtDecode } from 'jwt-decode';
 import { apiClient } from '../api/client';
 
@@ -150,7 +150,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         secretPhrase
       });
 
-      const { token: newToken, user: userData } = response.data;
+      const { token: newToken } = response.data;
 
       if (!newToken) {
         throw new Error('No token returned from server');
