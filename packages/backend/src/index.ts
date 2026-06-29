@@ -27,6 +27,8 @@ import adminRoutes from './routes/admin.routes';
 import phrasesRoutes from './routes/phrases.routes';
 import videoRoutes from './routes/video.routes';
 import imagenRoutes from './routes/imagen.routes';
+import authRoutes from './routes/auth.routes';
+import userManagementRoutes from './routes/user-management.routes';
 
 // Import config AFTER dotenv has loaded
 import { config } from './config/env';
@@ -73,6 +75,8 @@ app.use('/api', comprehensionRoutes);
 app.use('/api', ttsRoutes);
 app.use('/api', adminRoutes);
 app.use('/api', phrasesRoutes);
+app.use('/api', authRoutes);
+app.use('/api', userManagementRoutes);
 app.use('/api/video', videoRoutes);
 app.use('/api/imagen', imagenRoutes);
 

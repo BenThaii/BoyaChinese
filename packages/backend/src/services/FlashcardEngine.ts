@@ -56,24 +56,24 @@ export class FlashcardEngine {
 
   /**
    * Get next flashcard for specified mode and chapter range
-   * @param username - Owner username
+   * @param userId - Owner user ID
    * @param mode - Flashcard mode
    * @param chapterRange - Chapter range for vocabulary selection
    * @returns Flashcard with question
    */
   static async getNextCard(
-    username: string,
+    userId: number,
     mode: FlashcardMode,
     chapterRange: ChapterRange
   ): Promise<Flashcard> {
     // Validate chapter range
-    const isValid = await ChapterFilter.validateRange(username, chapterRange);
+    const isValid = await ChapterFilter.validateRange(userId, chapterRange);
     if (!isValid) {
       throw new Error('Invalid chapter range or no vocabulary available');
     }
 
     // Get vocabulary IDs in range
-    const vocabularyIds = await ChapterFilter.getVocabularyInRange(username, chapterRange);
+    const vocabularyIds = await ChapterFilter.getVocabularyInRange(userId, chapterRange);
     
     if (vocabularyIds.length === 0) {
       throw new Error('No vocabulary found in specified chapter range');
@@ -84,7 +84,7 @@ export class FlashcardEngine {
     const selectedId = vocabularyIds[randomIndex];
 
     // Fetch vocabulary entry
-    const entry = await VocabularyEntryDAO.findById(username, selectedId);
+    const entry = await VocabularyEntryDAO.findById(userId, selectedId);
     
     if (!entry) {
       throw new Error('Selected vocabulary entry not found');

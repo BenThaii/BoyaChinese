@@ -9,6 +9,28 @@ export const apiClient = axios.create({
   },
 });
 
+// Add request interceptor to log all requests with authorization
+apiClient.interceptors.request.use((config) => {
+  const authHeader = config.headers.Authorization;
+  console.log(`[API] ${config.method?.toUpperCase()} ${config.url}`, {
+    hasAuth: !!authHeader,
+    data: config.data
+  });
+  return config;
+}, (error) => {
+  console.error('[API] Request error:', error);
+  return Promise.reject(error);
+});
+
+// Add response interceptor to log responses
+apiClient.interceptors.response.use((response) => {
+  console.log(`[API] Response ${response.status} from ${response.config.url}`);
+  return response;
+}, (error) => {
+  console.error(`[API] Error ${error.response?.status} from ${error.config?.url}:`, error.response?.data);
+  return Promise.reject(error);
+});
+
 export interface VocabularyEntry {
   id: string;
   username: string;
@@ -92,38 +114,35 @@ export const vocabularyApi = {
 };
 
 export const adminApi = {
-  authenticate: (password: string) =>
-    apiClient.post<{ success: boolean; token?: string; expiresIn?: number }>('/admin/authenticate', { password }),
+  authenticate: (password: string, username: string) =>
+    apiClient.post<{ success: boolean; token?: string; expiresIn?: number }>('/admin/authenticate', { password, username }),
 
-  backup: (token: string) =>
+  backup: (token: string, username?: string) =>
     apiClient.get('/admin/backup', { 
+      headers: { Authorization: `Bearer ${token}` },
+      params: username ? { username } : undefined
+    }),
+
+  restore: (restoreData: { backupFile: any; username?: string }, token: string) =>
+    apiClient.post('/admin/restore', restoreData, {
+      headers: { 
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`
+      }
+    }),
+
+  exportComplete: (token: string) =>
+    apiClient.get('/admin/export-complete', {
       headers: { Authorization: `Bearer ${token}` }
     }),
 
-  restore: (file: File, token: string) => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = async (e) => {
-        try {
-          const content = e.target?.result as string;
-          const backupData = JSON.parse(content);
-          
-          const response = await apiClient.post('/admin/restore', backupData, {
-            headers: { 
-              'Content-Type': 'application/json',
-              Authorization: `Bearer ${token}`
-            }
-          });
-          resolve(response);
-        } catch (error: any) {
-          console.error('Import failed:', error);
-          reject(error);
-        }
-      };
-      reader.onerror = () => reject(new Error('Failed to read file'));
-      reader.readAsText(file);
-    });
-  },
+  importComplete: (backupFile: any, token: string) =>
+    apiClient.post('/admin/import-complete', { backupFile }, {
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`
+      }
+    }),
 };
 
 export const ttsApi = {

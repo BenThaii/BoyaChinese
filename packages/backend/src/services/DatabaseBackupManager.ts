@@ -53,15 +53,78 @@ export class DatabaseBackupManager {
   }
 
   /**
-   * Export entire database to backup file
-   * @returns Backup file containing all vocabulary entries
+   * Authenticate user against their stored secret phrase
+   * @param username - Username to authenticate
+   * @param secretPhrase - User's secret phrase/password
+   * @returns True if the secret phrase matches
    */
-  async exportDatabase(): Promise<BackupFile> {
-    // Get all users
-    const users = await this.getAllUsers();
-    
-    // Get all vocabulary entries from all users
-    const entries = await this.getAllVocabularyEntries();
+  async authenticateUser(username: string, secretPhrase: string): Promise<boolean> {
+    try {
+      const { UserDAO } = await import('../models/User');
+      
+      // Find user by username
+      const user = await UserDAO.findByUsername(username);
+      
+      if (!user) {
+        console.log(`[DatabaseBackupManager] User "${username}" not found in auth_users`);
+        return false;
+      }
+
+      // Use UserDAO's verify method to compare the secret phrase
+      const match = await UserDAO.verifySecretPhrase(secretPhrase, user.secretPhraseHash);
+      console.log(`[DatabaseBackupManager] Password comparison result for "${username}":`, match);
+      return match;
+    } catch (error) {
+      console.error('[DatabaseBackupManager] Error authenticating user:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Export database to backup file, optionally filtered by username
+   * @param username - If provided, only export this user's vocabulary
+   * @returns Backup file containing vocabulary entries
+   */
+  async exportDatabase(username?: string): Promise<BackupFile> {
+    let entries;
+    let users: string[];
+
+    if (username) {
+      // Export only this user's vocabulary
+      const { UserDAO } = await import('../models/User');
+      const user = await UserDAO.findByUsername(username);
+      if (!user) throw new Error(`User "${username}" not found`);
+      
+      const { getPool } = await import('../config/database');
+      const pool = getPool();
+      const [rows] = await pool.query<any[]>(
+        'SELECT * FROM vocabulary_entries WHERE user_id = ? ORDER BY chapter, created_at',
+        [user.id]
+      );
+      entries = rows.map(row => ({
+        id: row.id,
+        userId: row.user_id,
+        username: row.username,
+        chineseCharacter: row.chinese_character,
+        pinyin: row.pinyin,
+        hanVietnamese: row.han_vietnamese || undefined,
+        modernVietnamese: row.modern_vietnamese || undefined,
+        englishMeaning: row.english_meaning || undefined,
+        learningNote: row.learning_note || undefined,
+        isFavorite: row.is_favorite === 1,
+        chapter: row.chapter,
+        chapterLabel: row.chapter_label || undefined,
+        createdAt: new Date(row.created_at),
+        updatedAt: new Date(row.updated_at),
+        sharedFrom: row.shared_from || undefined
+      } as any));
+      users = [username];
+      console.log(`[DatabaseBackupManager] Exported ${entries.length} vocabulary entries for user "${username}"`);
+    } else {
+      // Export all
+      users = await this.getAllUsers();
+      entries = await this.getAllVocabularyEntries();
+    }
 
     const backupFile: BackupFile = {
       version: DatabaseBackupManager.BACKUP_VERSION,
@@ -80,9 +143,10 @@ export class DatabaseBackupManager {
   /**
    * Import and restore database from backup file
    * @param backupFile - Backup file to restore
+   * @param targetUsername - Optional: reassign all vocabulary to this username. If not provided, preserves original usernames
    * @returns Restore result with success status and entry count
    */
-  async importDatabase(backupFile: BackupFile): Promise<RestoreResult> {
+  async importDatabase(backupFile: BackupFile, targetUsername?: string): Promise<RestoreResult> {
     // Validate backup file first
     const validation = await this.validateBackupFile(backupFile);
     if (!validation.valid) {
@@ -93,31 +157,77 @@ export class DatabaseBackupManager {
       };
     }
 
+    // Log backup file content for debugging
+    const backupFavoritesCount = backupFile.vocabularyEntries.filter(e => e.isFavorite).length;
+    console.log(`[DatabaseBackupManager] Importing backup with ${backupFile.vocabularyEntries.length} entries, ${backupFavoritesCount} marked as favorites`);
+
+    // SAFETY CHECK: Ensure targetUsername is valid and not empty
+    if (targetUsername === '' || (targetUsername && typeof targetUsername !== 'string')) {
+      console.error('[DatabaseBackupManager] Invalid targetUsername provided:', targetUsername);
+      return {
+        success: false,
+        entriesRestored: 0,
+        errors: ['Invalid target username provided']
+      };
+    }
+
     try {
-      // Erase all existing data
-      await this.eraseAllUsers();
-      await this.eraseAllVocabularyEntries();
+      // Resolve targetUsername to userId
+      let targetUserId: number | null = null;
+      if (targetUsername) {
+        const { UserDAO } = await import('../models/User');
+        const user = await UserDAO.findByUsername(targetUsername);
+        if (!user) {
+          return {
+            success: false,
+            entriesRestored: 0,
+            errors: [`User "${targetUsername}" not found in auth_users`]
+          };
+        }
+        targetUserId = user.id;
+      }
+
+      // Erase existing data - if targeting a specific user, only erase that user's vocabulary
+      if (targetUserId) {
+        console.log(`[DatabaseBackupManager] Erasing existing vocabulary for userId: ${targetUserId} (${targetUsername})`);
+        await this.eraseUserVocabulary(targetUserId);
+      } else {
+        // Erase all existing data (backward compatibility)
+        console.log(`[DatabaseBackupManager] Erasing all users and vocabulary`);
+        await this.eraseAllUsers();
+        await this.eraseAllVocabularyEntries();
+      }
 
       // Extract users from backup (either from users field or from vocabulary entries)
       let usersToRestore: string[];
-      if (backupFile.users && backupFile.users.length > 0) {
+      if (targetUsername) {
+        // If targeting a specific user, only restore that user
+        usersToRestore = [targetUsername];
+      } else if (backupFile.users && backupFile.users.length > 0) {
         usersToRestore = backupFile.users;
       } else {
         // Backward compatibility: extract unique usernames from vocabulary entries
         usersToRestore = [...new Set(backupFile.vocabularyEntries.map(entry => entry.username))];
       }
 
-      // Restore users first
-      await this.restoreUsers(usersToRestore);
+      // Restore users first (only if not targeting a specific user)
+      if (!targetUsername) {
+        await this.restoreUsers(usersToRestore);
+      }
       
-      // Restore all entries from backup
-      const restoredCount = await this.restoreVocabularyEntries(backupFile.vocabularyEntries);
+      // Restore all entries from backup using userId
+      const restoredCount = await this.restoreVocabularyEntries(
+        backupFile.vocabularyEntries,
+        targetUserId!,
+        targetUsername!
+      );
 
       return {
         success: true,
         entriesRestored: restoredCount
       };
     } catch (error) {
+      console.error('[DatabaseBackupManager] Import error:', error);
       return {
         success: false,
         entriesRestored: 0,
@@ -258,11 +368,12 @@ export class DatabaseBackupManager {
     const pool = getPool();
 
     const [rows] = await pool.query<any[]>(
-      'SELECT * FROM vocabulary_entries ORDER BY username, chapter, created_at'
+      'SELECT * FROM vocabulary_entries ORDER BY user_id, chapter, created_at'
     );
 
-    return rows.map(row => ({
+    const entries = rows.map(row => ({
       id: row.id,
+      userId: row.user_id,
       username: row.username,
       chineseCharacter: row.chinese_character,
       pinyin: row.pinyin,
@@ -277,6 +388,11 @@ export class DatabaseBackupManager {
       updatedAt: new Date(row.updated_at),
       sharedFrom: row.shared_from || undefined
     } as any));
+
+    const favoritesCount = entries.filter(e => e.isFavorite).length;
+    console.log(`[DatabaseBackupManager] Exported ${entries.length} vocabulary entries, ${favoritesCount} marked as favorites`);
+
+    return entries;
   }
 
   /**
@@ -297,6 +413,18 @@ export class DatabaseBackupManager {
     const pool = getPool();
 
     await pool.query('DELETE FROM vocabulary_entries');
+  }
+
+  /**
+   * Erase vocabulary entries for a specific user by userId
+   * @param userId - User ID whose vocabulary should be erased
+   */
+  private async eraseUserVocabulary(userId: number): Promise<void> {
+    const { getPool } = await import('../config/database');
+    const pool = getPool();
+
+    await pool.query('DELETE FROM vocabulary_entries WHERE user_id = ?', [userId]);
+    console.log(`[DatabaseBackupManager] Erased vocabulary for userId: ${userId}`);
   }
 
   /**
@@ -324,34 +452,43 @@ export class DatabaseBackupManager {
   /**
    * Restore vocabulary entries from backup
    * @param entries - Entries to restore
+   * @param targetUserId - User ID to assign entries to
+   * @param targetUsername - Username to assign entries to
    * @returns Number of entries restored
    */
-  private async restoreVocabularyEntries(entries: VocabularyEntry[]): Promise<number> {
+  private async restoreVocabularyEntries(entries: VocabularyEntry[], targetUserId: number, targetUsername: string): Promise<number> {
     const { getPool } = await import('../config/database');
     const pool = getPool();
+    const { v4: uuidv4 } = await import('uuid');
 
     let restoredCount = 0;
+    let favoritesCount = 0;
 
     for (const entry of entries) {
-      // Convert Date objects or ISO strings to MySQL datetime format
       const createdAt = this.toMySQLDateTime(entry.createdAt);
       const updatedAt = this.toMySQLDateTime(entry.updatedAt);
 
+      const newEntryId = uuidv4();
+
+      const isFavoriteValue = entry.isFavorite === true || (entry.isFavorite as any) === 1 ? 1 : 0;
+      if (isFavoriteValue === 1) favoritesCount++;
+
       await pool.query(
         `INSERT INTO vocabulary_entries 
-         (id, username, chinese_character, pinyin, han_vietnamese, modern_vietnamese, 
+         (id, user_id, username, chinese_character, pinyin, han_vietnamese, modern_vietnamese, 
           english_meaning, learning_note, is_favorite, chapter, chapter_label, created_at, updated_at, shared_from)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
-          entry.id,
-          entry.username,
+          newEntryId,
+          targetUserId,
+          targetUsername,
           entry.chineseCharacter,
           entry.pinyin,
           entry.hanVietnamese || null,
           entry.modernVietnamese || null,
           entry.englishMeaning || null,
           entry.learningNote || null,
-          entry.isFavorite ? 1 : 0,
+          isFavoriteValue,
           entry.chapter,
           (entry as any).chapterLabel || null,
           createdAt,
@@ -359,8 +496,11 @@ export class DatabaseBackupManager {
           entry.sharedFrom || null
         ]
       );
+      
       restoredCount++;
     }
+
+    console.log(`[DatabaseBackupManager] Restored ${restoredCount} vocabulary entries for userId ${targetUserId}, ${favoritesCount} marked as favorites`);
 
     return restoredCount;
   }

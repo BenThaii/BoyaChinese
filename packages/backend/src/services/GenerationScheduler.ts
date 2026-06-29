@@ -67,7 +67,25 @@ export class GenerationScheduler {
 
     try {
       console.log('[GenerationScheduler] Starting sentence generation...');
-      await this.phraseGenerator.generateAllSentences();
+      
+      // Generate for each user that has vocabulary
+      const { getPool } = await import('../config/database');
+      const pool = getPool();
+      const [users]: any = await pool.query(
+        `SELECT DISTINCT au.id, au.username FROM vocabulary_entries ve JOIN auth_users au ON ve.user_id = au.id WHERE au.role IN ('admin', 'parent')`
+      );
+      
+      console.log(`[GenerationScheduler] Generating sentences for ${users.length} users`);
+      
+      for (const user of users) {
+        try {
+          console.log(`[GenerationScheduler] Generating for user: ${user.username} (id=${user.id})`);
+          await this.phraseGenerator.generateAllSentences(user.id);
+        } catch (userError) {
+          console.error(`[GenerationScheduler] Failed for user ${user.username}:`, userError);
+          // Continue with other users
+        }
+      }
       
       const duration = ((Date.now() - startTime) / 1000).toFixed(2);
       console.log(`[GenerationScheduler] Generation completed successfully in ${duration}s`);

@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 import { apiClient } from '../api/client';
+import { useAuth } from '../context/AuthContext';
+import { useChildEditProtection } from '../hooks/useChildEditProtection';
 
 interface VocabularyEntry {
   id: string;
@@ -19,6 +21,9 @@ interface VocabularyEntry {
 }
 
 export default function ChapterFlashcardPage() {
+  const { user } = useAuth();
+  const showEditProtection = useChildEditProtection();
+  const [parentUsername, setParentUsername] = useState<string | null>(null);
   const [chapterStart, setChapterStart] = useState<number>(1);
   const [chapterEnd, setChapterEnd] = useState<number>(1);
   const [availableChapters, setAvailableChapters] = useState<number[]>([]);
@@ -39,14 +44,43 @@ export default function ChapterFlashcardPage() {
   const [shuffledWords, setShuffledWords] = useState<VocabularyEntry[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
 
+  // Fetch parent username for child users
   useEffect(() => {
-    fetchAvailableChapters();
-    fetchAvailableChapterLabels();
-  }, []);
+    if (!user) return;
+
+    const fetchParentUsername = async () => {
+      if (user.role === 'child' && user.parentId) {
+        try {
+          const response = await apiClient.get(`/admin/users/${user.parentId}`, {
+            headers: { 'Authorization': `Bearer ${localStorage.getItem('auth_token')}` }
+          });
+          setParentUsername(response.data.username);
+        } catch (error) {
+          console.error('Failed to fetch parent username:', error);
+          setParentUsername(null);
+        }
+      } else {
+        setParentUsername(null);
+      }
+    };
+
+    fetchParentUsername();
+  }, [user]);
+
+  useEffect(() => {
+    if (user && (parentUsername !== null || user.role !== 'child')) {
+      fetchAvailableChapters();
+      fetchAvailableChapterLabels();
+    }
+  }, [user, parentUsername]);
+
+  // Get the username to use for API calls
+  const usernameForAPI = parentUsername || user?.username;
 
   const fetchAvailableChapters = async () => {
+    if (!usernameForAPI) return;
     try {
-      const response = await apiClient.get<number[]>('/user1/vocabulary/chapters');
+      const response = await apiClient.get<number[]>(`/${usernameForAPI}/vocabulary/chapters`);
       setAvailableChapters(response.data);
       if (response.data.length > 0) {
         // Set default to latest chapter (highest number)
@@ -60,8 +94,9 @@ export default function ChapterFlashcardPage() {
   };
 
   const fetchAvailableChapterLabels = async () => {
+    if (!usernameForAPI) return;
     try {
-      const response = await apiClient.get<string[]>('/user1/vocabulary/chapter-labels');
+      const response = await apiClient.get<string[]>(`/${usernameForAPI}/vocabulary/chapter-labels`);
       setAvailableChapterLabels(response.data);
     } catch (error) {
       console.error('Error fetching chapter labels:', error);
@@ -69,6 +104,7 @@ export default function ChapterFlashcardPage() {
   };
 
   const fetchRandomWord = async () => {
+    if (!usernameForAPI) return;
     setLoading(true);
     setError(null);
     setShowDetails(false);
@@ -79,7 +115,7 @@ export default function ChapterFlashcardPage() {
         // Shuffled algorithm: fetch all words once and serve in order
         if (shuffledWords.length === 0 || currentIndex >= shuffledWords.length) {
           // Fetch all words
-          let url = '/user1/vocabulary';
+          let url = `/${usernameForAPI}/vocabulary`;
           const params = new URLSearchParams();
           
           if (selectedChapterLabel) {
@@ -119,7 +155,7 @@ export default function ChapterFlashcardPage() {
         }
       } else {
         // Random algorithm: fetch random word each time
-        let url = '/user1/vocabulary/chapters/random';
+        let url = `/${usernameForAPI}/vocabulary/chapters/random`;
         const params = new URLSearchParams();
         
         if (selectedChapterLabel) {
@@ -233,10 +269,11 @@ export default function ChapterFlashcardPage() {
   };
 
   const handleToggleFavorite = async () => {
+    if (showEditProtection('favorite')) return;
     if (!currentWord) return;
 
     try {
-      await apiClient.post(`/user1/vocabulary/toggle-favorite`, {
+      await apiClient.post(`/${usernameForAPI}/vocabulary/toggle-favorite`, {
         chineseCharacter: currentWord.chineseCharacter
       });
 
@@ -255,12 +292,14 @@ export default function ChapterFlashcardPage() {
   };
 
   const handleFavoriteClick = () => {
+    if (showEditProtection('favorite')) return;
     if (!currentWord) return;
     setFavoriteAction(currentWord.isFavorite ? 'unfavorite' : 'favorite');
     setShowFavoriteConfirm(true);
   };
 
   const handleEdit = () => {
+    if (showEditProtection('edit')) return;
     if (currentWord) {
       setEditedWord({ ...currentWord });
       setIsEditing(true);
@@ -268,10 +307,10 @@ export default function ChapterFlashcardPage() {
   };
 
   const handleSaveEdit = async () => {
-    if (!editedWord || !currentWord) return;
+    if (!editedWord || !currentWord || !usernameForAPI) return;
 
     try {
-      const response = await apiClient.put(`/user1/vocabulary/${currentWord.id}`, {
+      const response = await apiClient.put(`/${usernameForAPI}/vocabulary/${currentWord.id}`, {
         pinyin: editedWord.pinyin,
         hanVietnamese: editedWord.hanVietnamese,
         modernVietnamese: editedWord.modernVietnamese,

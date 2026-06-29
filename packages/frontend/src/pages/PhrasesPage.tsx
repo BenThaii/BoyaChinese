@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 import { apiClient } from '../api/client';
+import { useChildEditProtection } from '../hooks/useChildEditProtection';
+import { useAuth } from '../context/AuthContext';
 
 // TypeScript interfaces
 interface VocabGroupResponse {
@@ -15,6 +17,7 @@ interface SentenceResponse {
   chineseText: string;
   pinyin: string;
   englishMeaning?: string;
+  modernVietnamese?: string;
   usedCharacters: string[];
   generationTimestamp: string;
 }
@@ -31,6 +34,8 @@ interface CharacterInfo {
 
 export default function PhrasesPage() {
   // Component state
+  const { user } = useAuth();
+  const showEditProtection = useChildEditProtection();
   const [vocabGroups, setVocabGroups] = useState<VocabGroupResponse[]>([]);
   const [sentences, setSentences] = useState<Map<number, SentenceResponse[]>>(new Map());
   const [selectedSentence, setSelectedSentence] = useState<SentenceResponse | null>(null);
@@ -53,14 +58,10 @@ export default function PhrasesPage() {
   });
   const [editingCharacter, setEditingCharacter] = useState<string | null>(null);
   const [editedCharacterData, setEditedCharacterData] = useState<CharacterInfo | null>(null);
-  const [modelConfig, setModelConfig] = useState<{ preferredModel: string | null; fallbackOrder: string[]; activeOrder: string[] } | null>(null);
+  const [modelConfig, setModelConfig] = useState<{ preferredModel: string | null; modelHistory: string[] } | null>(null);
   const [editingModel, setEditingModel] = useState(false);
   const [modelInput, setModelInput] = useState('');
-  const [modelHistory, setModelHistory] = useState<string[]>(() => {
-    try {
-      return JSON.parse(localStorage.getItem('phraseModelHistory') || '[]');
-    } catch { return []; }
-  });
+  const [modelHistory, setModelHistory] = useState<string[]>([]);
 
   // Fetch vocab groups on mount
   useEffect(() => {
@@ -120,7 +121,10 @@ export default function PhrasesPage() {
     try {
       const response = await apiClient.get('/phrases/model-config');
       setModelConfig(response.data);
-      setModelInput(response.data.preferredModel || response.data.activeOrder[0] || '');
+      setModelInput(response.data.preferredModel || '');
+      if (response.data.modelHistory) {
+        setModelHistory(response.data.modelHistory);
+      }
     } catch (err) {
       console.error('Failed to load model config:', err);
     }
@@ -131,16 +135,31 @@ export default function PhrasesPage() {
     try {
       const response = await apiClient.put('/phrases/model-config', { preferredModel: trimmed });
       setModelConfig(response.data);
+      setModelHistory(response.data.modelHistory || []);
       setEditingModel(false);
-      // Save to history (deduplicated, most recent first, max 10)
-      if (trimmed) {
-        const updated = [trimmed, ...modelHistory.filter(m => m !== trimmed)].slice(0, 10);
-        setModelHistory(updated);
-        localStorage.setItem('phraseModelHistory', JSON.stringify(updated));
-      }
     } catch (err) {
       console.error('Failed to save model config:', err);
       alert('Failed to save model config');
+    }
+  };
+
+  const addModelToHistory = async () => {
+    const name = prompt('Enter model name to add:');
+    if (!name || !name.trim()) return;
+    try {
+      const response = await apiClient.post('/phrases/model-history', { modelName: name.trim() });
+      setModelHistory(response.data.modelHistory);
+    } catch (err) {
+      console.error('Failed to add model:', err);
+    }
+  };
+
+  const removeModelFromHistory = async (modelName: string) => {
+    try {
+      const response = await apiClient.delete(`/phrases/model-history/${encodeURIComponent(modelName)}`);
+      setModelHistory(response.data.modelHistory);
+    } catch (err) {
+      console.error('Failed to remove model:', err);
     }
   };
 
@@ -306,6 +325,7 @@ export default function PhrasesPage() {
   };
 
   const handleToggleFavorite = async (character: string, currentFavoriteStatus: boolean) => {
+    if (showEditProtection('favorite')) return;
     try {
       await apiClient.post(`/user1/vocabulary/toggle-favorite`, {
         chineseCharacter: character
@@ -326,6 +346,7 @@ export default function PhrasesPage() {
   };
 
   const handleEditCharacter = (char: CharacterInfo) => {
+    if (showEditProtection('edit')) return;
     setEditingCharacter(char.chineseCharacter);
     setEditedCharacterData({ ...char });
   };
@@ -379,6 +400,7 @@ export default function PhrasesPage() {
   };
 
   const handleRefreshPhrases = async () => {
+    if (showEditProtection('regenerate')) return;
     if (refreshing) return;
     
     // Password protection
@@ -492,7 +514,8 @@ export default function PhrasesPage() {
         Practice Chinese sentences organized by vocabulary groups. Click any sentence to see character details.
       </p>
 
-      {/* AI Model Config */}
+      {/* AI Model Config - Admin only */}
+      {user?.role === 'admin' && (
       <div style={{ marginBottom: '20px', padding: '12px 16px', backgroundColor: '#f8f9fa', borderRadius: '8px', border: '1px solid #dee2e6' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
           <span style={{ fontSize: '13px', color: '#666', fontWeight: 'bold', whiteSpace: 'nowrap' }}>🤖 AI Model:</span>
@@ -513,40 +536,99 @@ export default function PhrasesPage() {
           ) : (
             <>
               <code style={{ fontSize: '13px', backgroundColor: '#e9ecef', padding: '4px 8px', borderRadius: '4px', flex: 1 }}>
-                {modelConfig ? (modelConfig.preferredModel || modelConfig.activeOrder[0] || 'default') : '...'}
+                {modelConfig ? (modelConfig.preferredModel || 'not set') : '...'}
               </code>
-              {modelConfig && !modelConfig.preferredModel && (
-                <span style={{ fontSize: '11px', color: '#999' }}>(auto-fallback)</span>
-              )}
-              <button onClick={() => { setEditingModel(true); setModelInput(modelConfig?.preferredModel || modelConfig?.activeOrder[0] || ''); }} style={{ padding: '6px 12px', backgroundColor: '#007bff', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '13px' }}>Edit</button>
+              <button onClick={() => { setEditingModel(true); setModelInput(modelConfig?.preferredModel || ''); }} style={{ padding: '6px 12px', backgroundColor: '#007bff', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '13px' }}>Edit</button>
             </>
           )}
         </div>
-        {/* Model history chips */}
-        {editingModel && modelHistory.length > 0 && (
-          <div style={{ marginTop: '10px', display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+        {/* Model history chips - always visible for management */}
+        {modelHistory.length > 0 && (
+          <div style={{ marginTop: '10px', display: 'flex', flexWrap: 'wrap', gap: '6px', alignItems: 'center' }}>
             <span style={{ fontSize: '11px', color: '#999', alignSelf: 'center' }}>Recent:</span>
             {modelHistory.map(m => (
-              <button
+              <span
                 key={m}
-                onClick={() => setModelInput(m)}
                 style={{
-                  padding: '3px 10px',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  padding: '3px 8px',
                   fontSize: '12px',
                   backgroundColor: modelInput === m ? '#007bff' : '#e9ecef',
                   color: modelInput === m ? 'white' : '#333',
                   border: '1px solid #dee2e6',
                   borderRadius: '12px',
-                  cursor: 'pointer',
                   whiteSpace: 'nowrap'
                 }}
               >
-                {m}
-              </button>
+                <button
+                  onClick={() => { setModelInput(m); if (!editingModel) setEditingModel(true); }}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    padding: 0,
+                    fontSize: '12px',
+                    color: 'inherit',
+                    cursor: 'pointer'
+                  }}
+                >
+                  {m}
+                </button>
+                <button
+                  onClick={(e) => { e.stopPropagation(); removeModelFromHistory(m); }}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    padding: '0 2px',
+                    fontSize: '14px',
+                    color: modelInput === m ? 'rgba(255,255,255,0.7)' : '#999',
+                    cursor: 'pointer',
+                    lineHeight: 1
+                  }}
+                  title={`Remove "${m}"`}
+                >
+                  ×
+                </button>
+              </span>
             ))}
+            <button
+              onClick={addModelToHistory}
+              style={{
+                padding: '3px 10px',
+                fontSize: '12px',
+                backgroundColor: '#28a745',
+                color: 'white',
+                border: 'none',
+                borderRadius: '12px',
+                cursor: 'pointer',
+                whiteSpace: 'nowrap'
+              }}
+            >
+              + Add
+            </button>
+          </div>
+        )}
+        {modelHistory.length === 0 && (
+          <div style={{ marginTop: '10px' }}>
+            <button
+              onClick={addModelToHistory}
+              style={{
+                padding: '3px 10px',
+                fontSize: '12px',
+                backgroundColor: '#28a745',
+                color: 'white',
+                border: 'none',
+                borderRadius: '12px',
+                cursor: 'pointer'
+              }}
+            >
+              + Add Model
+            </button>
           </div>
         )}
       </div>
+      )}
 
       {loading && (
         <div style={{ textAlign: 'center', padding: '40px' }}>
@@ -819,17 +901,17 @@ export default function PhrasesPage() {
               </div>
             </div>
 
-            {selectedSentence.englishMeaning && (
+            {selectedSentence.modernVietnamese && (
               <div style={{ marginBottom: '12px' }}>
-                <strong style={{ fontSize: '13px', color: '#666' }}>English Translation:</strong>
+                <strong style={{ fontSize: '13px', color: '#666' }}>Vietnamese Translation:</strong>
                 <div style={{
                   fontSize: 'clamp(14px, 4vw, 18px)',
                   padding: '10px 12px',
-                  backgroundColor: '#e7f3ff',
+                  backgroundColor: '#fff3cd',
                   borderRadius: '4px',
                   marginTop: '4px',
                 }}>
-                  {selectedSentence.englishMeaning}
+                  {selectedSentence.modernVietnamese}
                 </div>
               </div>
             )}

@@ -49,8 +49,15 @@ router.get('/:username/comprehension/character-info', async (req: Request, res: 
       });
     }
 
-    // Find vocabulary entry for this character (can be single or multi-character)
-    const entries = await VocabularyEntryDAO.findByUsername(username);
+    // Resolve username to userId
+    const { UserDAO } = await import('../models/User');
+    const user = await UserDAO.findByUsername(username);
+    if (!user) {
+      return res.status(404).json({ error: `User "${username}" not found` });
+    }
+
+    // Find vocabulary entry for this character
+    const entries = await VocabularyEntryDAO.findByUserId(user.id);
     const entry = entries.find(e => e.chineseCharacter === character);
 
     if (!entry) {

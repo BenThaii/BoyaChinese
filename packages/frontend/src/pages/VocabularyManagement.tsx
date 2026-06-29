@@ -1,9 +1,20 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { vocabularyApi, VocabularyEntry } from '../api/client';
+import { useAuth } from '../context/AuthContext';
+import { useChildEditProtection } from '../hooks/useChildEditProtection';
 
-export default function VocabularyManagement() {
-  const { username } = useParams<{ username: string }>();
+interface VocabularyManagementProps {
+  username?: string;
+}
+
+export default function VocabularyManagement({ username: propUsername }: VocabularyManagementProps) {
+  const { username: paramUsername } = useParams<{ username: string }>();
+  const { user } = useAuth();
+  const showEditProtection = useChildEditProtection();
+  
+  // Use prop username if provided, otherwise try params, otherwise use current user's username
+  const username = propUsername || paramUsername || user?.username;
   const [entries, setEntries] = useState<VocabularyEntry[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<Partial<VocabularyEntry>>({});
@@ -120,6 +131,7 @@ export default function VocabularyManagement() {
   };
 
   const handleEdit = (entry: VocabularyEntry) => {
+    if (showEditProtection('edit')) return;
     setEditingId(entry.id);
     setEditForm(entry);
   };
@@ -149,6 +161,7 @@ export default function VocabularyManagement() {
   };
 
   const handleDelete = async (id: string) => {
+    if (showEditProtection('delete')) return;
     if (!username || !confirm('Delete this entry?')) return;
     try {
       await vocabularyApi.delete(username, id);
@@ -310,6 +323,7 @@ export default function VocabularyManagement() {
   };
 
   const handleToggleFavorite = async (id: string) => {
+    if (showEditProtection('favorite')) return;
     if (!username) return;
     const entry = entries.find(e => e.id === id);
     if (!entry) return;
@@ -529,6 +543,7 @@ export default function VocabularyManagement() {
             rows={4}
             style={{ width: '100%', boxSizing: 'border-box', marginBottom: '10px' }}
             disabled={batchUploading}
+            lang="zh-CN"
           />
           <div style={{ marginBottom: '10px', display: 'flex', flexWrap: 'wrap', gap: '15px' }}>
             <label style={{ flex: '0 1 auto' }}>
@@ -551,6 +566,7 @@ export default function VocabularyManagement() {
                 style={{ marginLeft: '10px', width: 'clamp(150px, 100%, 250px)', boxSizing: 'border-box' }}
                 disabled={batchUploading}
                 placeholder="e.g., Introduction, Review"
+                lang="en-US"
               />
             </label>
           </div>
@@ -645,6 +661,7 @@ export default function VocabularyManagement() {
                   borderRadius: '3px',
                   boxSizing: 'border-box'
                 }}
+                lang="zh-CN"
               />
             </th>
             <th style={{ padding: '2px' }}>
@@ -661,6 +678,7 @@ export default function VocabularyManagement() {
                   borderRadius: '3px',
                   boxSizing: 'border-box'
                 }}
+                lang="en-US"
               />
             </th>
             <th style={{ padding: '2px' }}>
@@ -677,6 +695,7 @@ export default function VocabularyManagement() {
                   borderRadius: '3px',
                   boxSizing: 'border-box'
                 }}
+                lang="vi-VN"
               />
             </th>
             <th style={{ padding: '2px' }}>
@@ -693,6 +712,7 @@ export default function VocabularyManagement() {
                   borderRadius: '3px',
                   boxSizing: 'border-box'
                 }}
+                lang="vi-VN"
               />
             </th>
             <th style={{ padding: '2px' }}>
@@ -709,6 +729,7 @@ export default function VocabularyManagement() {
                   borderRadius: '3px',
                   boxSizing: 'border-box'
                 }}
+                lang="en-US"
               />
             </th>
             <th style={{ padding: '2px' }}></th>
@@ -727,6 +748,7 @@ export default function VocabularyManagement() {
                   borderRadius: '3px',
                   boxSizing: 'border-box'
                 }}
+                lang="vi-VN"
               />
             </th>
             <th style={{ padding: '2px' }}></th>
@@ -783,6 +805,7 @@ export default function VocabularyManagement() {
                       value={batchEditForms.get(entry.id)?.chineseCharacter || ''}
                       onChange={(e) => updateBatchEditForm(entry.id, 'chineseCharacter', e.target.value)}
                       style={{ width: '100%', boxSizing: 'border-box', padding: '2px', fontSize: '12px' }}
+                      lang="zh-CN"
                     />
                   </td>
                   <td>
@@ -790,6 +813,7 @@ export default function VocabularyManagement() {
                       value={batchEditForms.get(entry.id)?.pinyin || ''}
                       onChange={(e) => updateBatchEditForm(entry.id, 'pinyin', e.target.value)}
                       style={{ width: '100%', boxSizing: 'border-box', padding: '2px', fontSize: '12px' }}
+                      lang="en-US"
                     />
                   </td>
                   <td>
@@ -797,6 +821,7 @@ export default function VocabularyManagement() {
                       value={batchEditForms.get(entry.id)?.hanVietnamese || ''}
                       onChange={(e) => updateBatchEditForm(entry.id, 'hanVietnamese', e.target.value)}
                       style={{ width: '100%', boxSizing: 'border-box', padding: '2px', fontSize: '12px' }}
+                      lang="vi-VN"
                     />
                   </td>
                   <td>
@@ -804,6 +829,7 @@ export default function VocabularyManagement() {
                       value={batchEditForms.get(entry.id)?.modernVietnamese || ''}
                       onChange={(e) => updateBatchEditForm(entry.id, 'modernVietnamese', e.target.value)}
                       style={{ width: '100%', boxSizing: 'border-box', padding: '2px', fontSize: '12px' }}
+                      lang="vi-VN"
                     />
                   </td>
                   <td>
@@ -811,6 +837,7 @@ export default function VocabularyManagement() {
                       value={batchEditForms.get(entry.id)?.englishMeaning || ''}
                       onChange={(e) => updateBatchEditForm(entry.id, 'englishMeaning', e.target.value)}
                       style={{ width: '100%', boxSizing: 'border-box', padding: '2px', fontSize: '12px' }}
+                      lang="en-US"
                     />
                   </td>
                   <td style={{ display: isSmallScreen ? 'none' : 'table-cell' }}>
@@ -827,6 +854,7 @@ export default function VocabularyManagement() {
                       onChange={(e) => updateBatchEditForm(entry.id, 'chapterLabel', e.target.value)}
                       placeholder="Optional"
                       style={{ width: '100%', boxSizing: 'border-box', padding: '2px', fontSize: '12px' }}
+                      lang="en-US"
                     />
                   </td>
                   <td style={{ display: isSmallScreen ? 'none' : 'table-cell' }}>
@@ -835,6 +863,7 @@ export default function VocabularyManagement() {
                       onChange={(e) => updateBatchEditForm(entry.id, 'learningNote', e.target.value)}
                       placeholder="Note"
                       style={{ width: '100%', boxSizing: 'border-box', padding: '2px', fontSize: '12px' }}
+                      lang="vi-VN"
                     />
                   </td>
                   <td>
@@ -872,6 +901,7 @@ export default function VocabularyManagement() {
                         setEditForm({ ...editForm, chineseCharacter: e.target.value })
                       }
                       style={{ width: '100%', boxSizing: 'border-box', padding: '2px', fontSize: '12px' }}
+                      lang="zh-CN"
                     />
                   </td>
                   <td>
@@ -881,6 +911,7 @@ export default function VocabularyManagement() {
                         setEditForm({ ...editForm, pinyin: e.target.value })
                       }
                       style={{ width: '100%', boxSizing: 'border-box', padding: '2px', fontSize: '12px' }}
+                      lang="en-US"
                     />
                   </td>
                   <td>
@@ -890,6 +921,7 @@ export default function VocabularyManagement() {
                         setEditForm({ ...editForm, hanVietnamese: e.target.value })
                       }
                       style={{ width: '100%', boxSizing: 'border-box', padding: '2px', fontSize: '12px' }}
+                      lang="vi-VN"
                     />
                   </td>
                   <td>
@@ -899,6 +931,7 @@ export default function VocabularyManagement() {
                         setEditForm({ ...editForm, modernVietnamese: e.target.value })
                       }
                       style={{ width: '100%', boxSizing: 'border-box', padding: '2px', fontSize: '12px' }}
+                      lang="vi-VN"
                     />
                   </td>
                   <td>
@@ -908,6 +941,7 @@ export default function VocabularyManagement() {
                         setEditForm({ ...editForm, englishMeaning: e.target.value })
                       }
                       style={{ width: '100%', boxSizing: 'border-box', padding: '2px', fontSize: '12px' }}
+                      lang="en-US"
                     />
                   </td>
                   <td style={{ display: isSmallScreen ? 'none' : 'table-cell' }}>
@@ -928,6 +962,7 @@ export default function VocabularyManagement() {
                       }
                       placeholder="Optional"
                       style={{ width: '100%', boxSizing: 'border-box', padding: '2px', fontSize: '12px' }}
+                      lang="en-US"
                     />
                   </td>
                   <td style={{ display: isSmallScreen ? 'none' : 'table-cell' }}>
@@ -938,6 +973,7 @@ export default function VocabularyManagement() {
                       }
                       placeholder="Note"
                       style={{ width: '100%', boxSizing: 'border-box', padding: '2px', fontSize: '12px' }}
+                      lang="vi-VN"
                     />
                   </td>
                   <td>
@@ -1033,6 +1069,7 @@ export default function VocabularyManagement() {
                         boxSizing: 'border-box'
                       }}
                       placeholder="Add learning notes here..."
+                      lang="vi-VN"
                     />
                   </div>
                 </td>
@@ -1043,6 +1080,124 @@ export default function VocabularyManagement() {
         </tbody>
       </table>
       </div>
+
+      {/* Mobile Edit Modal - shows a fixed overlay on small screens */}
+      {editingId && isSmallScreen && (
+        <>
+          <div
+            onClick={() => setEditingId(null)}
+            style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              backgroundColor: 'rgba(0,0,0,0.5)',
+              zIndex: 2000
+            }}
+          />
+          <div
+            style={{
+              position: 'fixed',
+              bottom: 0,
+              left: 0,
+              right: 0,
+              backgroundColor: 'white',
+              borderTopLeftRadius: '16px',
+              borderTopRightRadius: '16px',
+              boxShadow: '0 -4px 20px rgba(0,0,0,0.2)',
+              zIndex: 2001,
+              maxHeight: '85vh',
+              overflowY: 'auto',
+              padding: '20px 16px',
+              paddingBottom: '40px'
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <h3 style={{ margin: 0, fontSize: '16px' }}>Edit: {editForm.chineseCharacter}</h3>
+              <button onClick={() => setEditingId(null)} style={{ background: 'none', border: 'none', fontSize: '24px', cursor: 'pointer', color: '#666' }}>×</button>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <label style={{ fontSize: '13px', fontWeight: 'bold' }}>
+                Chinese Character
+                <input
+                  value={editForm.chineseCharacter || ''}
+                  onChange={(e) => setEditForm({ ...editForm, chineseCharacter: e.target.value })}
+                  style={{ width: '100%', padding: '10px', fontSize: '16px', border: '1px solid #dee2e6', borderRadius: '6px', boxSizing: 'border-box', marginTop: '4px' }}
+                  lang="zh-CN"
+                />
+              </label>
+
+              <label style={{ fontSize: '13px', fontWeight: 'bold' }}>
+                Pinyin
+                <input
+                  value={editForm.pinyin || ''}
+                  onChange={(e) => setEditForm({ ...editForm, pinyin: e.target.value })}
+                  style={{ width: '100%', padding: '10px', fontSize: '16px', border: '1px solid #dee2e6', borderRadius: '6px', boxSizing: 'border-box', marginTop: '4px' }}
+                  lang="en-US"
+                />
+              </label>
+
+              <label style={{ fontSize: '13px', fontWeight: 'bold' }}>
+                Hán Việt
+                <input
+                  value={editForm.hanVietnamese || ''}
+                  onChange={(e) => setEditForm({ ...editForm, hanVietnamese: e.target.value })}
+                  style={{ width: '100%', padding: '10px', fontSize: '16px', border: '1px solid #dee2e6', borderRadius: '6px', boxSizing: 'border-box', marginTop: '4px' }}
+                  lang="vi-VN"
+                />
+              </label>
+
+              <label style={{ fontSize: '13px', fontWeight: 'bold' }}>
+                Modern Vietnamese
+                <input
+                  value={editForm.modernVietnamese || ''}
+                  onChange={(e) => setEditForm({ ...editForm, modernVietnamese: e.target.value })}
+                  style={{ width: '100%', padding: '10px', fontSize: '16px', border: '1px solid #dee2e6', borderRadius: '6px', boxSizing: 'border-box', marginTop: '4px' }}
+                  lang="vi-VN"
+                />
+              </label>
+
+              <label style={{ fontSize: '13px', fontWeight: 'bold' }}>
+                English Meaning
+                <input
+                  value={editForm.englishMeaning || ''}
+                  onChange={(e) => setEditForm({ ...editForm, englishMeaning: e.target.value })}
+                  style={{ width: '100%', padding: '10px', fontSize: '16px', border: '1px solid #dee2e6', borderRadius: '6px', boxSizing: 'border-box', marginTop: '4px' }}
+                  lang="en-US"
+                />
+              </label>
+
+              <label style={{ fontSize: '13px', fontWeight: 'bold' }}>
+                Learning Note
+                <textarea
+                  value={editForm.learningNote || ''}
+                  onChange={(e) => setEditForm({ ...editForm, learningNote: e.target.value })}
+                  rows={3}
+                  style={{ width: '100%', padding: '10px', fontSize: '16px', border: '1px solid #dee2e6', borderRadius: '6px', boxSizing: 'border-box', marginTop: '4px', fontFamily: 'inherit', resize: 'vertical' }}
+                  lang="vi-VN"
+                />
+              </label>
+
+              <div style={{ display: 'flex', gap: '12px', marginTop: '8px' }}>
+                <button
+                  onClick={handleSave}
+                  style={{ flex: 1, padding: '12px', backgroundColor: '#28a745', color: 'white', border: 'none', borderRadius: '8px', fontSize: '16px', fontWeight: 'bold', cursor: 'pointer' }}
+                >
+                  Save
+                </button>
+                <button
+                  onClick={() => setEditingId(null)}
+                  style={{ flex: 1, padding: '12px', backgroundColor: '#6c757d', color: 'white', border: 'none', borderRadius: '8px', fontSize: '16px', fontWeight: 'bold', cursor: 'pointer' }}
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
 
       {/* Scroll to Top Button */}
       {showScrollTop && (

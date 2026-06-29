@@ -1,57 +1,52 @@
 /**
  * Vocabulary API Routes
  * 
- * Provides REST API endpoints for vocabulary management:
- * - GET /api/vocabulary/users - Get all users
- * - GET /api/vocabulary/shared - Get users with shared vocabulary for a chapter
- * - POST /api/:username/vocabulary - Create vocabulary entry
- * - GET /api/:username/vocabulary - Get vocabulary entries with optional chapter or label filtering
- * - GET /api/:username/vocabulary/chapters - Get available chapters
- * - GET /api/:username/vocabulary/chapter-labels - Get available chapter labels
- * - GET /api/:username/vocabulary/:id - Get single vocabulary entry
- * - PUT /api/:username/vocabulary/:id - Update vocabulary entry
- * - DELETE /api/:username/vocabulary/:id - Delete vocabulary entry
- * - POST /api/:username/vocabulary/translate - Preview translations
- * - POST /api/:username/vocabulary/share - Share chapter vocabulary
+ * All routes use :username in the URL for human-readable paths,
+ * but internally resolve username → userId for all DB operations.
  */
 
 import { Router, Request, Response } from 'express';
 import { vocabularyManager } from '../services/VocabularyManager';
 import { VocabularyInput } from '../models/VocabularyEntry';
+import { authenticateJWT, AuthRequest, requireRole } from '../middleware/auth';
+import { UserDAO } from '../models/User';
 
 const router = Router();
 
 /**
- * GET /api/vocabulary/users
- * 
- * Get all unique usernames that have vocabulary entries
- * Note: This must come before /:username routes to avoid matching "vocabulary" as a username
+ * Helper: resolve username to userId. Returns null if user not found.
  */
-router.get('/vocabulary/users', async (req: Request, res: Response) => {
+async function resolveUserId(username: string): Promise<number | null> {
+  const user = await UserDAO.findByUsername(username);
+  return user ? user.id : null;
+}
+
+// ==================== Public / non-username routes ====================
+
+router.get('/vocabulary/users', async (_req: Request, res: Response) => {
   try {
-    const usernames = await vocabularyManager.getAllUsers();
-    res.json(usernames);
+    const { getPool } = await import('../config/database');
+    const pool = getPool();
+    const [rows] = await pool.query<any[]>(
+      `SELECT DISTINCT au.username FROM vocabulary_entries ve JOIN auth_users au ON ve.user_id = au.id ORDER BY au.username ASC`
+    );
+    res.json(rows.map((r: any) => r.username));
   } catch (error) {
     console.error('Error getting all users:', error);
     res.status(500).json({ error: 'Failed to get all users' });
   }
 });
 
-/**
- * POST /api/vocabulary/users
- * 
- * Create a new user
- * Note: This must come before /:username routes to avoid matching "vocabulary" as a username
- */
 router.post('/vocabulary/users', async (req: Request, res: Response) => {
   try {
     const { username } = req.body;
-
     if (!username || typeof username !== 'string' || username.trim() === '') {
       return res.status(400).json({ error: 'username is required' });
     }
-
-    await vocabularyManager.createUser(username.trim());
+    // Legacy: create in users table
+    const { getPool } = await import('../config/database');
+    const pool = getPool();
+    await pool.query('INSERT IGNORE INTO users (username) VALUES (?)', [username.trim()]);
     res.status(201).json({ username: username.trim(), message: 'User created successfully' });
   } catch (error) {
     console.error('Error creating user:', error);
@@ -59,26 +54,14 @@ router.post('/vocabulary/users', async (req: Request, res: Response) => {
   }
 });
 
-/**
- * DELETE /api/vocabulary/users/:username
- * 
- * Delete a user
- * Note: This must come before /:username/vocabulary routes
- */
 router.delete('/vocabulary/users/:username', async (req: Request, res: Response) => {
   try {
     const { username } = req.params;
-
-    if (!username || typeof username !== 'string') {
-      return res.status(400).json({ error: 'Invalid username' });
-    }
-
-    const deleted = await vocabularyManager.deleteUser(username);
-    
-    if (!deleted) {
-      return res.status(404).json({ error: 'User not found' });
-    }
-
+    if (!username) return res.status(400).json({ error: 'Invalid username' });
+    const { getPool } = await import('../config/database');
+    const pool = getPool();
+    const [result] = await pool.query<any>('DELETE FROM users WHERE username = ?', [username]);
+    if (result.affectedRows === 0) return res.status(404).json({ error: 'User not found' });
     res.status(204).send();
   } catch (error) {
     console.error('Error deleting user:', error);
@@ -86,26 +69,12 @@ router.delete('/vocabulary/users/:username', async (req: Request, res: Response)
   }
 });
 
-/**
- * GET /api/vocabulary/shared
- * 
- * Get users who have shared vocabulary for a specific chapter
- * Note: This must come before /:username routes to avoid matching "vocabulary" as a username
- */
 router.get('/vocabulary/shared', async (req: Request, res: Response) => {
   try {
     const { chapter } = req.query;
-
-    if (!chapter) {
-      return res.status(400).json({ error: 'chapter parameter is required' });
-    }
-
+    if (!chapter) return res.status(400).json({ error: 'chapter parameter is required' });
     const chapterNum = parseInt(chapter as string, 10);
-
-    if (isNaN(chapterNum)) {
-      return res.status(400).json({ error: 'chapter must be a valid integer' });
-    }
-
+    if (isNaN(chapterNum)) return res.status(400).json({ error: 'chapter must be a valid integer' });
     const usernames = await vocabularyManager.getSharedVocabularySources(chapterNum);
     res.json(usernames);
   } catch (error) {
@@ -114,138 +83,69 @@ router.get('/vocabulary/shared', async (req: Request, res: Response) => {
   }
 });
 
-/**
- * POST /api/:username/vocabulary/batch
- * 
- * Batch upload multiple Chinese characters with automatic translation
- * Note: This must come before /:username/vocabulary POST route to avoid route conflict
- * 
- * Request body:
- * - characters: string (comma, semicolon, or newline separated Chinese characters)
- * - chapter: number (chapter to assign to all characters)
- * 
- * Response:
- * - 201: Array of created entries with success/failure status
- */
-router.post('/:username/vocabulary/batch', async (req: Request, res: Response) => {
+// ==================== Batch upload ====================
+
+router.post('/:username/vocabulary/batch', authenticateJWT, requireRole(['admin', 'parent']), async (req: AuthRequest, res: Response) => {
   try {
     const { username } = req.params;
     const { characters, chapter, chapterLabel } = req.body;
 
-    console.log('[Batch Upload] Request from user:', username);
-    console.log('[Batch Upload] Characters:', characters);
-    console.log('[Batch Upload] Chapter:', chapter);
-    console.log('[Batch Upload] Chapter Label:', chapterLabel);
+    if (!username || typeof username !== 'string') return res.status(400).json({ error: 'Invalid username' });
+    if (!characters || typeof characters !== 'string') return res.status(400).json({ error: 'characters is required' });
+    if (!chapter || typeof chapter !== 'number' || isNaN(chapter)) return res.status(400).json({ error: 'chapter must be a valid integer' });
 
-    if (!username || typeof username !== 'string') {
-      return res.status(400).json({ error: 'Invalid username' });
-    }
+    const userId = await resolveUserId(username);
+    if (!userId) return res.status(404).json({ error: `User "${username}" not found` });
 
-    if (!characters || typeof characters !== 'string') {
-      return res.status(400).json({ error: 'characters is required' });
-    }
+    const charArray = characters.split(/[,;，；\n\r]/).map((c: string) => c.trim()).filter((c: string) => c.length > 0);
+    if (charArray.length === 0) return res.status(400).json({ error: 'No valid characters found' });
+    if (charArray.length > 100) return res.status(400).json({ error: 'Maximum 100 characters per batch' });
 
-    if (!chapter || typeof chapter !== 'number' || isNaN(chapter)) {
-      return res.status(400).json({ error: 'chapter must be a valid integer' });
-    }
-
-    // Split by comma, semicolon, or newline and clean up
-    const charArray = characters
-      .split(/[,;，；\n\r]/) // Support both English and Chinese punctuation, plus newlines
-      .map(char => char.trim())
-      .filter(char => char.length > 0);
-
-    console.log('[Batch Upload] Parsed characters:', charArray.length);
-
-    if (charArray.length === 0) {
-      return res.status(400).json({ error: 'No valid characters found' });
-    }
-
-    if (charArray.length > 100) {
-      return res.status(400).json({ error: 'Maximum 100 characters per batch' });
-    }
-
-    console.log('[Batch Upload] Processing in parallel batches...');
-    
-    // Process in parallel batches of 10 to avoid overwhelming the API
     const BATCH_SIZE = 10;
     const results = [];
 
     for (let i = 0; i < charArray.length; i += BATCH_SIZE) {
       const batch = charArray.slice(i, i + BATCH_SIZE);
-      console.log(`[Batch Upload] Processing batch ${Math.floor(i / BATCH_SIZE) + 1}/${Math.ceil(charArray.length / BATCH_SIZE)}`);
-      
-      const batchPromises = batch.map(async (char) => {
+      const batchPromises = batch.map(async (char: string) => {
         try {
-          console.log(`[Batch Upload] Processing character: ${char}`);
-          
-          // Create entry with automatic translation
-          const entry = await vocabularyManager.createEntry(username, {
+          const entry = await vocabularyManager.createEntry(userId, username, {
             chineseCharacter: char,
             chapter: chapter,
             chapterLabel: chapterLabel || undefined
           });
-
-          console.log(`[Batch Upload] ✓ Success: ${char}`);
-          return {
-            character: char,
-            success: true,
-            entry: entry
-          };
+          return { character: char, success: true, entry };
         } catch (error) {
-          console.error(`[Batch Upload] ✗ Failed: ${char}`, error);
-          return {
-            character: char,
-            success: false,
-            error: error instanceof Error ? error.message : 'Unknown error'
-          };
+          return { character: char, success: false, error: error instanceof Error ? error.message : 'Unknown error' };
         }
       });
-
-      const batchResults = await Promise.all(batchPromises);
-      results.push(...batchResults);
+      results.push(...await Promise.all(batchPromises));
     }
 
     const successCount = results.filter(r => r.success).length;
     const failCount = results.filter(r => !r.success).length;
 
-    console.log(`[Batch Upload] Complete: ${successCount} success, ${failCount} failed`);
-
-    res.status(201).json({
-      total: charArray.length,
-      success: successCount,
-      failed: failCount,
-      results: results
-    });
+    res.status(201).json({ total: charArray.length, success: successCount, failed: failCount, results });
   } catch (error) {
     console.error('Error in batch upload:', error);
     res.status(500).json({ error: 'Failed to process batch upload' });
   }
 });
 
-/**
- * POST /api/:username/vocabulary
- * 
- * Create new vocabulary entry with automatic translation for missing fields
- */
-router.post('/:username/vocabulary', async (req: Request, res: Response) => {
+// ==================== CRUD ====================
+
+router.post('/:username/vocabulary', authenticateJWT, requireRole(['admin', 'parent']), async (req: AuthRequest, res: Response) => {
   try {
     const { username } = req.params;
     const entry: VocabularyInput = req.body;
 
-    if (!username || typeof username !== 'string') {
-      return res.status(400).json({ error: 'Invalid username' });
-    }
+    if (!username) return res.status(400).json({ error: 'Invalid username' });
+    if (!entry.chineseCharacter) return res.status(400).json({ error: 'chineseCharacter is required' });
+    if (!entry.chapter || isNaN(entry.chapter)) return res.status(400).json({ error: 'chapter must be a valid integer' });
 
-    if (!entry.chineseCharacter || typeof entry.chineseCharacter !== 'string') {
-      return res.status(400).json({ error: 'chineseCharacter is required' });
-    }
+    const userId = await resolveUserId(username);
+    if (!userId) return res.status(404).json({ error: `User "${username}" not found` });
 
-    if (!entry.chapter || typeof entry.chapter !== 'number' || isNaN(entry.chapter)) {
-      return res.status(400).json({ error: 'chapter must be a valid integer' });
-    }
-
-    const createdEntry = await vocabularyManager.createEntry(username, entry);
+    const createdEntry = await vocabularyManager.createEntry(userId, username, entry);
     res.status(201).json(createdEntry);
   } catch (error) {
     console.error('Error creating vocabulary entry:', error);
@@ -253,43 +153,68 @@ router.post('/:username/vocabulary', async (req: Request, res: Response) => {
   }
 });
 
-/**
- * GET /api/:username/vocabulary
- * 
- * Get vocabulary entries with optional chapter or chapter label filtering
- */
-router.get('/:username/vocabulary', async (req: Request, res: Response) => {
+router.get('/:username/vocabulary', authenticateJWT, async (req: AuthRequest, res: Response) => {
   try {
     const { username } = req.params;
     const { chapterStart, chapterEnd, chapterLabel } = req.query;
 
-    if (!username || typeof username !== 'string') {
-      return res.status(400).json({ error: 'Invalid username' });
+    if (!username) return res.status(400).json({ error: 'Invalid username' });
+    if (!req.user) return res.status(401).json({ error: 'Not authenticated' });
+
+    const userId = await resolveUserId(username);
+    if (!userId) return res.status(404).json({ error: `User "${username}" not found` });
+
+    // Authorization check
+    const currentUserId = req.user.userId;
+    const currentRole = req.user.role;
+    const currentParentId = req.user.parentId;
+    
+    const isOwnVocabulary = userId === currentUserId;
+    const isAdmin = currentRole === 'admin';
+    let isParentVocabulary = false;
+    if (currentRole === 'child' && currentParentId && currentParentId === userId) {
+      isParentVocabulary = true;
+    }
+
+    if (!isOwnVocabulary && !isAdmin && !isParentVocabulary) {
+      return res.status(403).json({ error: 'Access denied.' });
     }
 
     let entries;
 
-    // Chapter label takes precedence over chapter range
     if (chapterLabel && typeof chapterLabel === 'string') {
-      entries = await vocabularyManager.getEntriesByChapterLabel(username, chapterLabel);
+      entries = await vocabularyManager.getEntriesByChapterLabel(userId, chapterLabel);
     } else {
       let chapterRange;
       if (chapterStart && chapterEnd) {
         const start = parseInt(chapterStart as string, 10);
         const end = parseInt(chapterEnd as string, 10);
-
-        if (isNaN(start) || isNaN(end)) {
-          return res.status(400).json({ error: 'chapterStart and chapterEnd must be valid numbers' });
-        }
-
-        if (start > end) {
-          return res.status(400).json({ error: 'chapterStart must be less than or equal to chapterEnd' });
-        }
-
+        if (isNaN(start) || isNaN(end)) return res.status(400).json({ error: 'chapterStart and chapterEnd must be valid numbers' });
+        if (start > end) return res.status(400).json({ error: 'chapterStart must be <= chapterEnd' });
         chapterRange = { start, end };
       }
+      entries = await vocabularyManager.getEntries(userId, chapterRange);
+    }
 
-      entries = await vocabularyManager.getEntries(username, chapterRange);
+    // Child user requesting own vocabulary: also fetch parent's vocabulary
+    if (currentRole === 'child' && isOwnVocabulary && currentParentId) {
+      try {
+        let parentEntries;
+        if (chapterLabel && typeof chapterLabel === 'string') {
+          parentEntries = await vocabularyManager.getEntriesByChapterLabel(currentParentId, chapterLabel);
+        } else {
+          let chapterRange;
+          if (chapterStart && chapterEnd) {
+            const start = parseInt(chapterStart as string, 10);
+            const end = parseInt(chapterEnd as string, 10);
+            if (!isNaN(start) && !isNaN(end) && start <= end) chapterRange = { start, end };
+          }
+          parentEntries = await vocabularyManager.getEntries(currentParentId, chapterRange);
+        }
+        entries = [...entries, ...parentEntries];
+      } catch (error) {
+        console.error('[Vocabulary] Error fetching parent vocabulary for child:', error);
+      }
     }
 
     res.json(entries);
@@ -299,60 +224,29 @@ router.get('/:username/vocabulary', async (req: Request, res: Response) => {
   }
 });
 
-/**
- * GET /api/:username/vocabulary/chapters/random
- * 
- * Get a random vocabulary entry from specified chapters or chapter label
- * Note: This must come BEFORE /:username/vocabulary/chapters to avoid route conflict
- * 
- * Query parameters:
- * - chapterStart: number (optional if chapterLabel provided)
- * - chapterEnd: number (optional if chapterLabel provided)
- * - chapterLabel: string (optional, takes precedence over chapter range)
- * 
- * Response:
- * - 200: Random vocabulary entry from specified chapters or label
- * - 400: Invalid parameters
- * - 404: No entries found
- * - 500: Server error
- */
-router.get('/:username/vocabulary/chapters/random', async (req: Request, res: Response) => {
+// ==================== Random entries ====================
+
+router.get('/:username/vocabulary/chapters/random', authenticateJWT, async (req: AuthRequest, res: Response) => {
   try {
     const { username } = req.params;
     const { chapterStart, chapterEnd, chapterLabel } = req.query;
 
-    if (!username || typeof username !== 'string') {
-      return res.status(400).json({ error: 'Invalid username' });
-    }
+    const userId = await resolveUserId(username);
+    if (!userId) return res.status(404).json({ error: `User "${username}" not found` });
 
     let randomEntry;
-
-    // Chapter label takes precedence over chapter range
     if (chapterLabel && typeof chapterLabel === 'string') {
-      randomEntry = await vocabularyManager.getRandomByChapterLabel(username, chapterLabel);
+      randomEntry = await vocabularyManager.getRandomByChapterLabel(userId, chapterLabel);
     } else {
-      if (!chapterStart || !chapterEnd) {
-        return res.status(400).json({ error: 'chapterStart and chapterEnd are required when chapterLabel is not provided' });
-      }
-
+      if (!chapterStart || !chapterEnd) return res.status(400).json({ error: 'chapterStart and chapterEnd are required' });
       const start = parseInt(chapterStart as string, 10);
       const end = parseInt(chapterEnd as string, 10);
-
-      if (isNaN(start) || isNaN(end)) {
-        return res.status(400).json({ error: 'chapterStart and chapterEnd must be valid numbers' });
-      }
-
-      if (start > end) {
-        return res.status(400).json({ error: 'chapterStart must be less than or equal to chapterEnd' });
-      }
-
-      randomEntry = await vocabularyManager.getRandomByChapters(username, start, end);
+      if (isNaN(start) || isNaN(end)) return res.status(400).json({ error: 'Invalid chapter numbers' });
+      if (start > end) return res.status(400).json({ error: 'chapterStart must be <= chapterEnd' });
+      randomEntry = await vocabularyManager.getRandomByChapters(userId, start, end);
     }
 
-    if (!randomEntry) {
-      return res.status(404).json({ error: 'No entries found' });
-    }
-
+    if (!randomEntry) return res.status(404).json({ error: 'No entries found' });
     res.json(randomEntry);
   } catch (error) {
     console.error('Error getting random entry:', error);
@@ -360,21 +254,14 @@ router.get('/:username/vocabulary/chapters/random', async (req: Request, res: Re
   }
 });
 
-/**
- * GET /api/:username/vocabulary/chapters
- * 
- * Get available chapters for a user
- * Note: This must come AFTER /chapters/random but before /:id route
- */
-router.get('/:username/vocabulary/chapters', async (req: Request, res: Response) => {
+// ==================== Chapters & labels ====================
+
+router.get('/:username/vocabulary/chapters', authenticateJWT, async (req: AuthRequest, res: Response) => {
   try {
     const { username } = req.params;
-
-    if (!username || typeof username !== 'string') {
-      return res.status(400).json({ error: 'Invalid username' });
-    }
-
-    const chapters = await vocabularyManager.getAvailableChapters(username);
+    const userId = await resolveUserId(username);
+    if (!userId) return res.status(404).json({ error: `User "${username}" not found` });
+    const chapters = await vocabularyManager.getAvailableChapters(userId);
     res.json(chapters);
   } catch (error) {
     console.error('Error getting available chapters:', error);
@@ -382,21 +269,12 @@ router.get('/:username/vocabulary/chapters', async (req: Request, res: Response)
   }
 });
 
-/**
- * GET /api/:username/vocabulary/chapter-labels
- * 
- * Get all unique chapter labels for a user
- * Note: This must come before /:id route
- */
-router.get('/:username/vocabulary/chapter-labels', async (req: Request, res: Response) => {
+router.get('/:username/vocabulary/chapter-labels', authenticateJWT, async (req: AuthRequest, res: Response) => {
   try {
     const { username } = req.params;
-
-    if (!username || typeof username !== 'string') {
-      return res.status(400).json({ error: 'Invalid username' });
-    }
-
-    const labels = await vocabularyManager.getChapterLabels(username);
+    const userId = await resolveUserId(username);
+    if (!userId) return res.status(404).json({ error: `User "${username}" not found` });
+    const labels = await vocabularyManager.getChapterLabels(userId);
     res.json(labels);
   } catch (error) {
     console.error('Error getting chapter labels:', error);
@@ -404,216 +282,74 @@ router.get('/:username/vocabulary/chapter-labels', async (req: Request, res: Res
   }
 });
 
-/**
- * POST /api/:username/vocabulary/translate
- * 
- * Preview translations for a Chinese character without saving
- * Note: This must come before /:id route to avoid matching "translate" as an ID
- */
-router.post('/:username/vocabulary/translate', async (req: Request, res: Response) => {
+// ==================== Translate preview ====================
+
+router.post('/:username/vocabulary/translate', authenticateJWT, async (req: AuthRequest, res: Response) => {
   try {
-    const { username } = req.params;
     const { chineseCharacter, pinyin, modernVietnamese, englishMeaning } = req.body;
-
-    if (!username || typeof username !== 'string') {
-      return res.status(400).json({ error: 'Invalid username' });
-    }
-
-    if (!chineseCharacter || typeof chineseCharacter !== 'string') {
-      return res.status(400).json({ error: 'chineseCharacter is required' });
-    }
-
-    console.log(`Translating character: ${chineseCharacter}`);
-    const preview = await vocabularyManager.previewTranslations(
-      chineseCharacter,
-      pinyin,
-      modernVietnamese,
-      englishMeaning
-    );
-    console.log('Translation successful:', preview);
+    if (!chineseCharacter) return res.status(400).json({ error: 'chineseCharacter is required' });
+    const preview = await vocabularyManager.previewTranslations(chineseCharacter, pinyin, modernVietnamese, englishMeaning);
     res.json(preview);
   } catch (error) {
     console.error('Error generating translation preview:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    console.error('Detailed error:', errorMessage);
-    res.status(500).json({ error: `Failed to generate translation preview: ${errorMessage}` });
+    res.status(500).json({ error: 'Failed to generate translation preview' });
   }
 });
 
-/**
- * POST /api/:username/vocabulary/share
- * 
- * Share chapter vocabulary from another user
- * Note: This must come before /:id route to avoid matching "share" as an ID
- */
-router.post('/:username/vocabulary/share', async (req: Request, res: Response) => {
+// ==================== Share ====================
+
+router.post('/:username/vocabulary/share', authenticateJWT, async (req: AuthRequest, res: Response) => {
   try {
     const { username } = req.params;
     const { sourceUsername, chapter } = req.body;
 
-    if (!username || typeof username !== 'string') {
-      return res.status(400).json({ error: 'Invalid username' });
-    }
+    if (!sourceUsername || !chapter) return res.status(400).json({ error: 'sourceUsername and chapter are required' });
 
-    if (!sourceUsername || typeof sourceUsername !== 'string') {
-      return res.status(400).json({ error: 'sourceUsername is required' });
-    }
+    const targetUserId = await resolveUserId(username);
+    if (!targetUserId) return res.status(404).json({ error: `Target user "${username}" not found` });
 
-    if (!chapter || typeof chapter !== 'number' || isNaN(chapter)) {
-      return res.status(400).json({ error: 'chapter must be a valid integer' });
-    }
+    const sourceUserId = await resolveUserId(sourceUsername);
+    if (!sourceUserId) return res.status(404).json({ error: `Source user "${sourceUsername}" not found` });
 
-    const copiedCount = await vocabularyManager.shareChapter(sourceUsername, username, chapter);
-    res.json({ 
-      message: 'Chapter vocabulary shared successfully',
-      entriesCopied: copiedCount
-    });
+    const copiedCount = await vocabularyManager.shareChapter(sourceUserId, targetUserId, username, chapter);
+    res.json({ success: true, copiedCount });
   } catch (error) {
-    console.error('Error sharing chapter vocabulary:', error);
-    res.status(500).json({ error: 'Failed to share chapter vocabulary' });
+    console.error('Error sharing vocabulary:', error);
+    res.status(500).json({ error: 'Failed to share vocabulary' });
   }
 });
 
-/**
- * GET /api/:username/vocabulary/favorites
- * 
- * Get all favorite vocabulary entries with optional chapter or chapter label filtering
- * Query parameters:
- * - chapterStart: number (optional)
- * - chapterEnd: number (optional)
- * - chapterLabel: string (optional, takes precedence over chapter range)
- * 
- * Response:
- * - 200: Array of favorite entries
- * - 400: Invalid parameters
- * - 500: Server error
- * 
- * NOTE: This route must come BEFORE /:id route to avoid "favorites" being matched as an ID
- */
-router.get('/:username/vocabulary/favorites', async (req: Request, res: Response) => {
+// ==================== Toggle favorite ====================
+
+router.post('/:username/vocabulary/favorite', authenticateJWT, async (req: AuthRequest, res: Response) => {
   try {
     const { username } = req.params;
-    const { chapterStart, chapterEnd, chapterLabel } = req.query;
+    const { chineseCharacter } = req.body;
 
-    if (!username || typeof username !== 'string') {
-      return res.status(400).json({ error: 'Invalid username' });
-    }
+    if (!chineseCharacter) return res.status(400).json({ error: 'chineseCharacter is required' });
 
-    let entries;
+    const userId = await resolveUserId(username);
+    if (!userId) return res.status(404).json({ error: `User "${username}" not found` });
 
-    // Chapter label takes precedence over chapter range
-    if (chapterLabel && typeof chapterLabel === 'string') {
-      entries = await vocabularyManager.getEntriesByChapterLabel(username, chapterLabel);
-    } else {
-      let chapterRange;
-      if (chapterStart && chapterEnd) {
-        const start = parseInt(chapterStart as string, 10);
-        const end = parseInt(chapterEnd as string, 10);
-
-        if (isNaN(start) || isNaN(end)) {
-          return res.status(400).json({ error: 'chapterStart and chapterEnd must be valid numbers' });
-        }
-
-if (start > end) {
-          return res.status(400).json({ error: 'chapterStart must be less than or equal to chapterEnd' });
-        }
-
-        chapterRange = { start, end };
-      }
-
-      entries = await vocabularyManager.getEntries(username, chapterRange);
-    }
-
-    const favorites = entries.filter(entry => entry.isFavorite);
-    res.json(favorites);
+    const updated = await vocabularyManager.toggleFavorite(userId, chineseCharacter);
+    if (!updated) return res.status(404).json({ error: 'Entry not found' });
+    res.json(updated);
   } catch (error) {
-    console.error('Error getting favorite entries:', error);
-    res.status(500).json({ error: 'Failed to get favorite entries' });
+    console.error('Error toggling favorite:', error);
+    res.status(500).json({ error: 'Failed to toggle favorite' });
   }
 });
 
-/**
- * GET /api/:username/vocabulary/favorites/random
- * 
- * Get a random favorite vocabulary entry with optional chapter or chapter label filtering
- * 
- * Query parameters:
- * - chapterStart: number (optional)
- * - chapterEnd: number (optional)
- * - chapterLabel: string (optional, takes precedence over chapter range)
- * 
- * Response:
- * - 200: Random favorite vocabulary entry
- * - 404: No favorite entries found
- * - 500: Server error
- * 
- * NOTE: This route must come BEFORE /:id route to avoid "favorites" being matched as an ID
- */
-router.get('/:username/vocabulary/favorites/random', async (req: Request, res: Response) => {
-  try {
-    const { username } = req.params;
-    const { chapterStart, chapterEnd, chapterLabel } = req.query;
+// ==================== Single entry CRUD ====================
 
-    if (!username || typeof username !== 'string') {
-      return res.status(400).json({ error: 'Invalid username' });
-    }
-
-    let randomFavorite;
-
-    // Chapter label takes precedence over chapter range
-    if (chapterLabel && typeof chapterLabel === 'string') {
-      randomFavorite = await vocabularyManager.getRandomFavoriteByChapterLabel(username, chapterLabel);
-    } else if (chapterStart && chapterEnd) {
-      const start = parseInt(chapterStart as string, 10);
-      const end = parseInt(chapterEnd as string, 10);
-
-      if (isNaN(start) || isNaN(end)) {
-        return res.status(400).json({ error: 'chapterStart and chapterEnd must be valid numbers' });
-      }
-
-if (start > end) {
-        return res.status(400).json({ error: 'chapterStart must be less than or equal to chapterEnd' });
-      }
-
-      randomFavorite = await vocabularyManager.getRandomFavoriteByChapters(username, start, end);
-    } else {
-      randomFavorite = await vocabularyManager.getRandomFavorite(username);
-    }
-
-    if (!randomFavorite) {
-      return res.status(404).json({ error: 'No favorite entries found' });
-    }
-
-    res.json(randomFavorite);
-  } catch (error) {
-    console.error('Error getting random favorite:', error);
-    res.status(500).json({ error: 'Failed to get random favorite' });
-  }
-});
-
-/**
- * GET /api/:username/vocabulary/:id
- * 
- * Get single vocabulary entry by ID
- */
-router.get('/:username/vocabulary/:id', async (req: Request, res: Response) => {
+router.get('/:username/vocabulary/:id', authenticateJWT, async (req: AuthRequest, res: Response) => {
   try {
     const { username, id } = req.params;
+    const userId = await resolveUserId(username);
+    if (!userId) return res.status(404).json({ error: `User "${username}" not found` });
 
-    if (!username || typeof username !== 'string') {
-      return res.status(400).json({ error: 'Invalid username' });
-    }
-
-    if (!id || typeof id !== 'string') {
-      return res.status(400).json({ error: 'Invalid entry ID' });
-    }
-
-    const entry = await vocabularyManager.getEntry(username, id);
-
-    if (!entry) {
-      return res.status(404).json({ error: 'Vocabulary entry not found' });
-    }
-
+    const entry = await vocabularyManager.getEntry(userId, id);
+    if (!entry) return res.status(404).json({ error: 'Entry not found' });
     res.json(entry);
   } catch (error) {
     console.error('Error getting vocabulary entry:', error);
@@ -621,66 +357,31 @@ router.get('/:username/vocabulary/:id', async (req: Request, res: Response) => {
   }
 });
 
-/**
- * PUT /api/:username/vocabulary/:id
- * 
- * Update vocabulary entry with automatic translation for missing fields
- */
-router.put('/:username/vocabulary/:id', async (req: Request, res: Response) => {
+router.put('/:username/vocabulary/:id', authenticateJWT, async (req: AuthRequest, res: Response) => {
   try {
     const { username, id } = req.params;
-    const updates = req.body;
+    const updates: Partial<VocabularyInput> = req.body;
 
-    if (!username || typeof username !== 'string') {
-      return res.status(400).json({ error: 'Invalid username' });
-    }
+    const userId = await resolveUserId(username);
+    if (!userId) return res.status(404).json({ error: `User "${username}" not found` });
 
-    if (!id || typeof id !== 'string') {
-      return res.status(400).json({ error: 'Invalid entry ID' });
-    }
-
-    if (updates.chapter !== undefined) {
-      if (typeof updates.chapter !== 'number' || isNaN(updates.chapter)) {
-        return res.status(400).json({ error: 'chapter must be a valid integer' });
-      }
-    }
-
-    const updatedEntry = await vocabularyManager.updateEntry(username, id, updates);
-
-    if (!updatedEntry) {
-      return res.status(404).json({ error: 'Vocabulary entry not found' });
-    }
-
-    res.json(updatedEntry);
+    const updated = await vocabularyManager.updateEntry(userId, id, updates);
+    if (!updated) return res.status(404).json({ error: 'Entry not found' });
+    res.json(updated);
   } catch (error) {
     console.error('Error updating vocabulary entry:', error);
     res.status(500).json({ error: 'Failed to update vocabulary entry' });
   }
 });
 
-/**
- * DELETE /api/:username/vocabulary/:id
- * 
- * Delete vocabulary entry
- */
-router.delete('/:username/vocabulary/:id', async (req: Request, res: Response) => {
+router.delete('/:username/vocabulary/:id', authenticateJWT, async (req: AuthRequest, res: Response) => {
   try {
     const { username, id } = req.params;
+    const userId = await resolveUserId(username);
+    if (!userId) return res.status(404).json({ error: `User "${username}" not found` });
 
-    if (!username || typeof username !== 'string') {
-      return res.status(400).json({ error: 'Invalid username' });
-    }
-
-    if (!id || typeof id !== 'string') {
-      return res.status(400).json({ error: 'Invalid entry ID' });
-    }
-
-    const deleted = await vocabularyManager.deleteEntry(username, id);
-
-    if (!deleted) {
-      return res.status(404).json({ error: 'Vocabulary entry not found' });
-    }
-
+    const deleted = await vocabularyManager.deleteEntry(userId, id);
+    if (!deleted) return res.status(404).json({ error: 'Entry not found' });
     res.status(204).send();
   } catch (error) {
     console.error('Error deleting vocabulary entry:', error);
@@ -688,45 +389,4 @@ router.delete('/:username/vocabulary/:id', async (req: Request, res: Response) =
   }
 });
 
-/**
- * POST /api/:username/vocabulary/toggle-favorite
- * 
- * Toggle favorite status for a vocabulary entry
- * 
- * Request body:
- * - chineseCharacter: string (required)
- * 
- * Response:
- * - 200: Updated vocabulary entry
- * - 400: Invalid parameters
- * - 404: Entry not found
- * - 500: Server error
- */
-router.post('/:username/vocabulary/toggle-favorite', async (req: Request, res: Response) => {
-  try {
-    const { username } = req.params;
-    const { chineseCharacter } = req.body;
-
-    if (!username || typeof username !== 'string') {
-      return res.status(400).json({ error: 'Invalid username' });
-    }
-
-    if (!chineseCharacter || typeof chineseCharacter !== 'string') {
-      return res.status(400).json({ error: 'chineseCharacter is required' });
-    }
-
-    const updatedEntry = await vocabularyManager.toggleFavorite(username, chineseCharacter);
-
-    if (!updatedEntry) {
-      return res.status(404).json({ error: 'Vocabulary entry not found' });
-    }
-
-    res.json(updatedEntry);
-  } catch (error) {
-    console.error('Error toggling favorite:', error);
-    res.status(500).json({ error: 'Failed to toggle favorite status' });
-  }
-});
-
 export default router;
-

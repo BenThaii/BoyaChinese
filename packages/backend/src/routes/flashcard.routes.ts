@@ -83,9 +83,16 @@ router.get('/:username/flashcard/next', async (req: Request, res: Response) => {
 
     const chapterRange: ChapterRange = { start, end };
 
+    // Resolve username to userId
+    const { UserDAO } = await import('../models/User');
+    const user = await UserDAO.findByUsername(username);
+    if (!user) {
+      return res.status(404).json({ error: `User "${username}" not found` });
+    }
+
     // Get next flashcard
     const flashcard = await FlashcardEngine.getNextCard(
-      username,
+      user.id,
       mode as FlashcardMode,
       chapterRange
     );

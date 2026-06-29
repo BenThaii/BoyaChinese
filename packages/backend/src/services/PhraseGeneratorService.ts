@@ -79,16 +79,29 @@ export class PhraseGeneratorService {
    * 
    * @returns Array of 5 VocabGroup instances ordered by chapter endpoint ascending
    */
-  async getVocabGroups(): Promise<VocabGroup[]> {
+  async getVocabGroups(userId?: number): Promise<VocabGroup[]> {
     const pool = getPool();
     
-    // Query for 2 most recent distinct chapters, ordered descending
-    const [rows] = await pool.query<RowDataPacket[]>(
-      `SELECT DISTINCT chapter 
+    // Query for 2 most recent distinct chapters, filtered by userId if provided
+    let query: string;
+    let params: any[];
+    
+    if (userId) {
+      query = `SELECT DISTINCT chapter 
+       FROM vocabulary_entries 
+       WHERE user_id = ?
+       ORDER BY chapter DESC 
+       LIMIT 2`;
+      params = [userId];
+    } else {
+      query = `SELECT DISTINCT chapter 
        FROM vocabulary_entries 
        ORDER BY chapter DESC 
-       LIMIT 2`
-    );
+       LIMIT 2`;
+      params = [];
+    }
+    
+    const [rows] = await pool.query<RowDataPacket[]>(query, params);
 
     // Extract chapter numbers
     const chapters = rows.map(row => row.chapter as number);
@@ -119,27 +132,23 @@ export class PhraseGeneratorService {
    * @param vocabGroupId - The vocab group ID (1-5) to delete sentences for
    * @param connection - Optional database connection for transaction support
    */
-  async deleteSentencesForGroup(vocabGroupId: number, connection?: any): Promise<void> {
+  async deleteSentencesForGroup(vocabGroupId: number, userId: number, connection?: any): Promise<void> {
     const pool = getPool();
     const conn = connection || pool;
 
     await conn.query(
-      'DELETE FROM pre_generated_sentences WHERE vocab_group_id = ?',
-      [vocabGroupId]
+      'DELETE FROM pre_generated_sentences WHERE vocab_group_id = ? AND user_id = ?',
+      [vocabGroupId, userId]
     );
   }
 
   /**
    * Store generated sentences in the database with UUID generation.
-   * Extracts chineseText, pinyin, and usedCharacters from AI response.
-   * 
-   * @param sentences - Array of GeneratedSentence objects from AITextGenerator
-   * @param vocabGroupId - The vocab group ID (1-5) these sentences belong to
-   * @param connection - Optional database connection for transaction support
    */
   async storeSentences(
     sentences: GeneratedSentence[], 
     vocabGroupId: number,
+    userId: number,
     connection?: any
   ): Promise<void> {
     const pool = getPool();
@@ -148,10 +157,12 @@ export class PhraseGeneratorService {
     // Prepare batch insert
     const values = sentences.map(sentence => [
       uuidv4(), // Generate UUID for each sentence
+      userId,
       vocabGroupId,
       sentence.chineseText,
       sentence.pinyin,
       sentence.englishMeaning || null,
+      sentence.modernVietnamese || null,
       JSON.stringify(sentence.usedCharacters)
     ]);
 
@@ -162,21 +173,18 @@ export class PhraseGeneratorService {
     // Insert all sentences in a single query
     await conn.query(
       `INSERT INTO pre_generated_sentences 
-       (id, vocab_group_id, chinese_text, pinyin, english_meaning, used_characters) 
+       (id, user_id, vocab_group_id, chinese_text, pinyin, english_meaning, modern_vietnamese, used_characters) 
        VALUES ?`,
       [values]
     );
   }
 
   /**
-   * Replace all sentences for a vocabulary group with new generated sentences.
-   * Uses database transaction to ensure atomicity - if storage fails, deletion is rolled back.
-   * 
-   * @param vocabGroupId - The vocab group ID (1-5) to replace sentences for
-   * @param sentences - Array of new GeneratedSentence objects to store
+   * Replace all sentences for a vocabulary group and user with new generated sentences.
    */
   async replaceSentencesForGroup(
     vocabGroupId: number,
+    userId: number,
     sentences: GeneratedSentence[]
   ): Promise<void> {
     const pool = getPool();
@@ -186,11 +194,11 @@ export class PhraseGeneratorService {
       // Start transaction
       await connection.beginTransaction();
 
-      // Delete old sentences
-      await this.deleteSentencesForGroup(vocabGroupId, connection);
+      // Delete old sentences for this user + group
+      await this.deleteSentencesForGroup(vocabGroupId, userId, connection);
 
       // Store new sentences
-      await this.storeSentences(sentences, vocabGroupId, connection);
+      await this.storeSentences(sentences, vocabGroupId, userId, connection);
 
       // Commit transaction
       await connection.commit();
@@ -218,11 +226,11 @@ export class PhraseGeneratorService {
    * 
    * @throws Error if all retry attempts fail
    */
-  async generateAllSentences(): Promise<void> {
-    console.log('[PhraseGenerator] Starting sentence generation for all vocab groups');
+  async generateAllSentences(userId?: number): Promise<void> {
+    console.log(`[PhraseGenerator] Starting sentence generation for all vocab groups${userId ? ` (userId: ${userId})` : ''}`);
     
     // Get all 5 vocab groups
-    const vocabGroups = await this.getVocabGroups();
+    const vocabGroups = await this.getVocabGroups(userId);
     
     if (vocabGroups.length === 0) {
       console.warn('[PhraseGenerator] No vocab groups found - skipping generation');
@@ -232,7 +240,7 @@ export class PhraseGeneratorService {
     console.log(`[PhraseGenerator] Found ${vocabGroups.length} vocab groups to process`);
 
     // Prepare data for all groups in a single API call
-    await this.generateAllGroupsInSingleCall(vocabGroups);
+    await this.generateAllGroupsInSingleCall(vocabGroups, userId);
 
     console.log('[PhraseGenerator] Successfully completed sentence generation for all vocab groups');
   }
@@ -247,6 +255,7 @@ export class PhraseGeneratorService {
    */
   private async generateAllGroupsInSingleCall(
     vocabGroups: VocabGroup[],
+    userId?: number,
     maxAttempts: number = 3
   ): Promise<void> {
     let lastError: Error | null = null;
@@ -262,15 +271,26 @@ export class PhraseGeneratorService {
         const vocabGroupsData: Array<{
           vocabGroupId: number;
           batches: string[][];
+          allVocabCharacters: string[];
         }> = [];
 
         for (const group of vocabGroups) {
           // Fetch all vocabulary characters with favorite status for the chapter range
-          const [rows] = await pool.query<RowDataPacket[]>(
-            `SELECT chinese_character, chapter, is_favorite FROM vocabulary_entries 
-             WHERE chapter >= ? AND chapter <= ?`,
-            [group.chapterStart, group.chapterEndpoint]
-          );
+          // Filter by userId if provided (user-specific generation)
+          let vocabQuery: string;
+          let vocabParams: any[];
+          
+          if (userId) {
+            vocabQuery = `SELECT chinese_character, chapter, is_favorite FROM vocabulary_entries 
+             WHERE user_id = ? AND chapter >= ? AND chapter <= ?`;
+            vocabParams = [userId, group.chapterStart, group.chapterEndpoint];
+          } else {
+            vocabQuery = `SELECT chinese_character, chapter, is_favorite FROM vocabulary_entries 
+             WHERE chapter >= ? AND chapter <= ?`;
+            vocabParams = [group.chapterStart, group.chapterEndpoint];
+          }
+
+          const [rows] = await pool.query<RowDataPacket[]>(vocabQuery, vocabParams);
 
           if (rows.length === 0) {
             throw new Error(`No vocabulary found for vocab group ${group.id} (chapters ${group.chapterStart}-${group.chapterEndpoint})`);
@@ -289,6 +309,9 @@ export class PhraseGeneratorService {
             }));
 
           console.log(`[PhraseGenerator] Group ${group.id}: ${favorites.length} favorites, ${nonFavorites.length} non-favorites`);
+
+          // Build full vocab list (all characters in this group) for validation
+          const allVocabCharacters = rows.map(row => row.chinese_character as string);
 
           // Prepare 4 batches of 300 characters each, always including all favorites
           const batches: string[][] = [];
@@ -314,7 +337,8 @@ export class PhraseGeneratorService {
 
           vocabGroupsData.push({
             vocabGroupId: group.id,
-            batches
+            batches,
+            allVocabCharacters
           });
         }
 
@@ -327,8 +351,8 @@ export class PhraseGeneratorService {
 
         // Store sentences for each group
         for (const [vocabGroupId, sentences] of resultMap.entries()) {
-          console.log(`[PhraseGenerator] Storing ${sentences.length} sentences for vocab group ${vocabGroupId}`);
-          await this.replaceSentencesForGroup(vocabGroupId, sentences);
+          console.log(`[PhraseGenerator] Storing ${sentences.length} sentences for vocab group ${vocabGroupId} (userId: ${userId || 'global'})`);
+          await this.replaceSentencesForGroup(vocabGroupId, userId || 0, sentences);
           console.log(`[PhraseGenerator] Successfully stored sentences for vocab group ${vocabGroupId}`);
         }
 

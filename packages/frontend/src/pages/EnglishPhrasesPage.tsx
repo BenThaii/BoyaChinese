@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { apiClient } from '../api/client';
+import { useChildEditProtection } from '../hooks/useChildEditProtection';
 
 // TypeScript interfaces
 interface VocabGroupResponse {
@@ -15,6 +16,7 @@ interface SentenceResponse {
   chineseText: string;
   pinyin: string;
   englishMeaning?: string;
+  modernVietnamese?: string;
   usedCharacters: string[];
   generationTimestamp: string;
 }
@@ -28,8 +30,9 @@ interface CharacterInfo {
   isFavorite?: boolean;
 }
 
-export default function EnglishPhrasesPage() {
+export default function VietnamesePhrases() {
   // Component state
+  const showEditProtection = useChildEditProtection();
   const [vocabGroups, setVocabGroups] = useState<VocabGroupResponse[]>([]);
   const [sentences, setSentences] = useState<Map<number, SentenceResponse[]>>(new Map());
   const [selectedSentence, setSelectedSentence] = useState<SentenceResponse | null>(null);
@@ -197,6 +200,7 @@ export default function EnglishPhrasesPage() {
   };
 
   const handleToggleFavorite = async (character: string, currentFavoriteStatus: boolean) => {
+    if (showEditProtection('favorite')) return;
     try {
       await apiClient.post(`/user1/vocabulary/toggle-favorite`, {
         chineseCharacter: character
@@ -217,6 +221,7 @@ export default function EnglishPhrasesPage() {
   };
 
   const handleEditCharacter = (char: CharacterInfo) => {
+    if (showEditProtection('edit')) return;
     setEditingCharacter(char.chineseCharacter);
     setEditedCharacterData({ ...char });
   };
@@ -271,9 +276,9 @@ export default function EnglishPhrasesPage() {
 
   return (
     <div style={{ padding: '20px', paddingTop: '50px', maxWidth: '1200px', margin: '0 auto' }}>
-      <h1 style={{ marginBottom: '10px' }}>English Phrases</h1>
+      <h1 style={{ marginBottom: '10px' }}>🇻🇳 Vietnamese Phrases</h1>
       <p style={{ color: '#666', marginBottom: '30px' }}>
-        Practice Chinese sentences by reading English translations. Click any sentence to see the Chinese text and character details.
+        Practice Chinese sentences by reading Vietnamese translations. Click any sentence to see the Chinese text and character details.
       </p>
 
       {loading && (
@@ -421,7 +426,7 @@ export default function EnglishPhrasesPage() {
                         }}>
                           {index + 1}
                         </div>
-                        {sentence.englishMeaning || 'No translation available'}
+                        {sentence.modernVietnamese || 'No translation available'}
                       </div>
                     ))}
                   </div>
@@ -543,18 +548,18 @@ export default function EnglishPhrasesPage() {
               </div>
             </div>
 
-            {selectedSentence.englishMeaning && (
+            {selectedSentence.modernVietnamese && (
               <div style={{ marginBottom: '20px' }}>
-                <strong>English Translation:</strong>
+                <strong>Vietnamese Translation:</strong>
                 <div style={{
                   fontSize: '18px',
                   padding: '15px',
-                  backgroundColor: '#e7f3ff',
+                  backgroundColor: '#fff3cd',
                   borderRadius: '4px',
                   marginTop: '5px',
                   color: '#000'
                 }}>
-                  {selectedSentence.englishMeaning}
+                  {selectedSentence.modernVietnamese}
                 </div>
               </div>
             )}

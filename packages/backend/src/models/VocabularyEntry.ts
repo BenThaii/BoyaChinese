@@ -2,7 +2,7 @@
  * VocabularyEntry Model
  * 
  * TypeScript interfaces and data access layer for vocabulary entries.
- * Implements CRUD operations with user isolation filtering.
+ * Implements CRUD operations with user isolation filtering by user_id.
  */
 
 import { getPool } from '../config/database';
@@ -29,10 +29,11 @@ export interface VocabularyInput {
  */
 export interface VocabularyEntry extends VocabularyInput {
   id: string;
-  username: string;
-  pinyin: string; // Required in full entry
+  userId: number;
+  username: string;  // kept for display/backward compat
+  pinyin: string;
   chapterLabel?: string;
-  isFavorite?: boolean; // Optional for backward compatibility with tests
+  isFavorite?: boolean;
   createdAt: Date;
   updatedAt: Date;
   sharedFrom?: string;
@@ -43,6 +44,7 @@ export interface VocabularyEntry extends VocabularyInput {
  */
 interface VocabularyEntryRow extends RowDataPacket {
   id: string;
+  user_id: number;
   username: string;
   chinese_character: string;
   pinyin: string;
@@ -52,7 +54,7 @@ interface VocabularyEntryRow extends RowDataPacket {
   learning_note: string | null;
   chapter: number;
   chapter_label: string | null;
-  is_favorite: number; // MySQL BOOLEAN is stored as TINYINT (0 or 1)
+  is_favorite: number;
   created_at: Date;
   updated_at: Date;
   shared_from: string | null;
@@ -64,6 +66,7 @@ interface VocabularyEntryRow extends RowDataPacket {
 function rowToEntry(row: VocabularyEntryRow): VocabularyEntry {
   return {
     id: row.id,
+    userId: row.user_id,
     username: row.username,
     chineseCharacter: row.chinese_character,
     pinyin: row.pinyin,
@@ -82,25 +85,24 @@ function rowToEntry(row: VocabularyEntryRow): VocabularyEntry {
 
 /**
  * Data Access Layer for VocabularyEntry
+ * All methods use userId (number) for user isolation.
  */
 export class VocabularyEntryDAO {
   /**
    * Create a new vocabulary entry
-   * @param username - Owner username
-   * @param entry - Vocabulary entry data
-   * @returns Created vocabulary entry
    */
-  static async create(username: string, entry: VocabularyInput): Promise<VocabularyEntry> {
+  static async create(userId: number, username: string, entry: VocabularyInput): Promise<VocabularyEntry> {
     const pool = getPool();
     const id = uuidv4();
     
-    const [result] = await pool.query<ResultSetHeader>(
+    await pool.query<ResultSetHeader>(
       `INSERT INTO vocabulary_entries 
-       (id, username, chinese_character, pinyin, han_vietnamese, modern_vietnamese, 
+       (id, user_id, username, chinese_character, pinyin, han_vietnamese, modern_vietnamese, 
         english_meaning, learning_note, is_favorite, chapter, chapter_label, shared_from)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         id,
+        userId,
         username,
         entry.chineseCharacter,
         entry.pinyin || '',
@@ -115,27 +117,22 @@ export class VocabularyEntryDAO {
       ]
     );
 
-    // Fetch and return the created entry
-    const created = await this.findById(username, id);
+    const created = await this.findById(userId, id);
     if (!created) {
       throw new Error('Failed to create vocabulary entry');
     }
-    
     return created;
   }
 
   /**
    * Find a vocabulary entry by ID with user isolation
-   * @param username - Owner username
-   * @param id - Entry ID
-   * @returns Vocabulary entry or null if not found
    */
-  static async findById(username: string, id: string): Promise<VocabularyEntry | null> {
+  static async findById(userId: number, id: string): Promise<VocabularyEntry | null> {
     const pool = getPool();
     
     const [rows] = await pool.query<VocabularyEntryRow[]>(
-      `SELECT * FROM vocabulary_entries WHERE id = ? AND username = ?`,
-      [id, username]
+      `SELECT * FROM vocabulary_entries WHERE id = ? AND user_id = ?`,
+      [id, userId]
     );
 
     if (rows.length === 0) {
@@ -147,10 +144,36 @@ export class VocabularyEntryDAO {
 
   /**
    * Find all vocabulary entries for a user with optional chapter filtering
-   * @param username - Owner username
-   * @param chapterStart - Optional start chapter (inclusive)
-   * @param chapterEnd - Optional end chapter (inclusive)
-   * @returns Array of vocabulary entries
+   */
+  static async findByUserId(
+    userId: number,
+    chapterStart?: number,
+    chapterEnd?: number
+  ): Promise<VocabularyEntry[]> {
+    const pool = getPool();
+    let query = 'SELECT * FROM vocabulary_entries WHERE user_id = ?';
+    const params: any[] = [userId];
+
+    if (chapterStart !== undefined && chapterEnd !== undefined) {
+      query += ' AND chapter >= ? AND chapter <= ?';
+      params.push(chapterStart, chapterEnd);
+    } else if (chapterStart !== undefined) {
+      query += ' AND chapter >= ?';
+      params.push(chapterStart);
+    } else if (chapterEnd !== undefined) {
+      query += ' AND chapter <= ?';
+      params.push(chapterEnd);
+    }
+
+    query += ' ORDER BY chapter ASC, created_at ASC';
+
+    const [rows] = await pool.query<VocabularyEntryRow[]>(query, params);
+
+    return rows.map(rowToEntry);
+  }
+
+  /**
+   * @deprecated Use findByUserId instead. Kept for backward compatibility during migration.
    */
   static async findByUsername(
     username: string,
@@ -181,19 +204,14 @@ export class VocabularyEntryDAO {
 
   /**
    * Update a vocabulary entry with user isolation
-   * @param username - Owner username
-   * @param id - Entry ID
-   * @param updates - Partial updates to apply
-   * @returns Updated vocabulary entry or null if not found
    */
   static async update(
-    username: string,
+    userId: number,
     id: string,
     updates: Partial<VocabularyInput>
   ): Promise<VocabularyEntry | null> {
     const pool = getPool();
     
-    // Build dynamic update query
     const updateFields: string[] = [];
     const params: any[] = [];
 
@@ -235,40 +253,31 @@ export class VocabularyEntryDAO {
     }
 
     if (updateFields.length === 0) {
-      // No updates provided, return current entry
-      return this.findById(username, id);
+      return this.findById(userId, id);
     }
 
-    // Add updated_at timestamp
     updateFields.push('updated_at = CURRENT_TIMESTAMP');
-    
-    // Add WHERE clause parameters
-    params.push(id, username);
+    params.push(id, userId);
 
-    const query = `UPDATE vocabulary_entries SET ${updateFields.join(', ')} WHERE id = ? AND username = ?`;
-
+    const query = `UPDATE vocabulary_entries SET ${updateFields.join(', ')} WHERE id = ? AND user_id = ?`;
     const [result] = await pool.query<ResultSetHeader>(query, params);
 
     if (result.affectedRows === 0) {
       return null;
     }
 
-    // Fetch and return the updated entry
-    return this.findById(username, id);
+    return this.findById(userId, id);
   }
 
   /**
    * Delete a vocabulary entry with user isolation
-   * @param username - Owner username
-   * @param id - Entry ID
-   * @returns True if deleted, false if not found
    */
-  static async delete(username: string, id: string): Promise<boolean> {
+  static async delete(userId: number, id: string): Promise<boolean> {
     const pool = getPool();
     
     const [result] = await pool.query<ResultSetHeader>(
-      `DELETE FROM vocabulary_entries WHERE id = ? AND username = ?`,
-      [id, username]
+      `DELETE FROM vocabulary_entries WHERE id = ? AND user_id = ?`,
+      [id, userId]
     );
 
     return result.affectedRows > 0;
@@ -276,15 +285,13 @@ export class VocabularyEntryDAO {
 
   /**
    * Get all unique chapters for a user
-   * @param username - Owner username
-   * @returns Array of chapter numbers
    */
-  static async getChapters(username: string): Promise<number[]> {
+  static async getChapters(userId: number): Promise<number[]> {
     const pool = getPool();
     
     const [rows] = await pool.query<RowDataPacket[]>(
-      `SELECT DISTINCT chapter FROM vocabulary_entries WHERE username = ? ORDER BY chapter ASC`,
-      [username]
+      `SELECT DISTINCT chapter FROM vocabulary_entries WHERE user_id = ? ORDER BY chapter ASC`,
+      [userId]
     );
 
     return rows.map(row => row.chapter as number);
@@ -292,16 +299,13 @@ export class VocabularyEntryDAO {
 
   /**
    * Count vocabulary entries for a user in a specific chapter
-   * @param username - Owner username
-   * @param chapter - Chapter number
-   * @returns Count of entries
    */
-  static async countByChapter(username: string, chapter: number): Promise<number> {
+  static async countByChapter(userId: number, chapter: number): Promise<number> {
     const pool = getPool();
     
     const [rows] = await pool.query<RowDataPacket[]>(
-      `SELECT COUNT(*) as count FROM vocabulary_entries WHERE username = ? AND chapter = ?`,
-      [username, chapter]
+      `SELECT COUNT(*) as count FROM vocabulary_entries WHERE user_id = ? AND chapter = ?`,
+      [userId, chapter]
     );
 
     return rows[0].count as number;
@@ -309,22 +313,19 @@ export class VocabularyEntryDAO {
 
   /**
    * Create a new vocabulary entry with shared_from field
-   * @param username - Owner username
-   * @param entry - Vocabulary entry data
-   * @param sharedFrom - Original username if shared
-   * @returns Created vocabulary entry
    */
-  static async createShared(username: string, entry: VocabularyInput, sharedFrom: string): Promise<VocabularyEntry> {
+  static async createShared(userId: number, username: string, entry: VocabularyInput, sharedFrom: string): Promise<VocabularyEntry> {
     const pool = getPool();
     const id = uuidv4();
     
-    const [result] = await pool.query<ResultSetHeader>(
+    await pool.query<ResultSetHeader>(
       `INSERT INTO vocabulary_entries 
-       (id, username, chinese_character, pinyin, han_vietnamese, modern_vietnamese, 
+       (id, user_id, username, chinese_character, pinyin, han_vietnamese, modern_vietnamese, 
         english_meaning, learning_note, is_favorite, chapter, chapter_label, shared_from)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         id,
+        userId,
         username,
         entry.chineseCharacter,
         entry.pinyin || '',
@@ -339,19 +340,15 @@ export class VocabularyEntryDAO {
       ]
     );
 
-    // Fetch and return the created entry
-    const created = await this.findById(username, id);
+    const created = await this.findById(userId, id);
     if (!created) {
       throw new Error('Failed to create shared vocabulary entry');
     }
-    
     return created;
   }
 
   /**
    * Get all unique usernames who have vocabulary in a specific chapter
-   * @param chapter - Chapter number
-   * @returns Array of usernames
    */
   static async getUsersByChapter(chapter: number): Promise<string[]> {
     const pool = getPool();
@@ -365,32 +362,14 @@ export class VocabularyEntryDAO {
   }
 
   /**
-   * Get all unique usernames that have vocabulary entries
-   * @returns Array of all usernames sorted alphabetically
-   */
-  static async getAllUsers(): Promise<string[]> {
-    const pool = getPool();
-    
-    const [rows] = await pool.query<RowDataPacket[]>(
-      `SELECT DISTINCT username FROM vocabulary_entries ORDER BY username ASC`
-    );
-
-    return rows.map(row => row.username as string);
-  }
-
-  /**
    * Toggle favorite status for a vocabulary entry
-   * @param username - Owner username
-   * @param chineseCharacter - Chinese character to toggle
-   * @returns Updated vocabulary entry or null if not found
    */
-  static async toggleFavorite(username: string, chineseCharacter: string): Promise<VocabularyEntry | null> {
+  static async toggleFavorite(userId: number, chineseCharacter: string): Promise<VocabularyEntry | null> {
     const pool = getPool();
     
-    // First, find the entry
     const [rows] = await pool.query<VocabularyEntryRow[]>(
-      `SELECT * FROM vocabulary_entries WHERE username = ? AND chinese_character = ? LIMIT 1`,
-      [username, chineseCharacter]
+      `SELECT * FROM vocabulary_entries WHERE user_id = ? AND chinese_character = ? LIMIT 1`,
+      [userId, chineseCharacter]
     );
 
     if (rows.length === 0) {
@@ -400,47 +379,38 @@ export class VocabularyEntryDAO {
     const currentEntry = rowToEntry(rows[0]);
     const newFavoriteStatus = !currentEntry.isFavorite;
 
-    // Update the favorite status
     await pool.query<ResultSetHeader>(
       `UPDATE vocabulary_entries SET is_favorite = ?, updated_at = CURRENT_TIMESTAMP 
-       WHERE username = ? AND chinese_character = ?`,
-      [newFavoriteStatus ? 1 : 0, username, chineseCharacter]
+       WHERE user_id = ? AND chinese_character = ?`,
+      [newFavoriteStatus ? 1 : 0, userId, chineseCharacter]
     );
 
-    // Return the updated entry
-    return this.findById(username, currentEntry.id);
+    return this.findById(userId, currentEntry.id);
   }
+
   /**
    * Get a random favorite vocabulary entry for a user
-   * @param username - Owner username
-   * @returns Random favorite entry or null if no favorites exist
    */
-  static async getRandomFavorite(username: string): Promise<VocabularyEntry | null> {
+  static async getRandomFavorite(userId: number): Promise<VocabularyEntry | null> {
     const pool = getPool();
 
     const [rows] = await pool.query<VocabularyEntryRow[]>(
-      `SELECT * FROM vocabulary_entries
-       WHERE username = ? AND is_favorite = 1
-       ORDER BY RAND()
-       LIMIT 1`,
-      [username]
+      `SELECT * FROM vocabulary_entries WHERE user_id = ? AND is_favorite = 1 ORDER BY RAND() LIMIT 1`,
+      [userId]
     );
 
-    if (rows.length === 0) {
-      return null;
-    }
-
+    if (rows.length === 0) return null;
     return rowToEntry(rows[0]);
   }
 
   /**
    * Get a random favorite vocabulary entry with optional chapter filtering
    */
-  static async getRandomFavoriteByChapters(username: string, chapterStart?: number, chapterEnd?: number): Promise<VocabularyEntry | null> {
+  static async getRandomFavoriteByChapters(userId: number, chapterStart?: number, chapterEnd?: number): Promise<VocabularyEntry | null> {
     const pool = getPool();
 
-    let query = `SELECT * FROM vocabulary_entries WHERE username = ? AND is_favorite = 1`;
-    const params: any[] = [username];
+    let query = `SELECT * FROM vocabulary_entries WHERE user_id = ? AND is_favorite = 1`;
+    const params: any[] = [userId];
 
     if (chapterStart !== undefined && chapterEnd !== undefined) {
       query += ` AND chapter >= ? AND chapter <= ?`;
@@ -450,51 +420,36 @@ export class VocabularyEntryDAO {
     query += ` ORDER BY RAND() LIMIT 1`;
 
     const [rows] = await pool.query<VocabularyEntryRow[]>(query, params);
-
-    if (rows.length === 0) {
-      return null;
-    }
-
+    if (rows.length === 0) return null;
     return rowToEntry(rows[0]);
   }
 
   /**
    * Get a random vocabulary entry from specified chapters
-   * @param username - Owner username
-   * @param chapterStart - Start chapter (inclusive)
-   * @param chapterEnd - End chapter (inclusive)
-   * @returns Random entry from specified chapters or null if no entries exist
    */
-  static async getRandomByChapters(username: string, chapterStart: number, chapterEnd: number): Promise<VocabularyEntry | null> {
+  static async getRandomByChapters(userId: number, chapterStart: number, chapterEnd: number): Promise<VocabularyEntry | null> {
     const pool = getPool();
 
     const [rows] = await pool.query<VocabularyEntryRow[]>(
-      `SELECT * FROM vocabulary_entries
-       WHERE username = ? AND chapter >= ? AND chapter <= ?
-       ORDER BY RAND()
-       LIMIT 1`,
-      [username, chapterStart, chapterEnd]
+      `SELECT * FROM vocabulary_entries WHERE user_id = ? AND chapter >= ? AND chapter <= ? ORDER BY RAND() LIMIT 1`,
+      [userId, chapterStart, chapterEnd]
     );
 
-    if (rows.length === 0) {
-      return null;
-    }
-
+    if (rows.length === 0) return null;
     return rowToEntry(rows[0]);
   }
+
   /**
    * Get all unique chapter labels for a user
-   * @param username - Owner username
-   * @returns Array of unique chapter labels (excluding null/empty)
    */
-  static async getChapterLabels(username: string): Promise<string[]> {
+  static async getChapterLabels(userId: number): Promise<string[]> {
     const pool = getPool();
 
     const [rows] = await pool.query<RowDataPacket[]>(
       `SELECT DISTINCT chapter_label FROM vocabulary_entries
-       WHERE username = ? AND chapter_label IS NOT NULL AND chapter_label != ''
+       WHERE user_id = ? AND chapter_label IS NOT NULL AND chapter_label != ''
        ORDER BY chapter_label ASC`,
-      [username]
+      [userId]
     );
 
     return rows.map(row => row.chapter_label as string);
@@ -502,18 +457,15 @@ export class VocabularyEntryDAO {
 
   /**
    * Find vocabulary entries by chapter label
-   * @param username - Owner username
-   * @param chapterLabel - Chapter label to filter by
-   * @returns Array of vocabulary entries with matching chapter label
    */
-  static async findByChapterLabel(username: string, chapterLabel: string): Promise<VocabularyEntry[]> {
+  static async findByChapterLabel(userId: number, chapterLabel: string): Promise<VocabularyEntry[]> {
     const pool = getPool();
 
     const [rows] = await pool.query<VocabularyEntryRow[]>(
       `SELECT * FROM vocabulary_entries
-       WHERE username = ? AND chapter_label = ?
+       WHERE user_id = ? AND chapter_label = ?
        ORDER BY chapter ASC, created_at ASC`,
-      [username, chapterLabel]
+      [userId, chapterLabel]
     );
 
     return rows.map(rowToEntry);
@@ -521,49 +473,49 @@ export class VocabularyEntryDAO {
 
   /**
    * Get a random favorite vocabulary entry by chapter label
-   * @param username - Owner username
-   * @param chapterLabel - Chapter label to filter by
-   * @returns Random favorite entry with matching chapter label or null if no favorites exist
    */
-  static async getRandomFavoriteByChapterLabel(username: string, chapterLabel: string): Promise<VocabularyEntry | null> {
+  static async getRandomFavoriteByChapterLabel(userId: number, chapterLabel: string): Promise<VocabularyEntry | null> {
     const pool = getPool();
 
     const [rows] = await pool.query<VocabularyEntryRow[]>(
       `SELECT * FROM vocabulary_entries
-       WHERE username = ? AND is_favorite = 1 AND chapter_label = ?
-       ORDER BY RAND()
-       LIMIT 1`,
-      [username, chapterLabel]
+       WHERE user_id = ? AND is_favorite = 1 AND chapter_label = ?
+       ORDER BY RAND() LIMIT 1`,
+      [userId, chapterLabel]
     );
 
-    if (rows.length === 0) {
-      return null;
-    }
-
+    if (rows.length === 0) return null;
     return rowToEntry(rows[0]);
   }
 
   /**
    * Get a random vocabulary entry by chapter label
-   * @param username - Owner username
-   * @param chapterLabel - Chapter label to filter by
-   * @returns Random entry with matching chapter label or null if no entries exist
    */
-  static async getRandomByChapterLabel(username: string, chapterLabel: string): Promise<VocabularyEntry | null> {
+  static async getRandomByChapterLabel(userId: number, chapterLabel: string): Promise<VocabularyEntry | null> {
     const pool = getPool();
 
     const [rows] = await pool.query<VocabularyEntryRow[]>(
       `SELECT * FROM vocabulary_entries
-       WHERE username = ? AND chapter_label = ?
-       ORDER BY RAND()
-       LIMIT 1`,
-      [username, chapterLabel]
+       WHERE user_id = ? AND chapter_label = ?
+       ORDER BY RAND() LIMIT 1`,
+      [userId, chapterLabel]
     );
 
-    if (rows.length === 0) {
-      return null;
-    }
-
+    if (rows.length === 0) return null;
     return rowToEntry(rows[0]);
+  }
+
+  /**
+   * Delete all vocabulary for a user
+   */
+  static async deleteAllForUser(userId: number): Promise<number> {
+    const pool = getPool();
+    
+    const [result] = await pool.query<ResultSetHeader>(
+      `DELETE FROM vocabulary_entries WHERE user_id = ?`,
+      [userId]
+    );
+
+    return result.affectedRows;
   }
 }

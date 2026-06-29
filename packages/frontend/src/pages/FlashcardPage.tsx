@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 import { apiClient } from '../api/client';
+import { useAuth } from '../context/AuthContext';
+import { useChildEditProtection } from '../hooks/useChildEditProtection';
 
 interface VocabularyEntry {
   id: string;
@@ -19,6 +21,9 @@ interface VocabularyEntry {
 }
 
 export default function FlashcardPage() {
+  const { user } = useAuth();
+  const showEditProtection = useChildEditProtection();
+  const [parentUsername, setParentUsername] = useState<string | null>(null);
   const [currentWord, setCurrentWord] = useState<VocabularyEntry | null>(null);
   const [showDetails, setShowDetails] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -38,15 +43,44 @@ export default function FlashcardPage() {
   const [shuffledWords, setShuffledWords] = useState<VocabularyEntry[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
 
+  // Fetch parent username for child users
   useEffect(() => {
-    fetchAvailableChapters();
-    fetchAvailableChapterLabels();
-    fetchRandomFavorite();
-  }, []);
+    if (!user) return;
+
+    const fetchParentUsername = async () => {
+      if (user.role === 'child' && user.parentId) {
+        try {
+          const response = await apiClient.get(`/admin/users/${user.parentId}`, {
+            headers: { 'Authorization': `Bearer ${localStorage.getItem('auth_token')}` }
+          });
+          setParentUsername(response.data.username);
+        } catch (error) {
+          console.error('Failed to fetch parent username:', error);
+          setParentUsername(null);
+        }
+      } else {
+        setParentUsername(null);
+      }
+    };
+
+    fetchParentUsername();
+  }, [user]);
+
+  useEffect(() => {
+    if (user && (parentUsername !== null || user.role !== 'child')) {
+      fetchAvailableChapters();
+      fetchAvailableChapterLabels();
+      fetchRandomFavorite();
+    }
+  }, [user, parentUsername]);
+
+  // Get the username to use for API calls
+  const usernameForAPI = parentUsername || user?.username;
 
   const fetchAvailableChapters = async () => {
+    if (!usernameForAPI) return;
     try {
-      const response = await apiClient.get<number[]>('/user1/vocabulary/chapters');
+      const response = await apiClient.get<number[]>(`/${usernameForAPI}/vocabulary/chapters`);
       setAvailableChapters(response.data);
     } catch (error) {
       console.error('Error fetching chapters:', error);
@@ -54,8 +88,9 @@ export default function FlashcardPage() {
   };
 
   const fetchAvailableChapterLabels = async () => {
+    if (!usernameForAPI) return;
     try {
-      const response = await apiClient.get<string[]>('/user1/vocabulary/chapter-labels');
+      const response = await apiClient.get<string[]>(`/${usernameForAPI}/vocabulary/chapter-labels`);
       setAvailableChapterLabels(response.data);
     } catch (error) {
       console.error('Error fetching chapter labels:', error);
@@ -63,6 +98,7 @@ export default function FlashcardPage() {
   };
 
   const fetchRandomFavorite = async () => {
+    if (!usernameForAPI) return;
     setLoading(true);
     setError(null);
     setShowDetails(false);
@@ -73,7 +109,7 @@ export default function FlashcardPage() {
         // Shuffled algorithm: fetch all words once and serve in order
         if (shuffledWords.length === 0 || currentIndex >= shuffledWords.length) {
           // Fetch all favorites
-          let url = '/user1/vocabulary/favorites';
+          let url = `/${usernameForAPI}/vocabulary/favorites`;
           const params = new URLSearchParams();
           
           if (chapterLabel) {
@@ -114,7 +150,7 @@ export default function FlashcardPage() {
         }
       } else {
         // Random algorithm: fetch random word each time
-        let url = '/user1/vocabulary/favorites/random';
+        let url = `/${usernameForAPI}/vocabulary/favorites/random`;
         const params = new URLSearchParams();
         
         if (chapterLabel) {
@@ -154,6 +190,7 @@ export default function FlashcardPage() {
   };
 
   const handleEdit = () => {
+    if (showEditProtection('edit')) return;
     if (currentWord) {
       setEditedWord({ ...currentWord });
       setIsEditing(true);
@@ -161,10 +198,10 @@ export default function FlashcardPage() {
   };
 
   const handleSaveEdit = async () => {
-    if (!editedWord || !currentWord) return;
+    if (!editedWord || !currentWord || !usernameForAPI) return;
 
     try {
-      const response = await apiClient.put(`/user1/vocabulary/${currentWord.id}`, {
+      const response = await apiClient.put(`/${usernameForAPI}/vocabulary/${currentWord.id}`, {
         pinyin: editedWord.pinyin,
         hanVietnamese: editedWord.hanVietnamese,
         modernVietnamese: editedWord.modernVietnamese,
@@ -218,10 +255,11 @@ export default function FlashcardPage() {
   };
 
   const handleUnfavorite = async () => {
-    if (!currentWord) return;
+    if (showEditProtection('unfavorite')) return;
+    if (!currentWord || !usernameForAPI) return;
 
     try {
-      await apiClient.post(`/user1/vocabulary/toggle-favorite`, {
+      await apiClient.post(`/${usernameForAPI}/vocabulary/toggle-favorite`, {
         chineseCharacter: currentWord.chineseCharacter
       });
 
@@ -384,7 +422,7 @@ export default function FlashcardPage() {
           <div style={{ marginBottom: '15px' }}>{error}</div>
           {noFavorites && (
             <a
-              href="/user1/admin"
+              href="/vocabulary"
               style={{
                 display: 'inline-block',
                 padding: '10px 20px',
