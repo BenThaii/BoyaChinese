@@ -578,8 +578,7 @@ IMPORTANT: Output ONLY "SENTENCE_N: [sentence]" lines. No other text whatsoever.
         console.error('[AITextGenerator] Error message:', error.message);
         console.error('[AITextGenerator] Error stack:', error.stack);
       }
-      console.error('[AITextGenerator] Falling back to mock data');
-      return this.generateMockForMultipleGroups(vocabGroupsData);
+      throw error; // Re-throw instead of falling back to mock data
     }
   }
 
