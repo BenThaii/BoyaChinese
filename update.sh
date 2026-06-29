@@ -51,10 +51,33 @@ cd $APP_DIR
 print_info "Starting update process..."
 echo ""
 
+# Step 0: Backup production .env files (safety measure)
+print_info "Backing up production environment files..."
+BACKUP_DIR="/tmp/boya-backup-$(date +%s)"
+mkdir -p $BACKUP_DIR
+if [ -f "packages/backend/.env" ]; then
+    cp packages/backend/.env "$BACKUP_DIR/.env"
+    print_success "Backed up backend .env to $BACKUP_DIR"
+fi
+if [ -f "packages/frontend/.env" ]; then
+    cp packages/frontend/.env "$BACKUP_DIR/frontend.env"
+    print_success "Backed up frontend .env to $BACKUP_DIR"
+fi
+
 # Step 1: Pull latest code
 print_info "Pulling latest code from git..."
 git pull origin main
 print_success "Code updated"
+
+# Step 1.5: Restore production .env files (git won't touch them since they're in .gitignore, but just to be safe)
+if [ -f "$BACKUP_DIR/.env" ]; then
+    cp "$BACKUP_DIR/.env" packages/backend/.env
+    print_success "Verified backend .env is in place"
+fi
+if [ -f "$BACKUP_DIR/frontend.env" ]; then
+    cp "$BACKUP_DIR/frontend.env" packages/frontend/.env
+    print_success "Verified frontend .env is in place"
+fi
 
 # Step 2: Install/update dependencies
 print_info "Installing dependencies..."
