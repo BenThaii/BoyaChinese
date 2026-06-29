@@ -215,27 +215,50 @@ router.post('/phrases/generate', authenticateJWT, requireRole(['admin', 'parent'
     const userId = req.user?.userId;
     console.log(`[PhrasesRoute] Manual generation triggered by userId: ${userId}`);
     
-    // Trigger generation with user's vocabulary
-    await phraseGenerator.generateAllSentences(userId);
-    
-    res.json({ 
-      success: true, 
-      message: 'Sentence generation completed successfully' 
-    });
-  } catch (error) {
-    console.error('Error generating sentences:', error);
-    
-    // Check if error is due to concurrent generation
-    if (error instanceof Error && error.message.includes('already in progress')) {
-      return res.status(503).json({ 
+    try {
+      // Trigger generation with user's vocabulary
+      await phraseGenerator.generateAllSentences(userId);
+      
+      res.json({ 
+        success: true, 
+        message: 'Sentence generation completed successfully' 
+      });
+    } catch (generationError) {
+      console.error('[PhrasesRoute] Generation error:', generationError);
+      
+      // Check if error is due to concurrent generation
+      if (generationError instanceof Error && generationError.message.includes('already in progress')) {
+        return res.status(503).json({ 
+          success: false, 
+          error: 'Generation already in progress' 
+        });
+      }
+      
+      // Log full error details for debugging
+      const errorMessage = generationError instanceof Error 
+        ? generationError.message 
+        : String(generationError);
+      const errorStack = generationError instanceof Error 
+        ? generationError.stack 
+        : 'No stack trace available';
+      
+      console.error('[PhrasesRoute] Full error details:');
+      console.error('[PhrasesRoute] Message:', errorMessage);
+      console.error('[PhrasesRoute] Stack:', errorStack);
+      
+      // Return 500 with detailed error info
+      res.status(500).json({ 
         success: false, 
-        error: 'Generation already in progress' 
+        error: `Failed to generate sentences: ${errorMessage}`,
+        details: process.env.NODE_ENV === 'development' ? errorStack : undefined
       });
     }
-    
+  } catch (error) {
+    console.error('[PhrasesRoute] Unexpected error in /phrases/generate endpoint:', error);
     res.status(500).json({ 
       success: false, 
-      error: 'Failed to generate sentences' 
+      error: 'Failed to generate sentences',
+      details: error instanceof Error ? error.message : 'Unknown error'
     });
   }
 });

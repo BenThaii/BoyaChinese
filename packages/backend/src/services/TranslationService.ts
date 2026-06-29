@@ -9,6 +9,7 @@ export class TranslationService {
   private consecutiveFailures: number = 0;
   private readonly MAX_FAILURES = 3;
   private initialized: boolean = false;
+  private useMockOnly: boolean = false;
 
   constructor() {
     // Don't initialize in constructor - do it lazily on first use
@@ -20,17 +21,34 @@ export class TranslationService {
   private initialize() {
     if (this.initialized) return;
     
+    // Check if we should use mock translations only
+    if (process.env.USE_MOCK_TRANSLATIONS === 'true') {
+      console.log('[Translation] Using mock translations only (USE_MOCK_TRANSLATIONS=true)');
+      this.useMockOnly = true;
+      this.initialized = true;
+      return;
+    }
+    
     // Initialize Google Cloud Translate with API key
     const apiKey = process.env.GOOGLE_TRANSLATE_API_KEY || process.env.GOOGLE_AI_API_KEY;
     
     console.log('[Translation] Initializing with API key:', apiKey ? `${apiKey.substring(0, 15)}...` : 'NOT FOUND');
     
     if (apiKey) {
-      this.translate = new v2.Translate({ key: apiKey });
-      console.log('[Translation] Google Cloud Translation API initialized successfully');
+      try {
+        // Try to initialize Google Cloud Translate
+        this.translate = new v2.Translate({ key: apiKey });
+        console.log('[Translation] Google Cloud Translation API initialized successfully');
+      } catch (error) {
+        console.warn('[Translation] Failed to initialize Google Cloud Translate:', error);
+        console.warn('[Translation] Falling back to mock translations');
+        this.translate = null;
+        this.useMockOnly = true;
+      }
     } else {
       console.warn('[Translation] No API key found, using mock translations');
       this.translate = null;
+      this.useMockOnly = true;
     }
     
     this.initialized = true;
@@ -58,19 +76,19 @@ export class TranslationService {
    * Translate Chinese text to Vietnamese
    */
   async translateToVietnamese(chineseText: string): Promise<string> {
-    this.initialize(); // Lazy initialization
-    
-    if (!this.translate) {
-      return this.mockTranslate(chineseText, 'vi');
-    }
-
-    // If too many consecutive failures, use mock temporarily
-    if (this.consecutiveFailures >= this.MAX_FAILURES) {
-      console.log('[Translation] Too many failures, using mock translation for Vietnamese');
-      return this.mockTranslate(chineseText, 'vi');
-    }
-
     try {
+      this.initialize(); // Lazy initialization
+      
+      if (!this.translate || this.useMockOnly) {
+        return this.mockTranslate(chineseText, 'vi');
+      }
+
+      // If too many consecutive failures, use mock temporarily
+      if (this.consecutiveFailures >= this.MAX_FAILURES) {
+        console.log('[Translation] Too many failures, using mock translation for Vietnamese');
+        return this.mockTranslate(chineseText, 'vi');
+      }
+
       console.log(`[Translation] Translating to Vietnamese: ${chineseText}`);
       
       const [translation] = await this.translate.translate(chineseText, {
@@ -83,7 +101,7 @@ export class TranslationService {
       return translation;
     } catch (error: any) {
       this.consecutiveFailures++;
-      console.error('[Translation] Google Cloud Translation API error (Vietnamese):', error.message);
+      console.error('[Translation] Translation to Vietnamese failed:', error?.message || error);
       console.log(`[Translation] Consecutive failures: ${this.consecutiveFailures}/${this.MAX_FAILURES}`);
       return this.mockTranslate(chineseText, 'vi');
     }
@@ -93,19 +111,19 @@ export class TranslationService {
    * Translate Chinese text to English
    */
   async translateToEnglish(chineseText: string): Promise<string> {
-    this.initialize(); // Lazy initialization
-    
-    if (!this.translate) {
-      return this.mockTranslate(chineseText, 'en');
-    }
-
-    // If too many consecutive failures, use mock temporarily
-    if (this.consecutiveFailures >= this.MAX_FAILURES) {
-      console.log('[Translation] Too many failures, using mock translation for English');
-      return this.mockTranslate(chineseText, 'en');
-    }
-
     try {
+      this.initialize(); // Lazy initialization
+      
+      if (!this.translate || this.useMockOnly) {
+        return this.mockTranslate(chineseText, 'en');
+      }
+
+      // If too many consecutive failures, use mock temporarily
+      if (this.consecutiveFailures >= this.MAX_FAILURES) {
+        console.log('[Translation] Too many failures, using mock translation for English');
+        return this.mockTranslate(chineseText, 'en');
+      }
+
       console.log(`[Translation] Translating to English: ${chineseText}`);
       
       const [translation] = await this.translate.translate(chineseText, {
@@ -118,7 +136,7 @@ export class TranslationService {
       return translation;
     } catch (error: any) {
       this.consecutiveFailures++;
-      console.error('[Translation] Google Cloud Translation API error (English):', error.message);
+      console.error('[Translation] Translation to English failed:', error?.message || error);
       console.log(`[Translation] Consecutive failures: ${this.consecutiveFailures}/${this.MAX_FAILURES}`);
       return this.mockTranslate(chineseText, 'en');
     }

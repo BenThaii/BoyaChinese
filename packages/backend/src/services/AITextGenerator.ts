@@ -549,24 +549,42 @@ IMPORTANT: Output ONLY "SENTENCE_N: [sentence]" lines. No other text whatsoever.
       try {
         // Translate to both English and Vietnamese in parallel
         const [englishTranslations, vietnameseTranslations] = await Promise.all([
-          this.translationService.batchTranslate(chineseTexts, 'en'),
-          this.translationService.batchTranslate(chineseTexts, 'vi')
+          this.translationService.batchTranslate(chineseTexts, 'en').catch(err => {
+            console.error('[AITextGenerator] English batch translation failed:', err);
+            return chineseTexts.map(text => `[English: ${text}]`);
+          }),
+          this.translationService.batchTranslate(chineseTexts, 'vi').catch(err => {
+            console.error('[AITextGenerator] Vietnamese batch translation failed:', err);
+            return chineseTexts.map(text => `[Vietnamese: ${text}]`);
+          })
         ]);
         
         // Assign translations back to sentences
         let translationIndex = 0;
         for (const sentences of resultMap.values()) {
           for (const sentence of sentences) {
-            sentence.englishMeaning = englishTranslations[translationIndex];
-            sentence.modernVietnamese = vietnameseTranslations[translationIndex];
+            sentence.englishMeaning = englishTranslations[translationIndex] || `[English: ${sentence.chineseText}]`;
+            sentence.modernVietnamese = vietnameseTranslations[translationIndex] || `[Vietnamese: ${sentence.chineseText}]`;
             translationIndex++;
           }
         }
         
         console.log('[AITextGenerator] Translation completed successfully');
       } catch (error) {
-        console.error('[AITextGenerator] Translation failed:', error);
+        console.error('[AITextGenerator] Translation process failed:', error);
         console.log('[AITextGenerator] Continuing without translations');
+        
+        // Assign placeholder translations if all else fails
+        for (const sentences of resultMap.values()) {
+          for (const sentence of sentences) {
+            if (!sentence.englishMeaning) {
+              sentence.englishMeaning = `[English: ${sentence.chineseText}]`;
+            }
+            if (!sentence.modernVietnamese) {
+              sentence.modernVietnamese = `[Vietnamese: ${sentence.chineseText}]`;
+            }
+          }
+        }
       }
       
       console.log('[AITextGenerator] ===== END TRANSLATION =====');
