@@ -7,7 +7,7 @@
 
 import { Router, Request, Response } from 'express';
 import { vocabularyManager } from '../services/VocabularyManager';
-import { VocabularyInput } from '../models/VocabularyEntry';
+import { VocabularyInput, VocabularyEntry } from '../models/VocabularyEntry';
 import { authenticateJWT, AuthRequest, requireRole } from '../middleware/auth';
 import { UserDAO } from '../models/User';
 
@@ -322,6 +322,105 @@ router.post('/:username/vocabulary/share', authenticateJWT, async (req: AuthRequ
 // ==================== Toggle favorite ====================
 
 router.post('/:username/vocabulary/favorite', authenticateJWT, async (req: AuthRequest, res: Response) => {
+  try {
+    const { username } = req.params;
+    const { chineseCharacter } = req.body;
+
+    if (!chineseCharacter) return res.status(400).json({ error: 'chineseCharacter is required' });
+
+    const userId = await resolveUserId(username);
+    if (!userId) return res.status(404).json({ error: `User "${username}" not found` });
+
+    const updated = await vocabularyManager.toggleFavorite(userId, chineseCharacter);
+    if (!updated) return res.status(404).json({ error: 'Entry not found' });
+    res.json(updated);
+  } catch (error) {
+    console.error('Error toggling favorite:', error);
+    res.status(500).json({ error: 'Failed to toggle favorite' });
+  }
+});
+
+// ==================== Get favorites ====================
+
+router.get('/:username/vocabulary/favorites', authenticateJWT, async (req: AuthRequest, res: Response) => {
+  try {
+    const { username } = req.params;
+    const { chapterStart, chapterEnd, chapterLabel } = req.query;
+
+    const userId = await resolveUserId(username);
+    if (!userId) return res.status(404).json({ error: `User "${username}" not found` });
+
+    // Get all favorites with optional chapter filtering
+    let entries = await vocabularyManager.getEntries(userId);
+    entries = entries.filter(e => e.isFavorite);
+
+    // Apply chapter label filter
+    if (chapterLabel && typeof chapterLabel === 'string') {
+      entries = entries.filter(e => e.chapterLabel === chapterLabel);
+    } 
+    // Apply chapter range filter
+    else if (chapterStart && chapterEnd) {
+      const start = parseInt(chapterStart as string, 10);
+      const end = parseInt(chapterEnd as string, 10);
+      if (!isNaN(start) && !isNaN(end)) {
+        entries = entries.filter(e => e.chapter >= start && e.chapter <= end);
+      }
+    }
+
+    if (entries.length === 0) {
+      return res.status(404).json({ error: 'No favorite words found' });
+    }
+
+    res.json(entries);
+  } catch (error) {
+    console.error('Error getting favorite entries:', error);
+    res.status(500).json({ error: 'Failed to get favorite entries' });
+  }
+});
+
+// ==================== Get random favorite ====================
+
+router.get('/:username/vocabulary/favorites/random', authenticateJWT, async (req: AuthRequest, res: Response) => {
+  try {
+    const { username } = req.params;
+    const { chapterStart, chapterEnd, chapterLabel } = req.query;
+
+    const userId = await resolveUserId(username);
+    if (!userId) return res.status(404).json({ error: `User "${username}" not found` });
+
+    let randomEntry: VocabularyEntry | null = null;
+
+    // Use chapter label if provided
+    if (chapterLabel && typeof chapterLabel === 'string') {
+      randomEntry = await vocabularyManager.getRandomFavoriteByChapterLabel(userId, chapterLabel);
+    } 
+    // Use chapter range if provided
+    else if (chapterStart && chapterEnd) {
+      const start = parseInt(chapterStart as string, 10);
+      const end = parseInt(chapterEnd as string, 10);
+      if (!isNaN(start) && !isNaN(end)) {
+        randomEntry = await vocabularyManager.getRandomFavoriteByChapters(userId, start, end);
+      }
+    } 
+    // Get any random favorite
+    else {
+      randomEntry = await vocabularyManager.getRandomFavorite(userId);
+    }
+
+    if (!randomEntry) {
+      return res.status(404).json({ error: 'No favorite words found' });
+    }
+
+    res.json(randomEntry);
+  } catch (error) {
+    console.error('Error getting random favorite entry:', error);
+    res.status(500).json({ error: 'Failed to get random favorite entry' });
+  }
+});
+
+// ==================== Toggle favorite (alternative POST endpoint) ====================
+
+router.post('/:username/vocabulary/toggle-favorite', authenticateJWT, async (req: AuthRequest, res: Response) => {
   try {
     const { username } = req.params;
     const { chineseCharacter } = req.body;
