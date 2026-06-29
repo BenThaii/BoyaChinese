@@ -1,55 +1,89 @@
 /**
- * Hook to manage keyboard language switching for multilingual inputs
- * On iOS, this will automatically switch the keyboard language when focus changes
+ * Hook to handle keyboard language switching based on input field language requirements
+ * 
+ * On iOS/Android, sets appropriate inputMode and data attributes
+ * to help browsers/IME suggest the correct keyboard
+ * 
+ * Supported languages:
+ * - 'zh': Chinese (Pinyin/Zhuyin)
+ * - 'vi': Vietnamese
+ * - 'en': English
  */
 
-export type KeyboardLanguage = 'zh' | 'en' | 'vi';
+export type KeyboardLanguage = 'zh' | 'vi' | 'en';
 
-interface LanguageConfig {
-  lang: string;
-  inputMode?: 'text' | 'none' | 'decimal' | 'numeric' | 'tel' | 'search' | 'email' | 'url';
+interface KeyboardConfig {
+  language: KeyboardLanguage;
+  inputMode: 'text' | 'decimal' | 'numeric' | 'tel' | 'search' | 'email' | 'url' | 'none';
+  pattern?: string;
+  autoCapitalize?: 'off' | 'on' | 'sentences' | 'words' | 'characters';
+  autoCorrect?: 'off' | 'on';
+  spellCheck?: boolean;
 }
 
-const LANGUAGE_CONFIGS: Record<KeyboardLanguage, LanguageConfig> = {
+const KEYBOARD_CONFIGS: Record<KeyboardLanguage, KeyboardConfig> = {
   zh: {
-    lang: 'zh-CN',
-    inputMode: 'text'
-  },
-  en: {
-    lang: 'en-US',
-    inputMode: 'text'
+    language: 'zh',
+    inputMode: 'text',
+    autoCapitalize: 'off',
+    autoCorrect: 'off',
+    spellCheck: false,
   },
   vi: {
-    lang: 'vi-VN',
-    inputMode: 'text'
-  }
+    language: 'vi',
+    inputMode: 'text',
+    autoCapitalize: 'sentences',
+    autoCorrect: 'on',
+    spellCheck: true,
+  },
+  en: {
+    language: 'en',
+    inputMode: 'text',
+    autoCapitalize: 'sentences',
+    autoCorrect: 'on',
+    spellCheck: true,
+  },
 };
 
 /**
- * Get the language configuration for a specific keyboard language
+ * Get keyboard configuration for a specific language
  */
-export const getLanguageConfig = (language: KeyboardLanguage): LanguageConfig => {
-  return LANGUAGE_CONFIGS[language];
-};
+export function getKeyboardConfig(language: KeyboardLanguage): KeyboardConfig {
+  return KEYBOARD_CONFIGS[language];
+}
 
 /**
- * Map field names to keyboard languages
- * Used to determine which keyboard language should be active for each field
+ * Get input attributes for a specific language
+ * Returns object that can be spread onto input/textarea elements
  */
-export const getFieldLanguage = (fieldName: string): KeyboardLanguage => {
-  switch (fieldName.toLowerCase()) {
-    case 'chinese':
-    case 'chinesecharacter':
+export function getInputProps(language: KeyboardLanguage) {
+  const config = getKeyboardConfig(language);
+  return {
+    inputMode: config.inputMode,
+    lang: language === 'zh' ? 'zh-CN' : language === 'vi' ? 'vi-VN' : 'en-US',
+    autoCapitalize: config.autoCapitalize,
+    autoCorrect: config.autoCorrect ? 'on' : 'off',
+    spellCheck: config.spellCheck,
+    'data-keyboard-lang': language,
+  };
+}
+
+/**
+ * Map field names to keyboard languages for vocabulary entries
+ */
+export function getFieldKeyboardLanguage(fieldName: string): KeyboardLanguage {
+  switch (fieldName) {
+    case 'chineseCharacter':
+    case 'pinyin':
       return 'zh';
-    case 'english':
-    case 'englishmeaning':
-      return 'en';
-    case 'vietnamese':
-    case 'modernvietnamese':
-    case 'hanvietnamese':
-    case 'learningnote':
+    case 'hanVietnamese':
+    case 'modernVietnamese':
+    case 'learningNote':
       return 'vi';
+    case 'englishMeaning':
+    case 'chapter':
+    case 'chapterLabel':
     default:
       return 'en';
   }
-};
+}

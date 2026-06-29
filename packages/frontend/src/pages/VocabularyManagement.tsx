@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom';
 import { vocabularyApi, VocabularyEntry } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { useChildEditProtection } from '../hooks/useChildEditProtection';
+import { getInputProps } from '../hooks/useKeyboardLanguage';
 
 interface VocabularyManagementProps {
   username?: string;
@@ -543,7 +544,7 @@ export default function VocabularyManagement({ username: propUsername }: Vocabul
             rows={4}
             style={{ width: '100%', boxSizing: 'border-box', marginBottom: '10px' }}
             disabled={batchUploading}
-            lang="zh-CN"
+            {...getInputProps('zh')}
           />
           <div style={{ marginBottom: '10px', display: 'flex', flexWrap: 'wrap', gap: '15px' }}>
             <label style={{ flex: '0 1 auto' }}>
@@ -566,7 +567,7 @@ export default function VocabularyManagement({ username: propUsername }: Vocabul
                 style={{ marginLeft: '10px', width: 'clamp(150px, 100%, 250px)', boxSizing: 'border-box' }}
                 disabled={batchUploading}
                 placeholder="e.g., Introduction, Review"
-                lang="en-US"
+                {...getInputProps('en')}
               />
             </label>
           </div>
@@ -661,7 +662,7 @@ export default function VocabularyManagement({ username: propUsername }: Vocabul
                   borderRadius: '3px',
                   boxSizing: 'border-box'
                 }}
-                lang="zh-CN"
+                {...getInputProps('zh')}
               />
             </th>
             <th style={{ padding: '2px' }}>
@@ -678,7 +679,7 @@ export default function VocabularyManagement({ username: propUsername }: Vocabul
                   borderRadius: '3px',
                   boxSizing: 'border-box'
                 }}
-                lang="en-US"
+                {...getInputProps('zh')}
               />
             </th>
             <th style={{ padding: '2px' }}>
@@ -695,7 +696,7 @@ export default function VocabularyManagement({ username: propUsername }: Vocabul
                   borderRadius: '3px',
                   boxSizing: 'border-box'
                 }}
-                lang="vi-VN"
+                {...getInputProps('vi')}
               />
             </th>
             <th style={{ padding: '2px' }}>
@@ -712,7 +713,7 @@ export default function VocabularyManagement({ username: propUsername }: Vocabul
                   borderRadius: '3px',
                   boxSizing: 'border-box'
                 }}
-                lang="vi-VN"
+                {...getInputProps('vi')}
               />
             </th>
             <th style={{ padding: '2px' }}>
@@ -729,7 +730,7 @@ export default function VocabularyManagement({ username: propUsername }: Vocabul
                   borderRadius: '3px',
                   boxSizing: 'border-box'
                 }}
-                lang="en-US"
+                {...getInputProps('en')}
               />
             </th>
             <th style={{ padding: '2px' }}></th>
@@ -748,7 +749,7 @@ export default function VocabularyManagement({ username: propUsername }: Vocabul
                   borderRadius: '3px',
                   boxSizing: 'border-box'
                 }}
-                lang="vi-VN"
+                {...getInputProps('vi')}
               />
             </th>
             <th style={{ padding: '2px' }}></th>
@@ -805,7 +806,7 @@ export default function VocabularyManagement({ username: propUsername }: Vocabul
                       value={batchEditForms.get(entry.id)?.chineseCharacter || ''}
                       onChange={(e) => updateBatchEditForm(entry.id, 'chineseCharacter', e.target.value)}
                       style={{ width: '100%', boxSizing: 'border-box', padding: '2px', fontSize: '12px' }}
-                      lang="zh-CN"
+                      {...getInputProps('zh')}
                     />
                   </td>
                   <td>
@@ -813,7 +814,7 @@ export default function VocabularyManagement({ username: propUsername }: Vocabul
                       value={batchEditForms.get(entry.id)?.pinyin || ''}
                       onChange={(e) => updateBatchEditForm(entry.id, 'pinyin', e.target.value)}
                       style={{ width: '100%', boxSizing: 'border-box', padding: '2px', fontSize: '12px' }}
-                      lang="en-US"
+                      {...getInputProps('zh')}
                     />
                   </td>
                   <td>
@@ -821,7 +822,7 @@ export default function VocabularyManagement({ username: propUsername }: Vocabul
                       value={batchEditForms.get(entry.id)?.hanVietnamese || ''}
                       onChange={(e) => updateBatchEditForm(entry.id, 'hanVietnamese', e.target.value)}
                       style={{ width: '100%', boxSizing: 'border-box', padding: '2px', fontSize: '12px' }}
-                      lang="vi-VN"
+                      {...getInputProps('vi')}
                     />
                   </td>
                   <td>
@@ -829,7 +830,7 @@ export default function VocabularyManagement({ username: propUsername }: Vocabul
                       value={batchEditForms.get(entry.id)?.modernVietnamese || ''}
                       onChange={(e) => updateBatchEditForm(entry.id, 'modernVietnamese', e.target.value)}
                       style={{ width: '100%', boxSizing: 'border-box', padding: '2px', fontSize: '12px' }}
-                      lang="vi-VN"
+                      {...getInputProps('vi')}
                     />
                   </td>
                   <td>
@@ -837,7 +838,7 @@ export default function VocabularyManagement({ username: propUsername }: Vocabul
                       value={batchEditForms.get(entry.id)?.englishMeaning || ''}
                       onChange={(e) => updateBatchEditForm(entry.id, 'englishMeaning', e.target.value)}
                       style={{ width: '100%', boxSizing: 'border-box', padding: '2px', fontSize: '12px' }}
-                      lang="en-US"
+                      {...getInputProps('en')}
                     />
                   </td>
                   <td style={{ display: isSmallScreen ? 'none' : 'table-cell' }}>
@@ -854,7 +855,7 @@ export default function VocabularyManagement({ username: propUsername }: Vocabul
                       onChange={(e) => updateBatchEditForm(entry.id, 'chapterLabel', e.target.value)}
                       placeholder="Optional"
                       style={{ width: '100%', boxSizing: 'border-box', padding: '2px', fontSize: '12px' }}
-                      lang="en-US"
+                      {...getInputProps('en')}
                     />
                   </td>
                   <td style={{ display: isSmallScreen ? 'none' : 'table-cell' }}>
@@ -863,7 +864,7 @@ export default function VocabularyManagement({ username: propUsername }: Vocabul
                       onChange={(e) => updateBatchEditForm(entry.id, 'learningNote', e.target.value)}
                       placeholder="Note"
                       style={{ width: '100%', boxSizing: 'border-box', padding: '2px', fontSize: '12px' }}
-                      lang="vi-VN"
+                      {...getInputProps('vi')}
                     />
                   </td>
                   <td>
@@ -901,7 +902,7 @@ export default function VocabularyManagement({ username: propUsername }: Vocabul
                         setEditForm({ ...editForm, chineseCharacter: e.target.value })
                       }
                       style={{ width: '100%', boxSizing: 'border-box', padding: '2px', fontSize: '12px' }}
-                      lang="zh-CN"
+                      {...getInputProps('zh')}
                     />
                   </td>
                   <td>
@@ -911,7 +912,7 @@ export default function VocabularyManagement({ username: propUsername }: Vocabul
                         setEditForm({ ...editForm, pinyin: e.target.value })
                       }
                       style={{ width: '100%', boxSizing: 'border-box', padding: '2px', fontSize: '12px' }}
-                      lang="en-US"
+                      {...getInputProps('zh')}
                     />
                   </td>
                   <td>
@@ -921,7 +922,7 @@ export default function VocabularyManagement({ username: propUsername }: Vocabul
                         setEditForm({ ...editForm, hanVietnamese: e.target.value })
                       }
                       style={{ width: '100%', boxSizing: 'border-box', padding: '2px', fontSize: '12px' }}
-                      lang="vi-VN"
+                      {...getInputProps('vi')}
                     />
                   </td>
                   <td>
@@ -931,7 +932,7 @@ export default function VocabularyManagement({ username: propUsername }: Vocabul
                         setEditForm({ ...editForm, modernVietnamese: e.target.value })
                       }
                       style={{ width: '100%', boxSizing: 'border-box', padding: '2px', fontSize: '12px' }}
-                      lang="vi-VN"
+                      {...getInputProps('vi')}
                     />
                   </td>
                   <td>
@@ -941,7 +942,7 @@ export default function VocabularyManagement({ username: propUsername }: Vocabul
                         setEditForm({ ...editForm, englishMeaning: e.target.value })
                       }
                       style={{ width: '100%', boxSizing: 'border-box', padding: '2px', fontSize: '12px' }}
-                      lang="en-US"
+                      {...getInputProps('en')}
                     />
                   </td>
                   <td style={{ display: isSmallScreen ? 'none' : 'table-cell' }}>
@@ -962,7 +963,7 @@ export default function VocabularyManagement({ username: propUsername }: Vocabul
                       }
                       placeholder="Optional"
                       style={{ width: '100%', boxSizing: 'border-box', padding: '2px', fontSize: '12px' }}
-                      lang="en-US"
+                      {...getInputProps('en')}
                     />
                   </td>
                   <td style={{ display: isSmallScreen ? 'none' : 'table-cell' }}>
@@ -973,7 +974,7 @@ export default function VocabularyManagement({ username: propUsername }: Vocabul
                       }
                       placeholder="Note"
                       style={{ width: '100%', boxSizing: 'border-box', padding: '2px', fontSize: '12px' }}
-                      lang="vi-VN"
+                      {...getInputProps('vi')}
                     />
                   </td>
                   <td>
@@ -1069,7 +1070,7 @@ export default function VocabularyManagement({ username: propUsername }: Vocabul
                         boxSizing: 'border-box'
                       }}
                       placeholder="Add learning notes here..."
-                      lang="vi-VN"
+                      {...getInputProps('vi')}
                     />
                   </div>
                 </td>
@@ -1125,7 +1126,7 @@ export default function VocabularyManagement({ username: propUsername }: Vocabul
                   value={editForm.chineseCharacter || ''}
                   onChange={(e) => setEditForm({ ...editForm, chineseCharacter: e.target.value })}
                   style={{ width: '100%', padding: '10px', fontSize: '16px', border: '1px solid #dee2e6', borderRadius: '6px', boxSizing: 'border-box', marginTop: '4px' }}
-                  lang="zh-CN"
+                  {...getInputProps('zh')}
                 />
               </label>
 
@@ -1135,7 +1136,7 @@ export default function VocabularyManagement({ username: propUsername }: Vocabul
                   value={editForm.pinyin || ''}
                   onChange={(e) => setEditForm({ ...editForm, pinyin: e.target.value })}
                   style={{ width: '100%', padding: '10px', fontSize: '16px', border: '1px solid #dee2e6', borderRadius: '6px', boxSizing: 'border-box', marginTop: '4px' }}
-                  lang="en-US"
+                  {...getInputProps('zh')}
                 />
               </label>
 
@@ -1145,7 +1146,7 @@ export default function VocabularyManagement({ username: propUsername }: Vocabul
                   value={editForm.hanVietnamese || ''}
                   onChange={(e) => setEditForm({ ...editForm, hanVietnamese: e.target.value })}
                   style={{ width: '100%', padding: '10px', fontSize: '16px', border: '1px solid #dee2e6', borderRadius: '6px', boxSizing: 'border-box', marginTop: '4px' }}
-                  lang="vi-VN"
+                  {...getInputProps('vi')}
                 />
               </label>
 
@@ -1155,7 +1156,7 @@ export default function VocabularyManagement({ username: propUsername }: Vocabul
                   value={editForm.modernVietnamese || ''}
                   onChange={(e) => setEditForm({ ...editForm, modernVietnamese: e.target.value })}
                   style={{ width: '100%', padding: '10px', fontSize: '16px', border: '1px solid #dee2e6', borderRadius: '6px', boxSizing: 'border-box', marginTop: '4px' }}
-                  lang="vi-VN"
+                  {...getInputProps('vi')}
                 />
               </label>
 
@@ -1165,7 +1166,7 @@ export default function VocabularyManagement({ username: propUsername }: Vocabul
                   value={editForm.englishMeaning || ''}
                   onChange={(e) => setEditForm({ ...editForm, englishMeaning: e.target.value })}
                   style={{ width: '100%', padding: '10px', fontSize: '16px', border: '1px solid #dee2e6', borderRadius: '6px', boxSizing: 'border-box', marginTop: '4px' }}
-                  lang="en-US"
+                  {...getInputProps('en')}
                 />
               </label>
 
@@ -1176,7 +1177,7 @@ export default function VocabularyManagement({ username: propUsername }: Vocabul
                   onChange={(e) => setEditForm({ ...editForm, learningNote: e.target.value })}
                   rows={3}
                   style={{ width: '100%', padding: '10px', fontSize: '16px', border: '1px solid #dee2e6', borderRadius: '6px', boxSizing: 'border-box', marginTop: '4px', fontFamily: 'inherit', resize: 'vertical' }}
-                  lang="vi-VN"
+                  {...getInputProps('vi')}
                 />
               </label>
 
