@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { vocabularyApi } from '../api/client';
 import { apiClient } from '../api/client';
+import { getInputProps } from '../hooks/useKeyboardLanguage';
 
 export default function VocabularyUpload() {
   const { username } = useParams<{ username: string }>();
@@ -64,10 +65,18 @@ export default function VocabularyUpload() {
   };
 
   const handlePreviewTranslation = async () => {
-    if (!username || !form.chineseCharacter) {
+    console.log('[VocabularyUpload] handlePreviewTranslation called', { username, chineseCharacter: form.chineseCharacter, formLength: form.chineseCharacter.length });
+    
+    if (!username) {
+      alert('Username not found');
+      return;
+    }
+    
+    if (!form.chineseCharacter || form.chineseCharacter.trim().length === 0) {
       alert('Please enter a Chinese character first');
       return;
     }
+    
     setLoading(true);
     try {
       const response = await vocabularyApi.previewTranslation(
@@ -129,7 +138,11 @@ export default function VocabularyUpload() {
           <label>Chinese Character:</label>
           <input
             value={form.chineseCharacter}
-            onChange={(e) => setForm({ ...form, chineseCharacter: e.target.value })}
+            onChange={(e) => {
+              console.log('[VocabularyUpload] Chinese input changed', { value: e.target.value, length: e.target.value.length });
+              setForm({ ...form, chineseCharacter: e.target.value });
+            }}
+            {...getInputProps('zh')}
             required
           />
           <button 
@@ -146,6 +159,7 @@ export default function VocabularyUpload() {
           <input
             value={form.pinyin}
             onChange={(e) => setForm({ ...form, pinyin: e.target.value })}
+            {...getInputProps('zh')}
           />
         </div>
         <div>
@@ -153,6 +167,7 @@ export default function VocabularyUpload() {
           <input
             value={form.hanVietnamese}
             onChange={(e) => setForm({ ...form, hanVietnamese: e.target.value })}
+            {...getInputProps('vi')}
           />
         </div>
         <div>
@@ -160,6 +175,7 @@ export default function VocabularyUpload() {
           <input
             value={form.modernVietnamese}
             onChange={(e) => setForm({ ...form, modernVietnamese: e.target.value })}
+            {...getInputProps('vi')}
           />
         </div>
         <div>
@@ -167,6 +183,7 @@ export default function VocabularyUpload() {
           <input
             value={form.englishMeaning}
             onChange={(e) => setForm({ ...form, englishMeaning: e.target.value })}
+            {...getInputProps('en')}
           />
         </div>
         <div>
@@ -174,6 +191,7 @@ export default function VocabularyUpload() {
           <textarea
             value={form.learningNote}
             onChange={(e) => setForm({ ...form, learningNote: e.target.value })}
+            {...getInputProps('vi')}
           />
         </div>
         <div>
@@ -192,6 +210,7 @@ export default function VocabularyUpload() {
             value={form.chapterLabel}
             onChange={(e) => setForm({ ...form, chapterLabel: e.target.value })}
             placeholder="e.g., Introduction, Review, etc."
+            {...getInputProps('en')}
           />
         </div>
         <div>
