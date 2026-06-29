@@ -5,9 +5,8 @@
  * Only accessible to admin users.
  */
 
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { ProtectedRoute } from '../components/ProtectedRoute';
 import { apiClient } from '../api/client';
 
 interface User {
@@ -33,7 +32,6 @@ export default function AdminPanelPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'users' | 'create'>('users');
-  const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState<CreateUserForm>({
     username: '',
     role: 'parent',
