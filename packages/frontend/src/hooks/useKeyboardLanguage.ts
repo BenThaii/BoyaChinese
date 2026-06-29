@@ -61,10 +61,8 @@ export function getInputProps(language: KeyboardLanguage) {
   return {
     inputMode: config.inputMode,
     lang: language === 'zh' ? 'zh-CN' : language === 'vi' ? 'vi-VN' : 'en-US',
-    autoCapitalize: config.autoCapitalize,
-    autoCorrect: config.autoCorrect ? 'on' : 'off',
-    spellCheck: config.spellCheck,
-    'data-keyboard-lang': language,
+    // Note: autoCapitalize, autoCorrect, spellCheck are only hints - not all are standard HTML attributes
+    // Keep only the widely supported ones
   };
 }
 

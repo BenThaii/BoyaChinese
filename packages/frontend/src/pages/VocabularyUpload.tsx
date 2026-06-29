@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import { vocabularyApi } from '../api/client';
 import { apiClient } from '../api/client';
 import { getInputProps } from '../hooks/useKeyboardLanguage';
 
 export default function VocabularyUpload() {
-  const { username } = useParams<{ username: string }>();
+  const { user } = useAuth();
+  const username = user?.username;
   const [form, setForm] = useState({
     chineseCharacter: '',
     pinyin: '',
@@ -65,14 +66,14 @@ export default function VocabularyUpload() {
   };
 
   const handlePreviewTranslation = async () => {
-    console.log('[VocabularyUpload] handlePreviewTranslation called', { username, chineseCharacter: form.chineseCharacter, formLength: form.chineseCharacter.length });
-    
     if (!username) {
       alert('Username not found');
       return;
     }
     
-    if (!form.chineseCharacter || form.chineseCharacter.trim().length === 0) {
+    const trimmedChar = form.chineseCharacter.trim();
+    
+    if (!trimmedChar) {
       alert('Please enter a Chinese character first');
       return;
     }
@@ -139,7 +140,6 @@ export default function VocabularyUpload() {
           <input
             value={form.chineseCharacter}
             onChange={(e) => {
-              console.log('[VocabularyUpload] Chinese input changed', { value: e.target.value, length: e.target.value.length });
               setForm({ ...form, chineseCharacter: e.target.value });
             }}
             {...getInputProps('zh')}
