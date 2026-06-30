@@ -8,32 +8,21 @@ const getApiBaseUrl = (): string => {
     return import.meta.env.VITE_API_URL;
   }
   
-  // For production, use current protocol and host
-  // IMPORTANT: Always use the same host and protocol to avoid CORS/loopback blocking
+  // For production, use protocol-relative URL
+  // This automatically uses whatever protocol the page was loaded with (http or https)
   if (typeof window !== 'undefined') {
-    const rawProtocol = window.location.protocol; // 'https:' or 'http:'
     const hostname = window.location.hostname; // e.g., '13.212.235.9', 'localhost'
     const port = window.location.port;
-    const href = window.location.href;
-    
-    // Force HTTPS for production
-    // If we're on EC2, always use HTTPS regardless of what protocol reports
-    const isProduction = hostname === '13.212.235.9' || !hostname.includes('localhost');
-    const protocol = isProduction ? 'https:' : rawProtocol;
     
     // Log for debugging
-    console.log(`[API Config] Raw Protocol: ${rawProtocol}, Hostname: ${hostname}, Port: ${port}`);
-    console.log(`[API Config] Page href: ${href}`);
-    console.log(`[API Config] Is Production: ${isProduction}, Using Protocol: ${protocol}`);
+    console.log(`[API Config] Hostname: ${hostname}, Port: ${port}`);
     
-    // RULE: Always use the same host the page loaded from
-    // This avoids CORS issues and browser security restrictions like:
-    // - HTTPS pages cannot access http://localhost (loopback blocking)
-    // - HTTPS pages cannot access http://127.0.0.1 (loopback blocking)
+    // Use protocol-relative URL: //hostname/api
+    // Browser will automatically use http:// or https:// based on what protocol the page uses
     const hostPart = port ? `${hostname}:${port}` : hostname;
-    const url = `${protocol}//${hostPart}/api`;
+    const url = `//${hostPart}/api`;
     
-    console.log(`[API Config] Using URL: ${url} (same as page origin)`);
+    console.log(`[API Config] Using protocol-relative URL: ${url}`);
     return url;
   }
   
