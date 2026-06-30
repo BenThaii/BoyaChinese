@@ -2,6 +2,7 @@ import axios from 'axios';
 
 // Determine API URL based on environment and current protocol
 const getApiBaseUrl = (): string => {
+  // UNIQUE_MARKER_12345_HTTPS_FIX
   // If VITE_API_URL is set, use it (for development)
   if (import.meta.env.VITE_API_URL) {
     return import.meta.env.VITE_API_URL;

@@ -6,10 +6,15 @@ inclusion: auto
 # Agent Objective
 - If the user's instruction is not clear, ask until it is clear before implementation.
 - Automatically perform all tasks (code writing, deploying and testing, etc.) for the user, require minimal user's manual action
+
+
+# EC2 host
 - EC2 host: ubuntu@ec2-13-212-235-9.ap-southeast-1.compute.amazonaws.com
 - SSH key: D:\Google Drive\ketoanvamtgt@gmail.com\VAM\00_management\aws_migration\bitrix_gt_keypair\bitrix_gt_keypair.ppk
 - App dir: /var/www/chinese-learning-app
-- use plink to connect to ec2
+- use plink to connect to ec2, pscp to copy files
+- sample script to connect to EC2:
+    cd "d:\Chinese\custom_app"; plink -i "D:\Google Drive\ketoanvamtgt@gmail.com\VAM\00_management\aws_migration\bitrix_gt_keypair\bitrix_gt_keypair.ppk" ubuntu@ec2-13-212-235-9.ap-southeast-1.compute.amazonaws.com -batch "chmod +x /tmp/setup-https.sh && bash /tmp/setup-https.sh"
 
 # ⚠️ CRITICAL: AUTHORIZATION REQUIRED FOR ALL CHANGES ⚠️
 
