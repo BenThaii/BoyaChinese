@@ -118,9 +118,41 @@ export default function AdminPanelPage() {
   };
 
   const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text);
-    setCopiedPhrase(true);
-    setTimeout(() => setCopiedPhrase(false), 2000);
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(() => {
+          setCopiedPhrase(true);
+          setTimeout(() => setCopiedPhrase(false), 2000);
+        }).catch(() => {
+          // Fallback to old method
+          fallbackCopyToClipboard(text);
+        });
+      } else {
+        // Fallback for non-secure contexts
+        fallbackCopyToClipboard(text);
+      }
+    } catch (err) {
+      console.error('Clipboard error:', err);
+      fallbackCopyToClipboard(text);
+    }
+  };
+
+  const fallbackCopyToClipboard = (text: string) => {
+    try {
+      const textArea = document.createElement('textarea');
+      textArea.value = text;
+      textArea.style.position = 'fixed';
+      textArea.style.left = '-999999px';
+      document.body.appendChild(textArea);
+      textArea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textArea);
+      setCopiedPhrase(true);
+      setTimeout(() => setCopiedPhrase(false), 2000);
+    } catch (err) {
+      console.error('Fallback copy error:', err);
+      alert('Copy to clipboard failed. Please copy manually:\n\n' + text);
+    }
   };
 
   const handleEditUser = (userToEdit: User) => {
@@ -328,19 +360,28 @@ export default function AdminPanelPage() {
                 {/* Copy Buttons */}
                 <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                   <button
-                    onClick={() => copyToClipboard(createdUser.user.username)}
+                    onClick={() => {
+                      console.log('Copy Username clicked:', createdUser.user.username);
+                      copyToClipboard(createdUser.user.username);
+                    }}
                     style={styles.copyButton}
                   >
                     Copy Username
                   </button>
                   <button
-                    onClick={() => copyToClipboard(createdUser.secretPhrase)}
+                    onClick={() => {
+                      console.log('Copy Phrase clicked:', createdUser.secretPhrase);
+                      copyToClipboard(createdUser.secretPhrase);
+                    }}
                     style={styles.copyButton}
                   >
                     Copy Phrase
                   </button>
                   <button
-                    onClick={() => copyToClipboard(`Username: ${createdUser.user.username}\nSecret Phrase: ${createdUser.secretPhrase}`)}
+                    onClick={() => {
+                      console.log('Copy Both clicked');
+                      copyToClipboard(`Username: ${createdUser.user.username}\nSecret Phrase: ${createdUser.secretPhrase}`);
+                    }}
                     style={{ ...styles.copyButton, backgroundColor: '#28a745' }}
                   >
                     Copy Both
