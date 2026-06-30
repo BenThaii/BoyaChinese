@@ -11,12 +11,20 @@ const getApiBaseUrl = (): string => {
   // For production, use current protocol and host
   // IMPORTANT: Always use the same host and protocol to avoid CORS/loopback blocking
   if (typeof window !== 'undefined') {
-    const protocol = window.location.protocol; // 'https:' or 'http:'
+    const rawProtocol = window.location.protocol; // 'https:' or 'http:'
     const hostname = window.location.hostname; // e.g., '13.212.235.9', 'localhost'
     const port = window.location.port;
+    const href = window.location.href;
+    
+    // Force HTTPS for production
+    // If we're on EC2, always use HTTPS regardless of what protocol reports
+    const isProduction = hostname === '13.212.235.9' || !hostname.includes('localhost');
+    const protocol = isProduction ? 'https:' : rawProtocol;
     
     // Log for debugging
-    console.log(`[API Config] Protocol: ${protocol}, Hostname: ${hostname}, Port: ${port}`);
+    console.log(`[API Config] Raw Protocol: ${rawProtocol}, Hostname: ${hostname}, Port: ${port}`);
+    console.log(`[API Config] Page href: ${href}`);
+    console.log(`[API Config] Is Production: ${isProduction}, Using Protocol: ${protocol}`);
     
     // RULE: Always use the same host the page loaded from
     // This avoids CORS issues and browser security restrictions like:
