@@ -82,14 +82,22 @@ fi
 # Step 2: Install/update dependencies
 print_info "Installing dependencies..."
 npm install
-print_success "Dependencies updated"
+print_success "Dependencies installed"
 
-# Step 3: Build application
-print_info "Building application..."
+# Step 3: Build backend
+print_info "Building backend..."
+cd packages/backend
 npm run build
-print_success "Application built"
+cd ../..
+print_success "Backend built"
 
-# Step 4: Run database migrations (if any)
+# Step 4: Build frontend
+print_info "Building frontend..."
+cd packages/frontend
+rm -rf dist  # Clean old build to ensure fresh files
+npm run build
+cd ../..
+print_success "Frontend built"
 print_info "Checking for database migrations..."
 if [ -f "packages/backend/database/add_english_meaning_column.sql" ]; then
     print_info "Running database migration for english_meaning column..."
@@ -119,16 +127,29 @@ fi
 
 # Step 5: Restart backend
 print_info "Restarting backend..."
-pm2 restart chinese-learning-backend
+pm2 restart backend
+sleep 3
 print_success "Backend restarted"
 
-# Step 6: Deploy updated frontend
+# Step 6: Deploy updated frontend (Nginx serves from /var/www/chinese-learning-app/packages/frontend/dist/)
 print_info "Deploying updated frontend..."
-sudo cp -r packages/frontend/dist/* /var/www/html/chinese-learning-app/
-sudo chown -R www-data:www-data /var/www/html/chinese-learning-app
-print_success "Frontend deployed"
+# Frontend is already built, just verify it's there
+if [ -f "packages/frontend/dist/index.html" ]; then
+    print_success "Frontend built and ready at packages/frontend/dist/"
+else
+    print_error "Frontend build failed - index.html not found"
+    exit 1
+fi
 
-# Step 7: Reload Nginx (just in case)
+# Step 7: Verify Nginx configuration points to correct frontend directory
+print_info "Checking Nginx configuration..."
+if grep -q "packages/frontend/dist" /etc/nginx/sites-available/chinese-learning-app 2>/dev/null; then
+    print_success "Nginx configured correctly"
+else
+    print_info "Note: Verify Nginx config points to /var/www/chinese-learning-app/packages/frontend/dist/"
+fi
+
+# Step 8: Reload Nginx to serve new files
 print_info "Reloading Nginx..."
 sudo nginx -t && sudo systemctl reload nginx
 print_success "Nginx reloaded"
@@ -139,7 +160,7 @@ print_success "Update completed successfully!"
 echo "=========================================="
 echo ""
 echo "Useful commands:"
-echo "  View backend logs:    pm2 logs chinese-learning-backend"
+echo "  View backend logs:    pm2 logs backend"
 echo "  Check backend status: pm2 status"
-echo "  Restart backend:      pm2 restart chinese-learning-backend"
+echo "  Restart backend:      pm2 restart backend"
 echo ""
