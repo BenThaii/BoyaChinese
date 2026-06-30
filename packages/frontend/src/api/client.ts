@@ -1,6 +1,41 @@
 import axios from 'axios';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+// Determine API URL based on environment and current protocol
+const getApiBaseUrl = (): string => {
+  // If VITE_API_URL is set, use it (for development)
+  if (import.meta.env.VITE_API_URL) {
+    return import.meta.env.VITE_API_URL;
+  }
+  
+  // For production, use current protocol and host
+  // If running on HTTPS, use HTTPS for API calls
+  // If running on HTTP (localhost dev), use HTTP
+  if (typeof window !== 'undefined') {
+    const protocol = window.location.protocol; // 'https:' or 'http:'
+    const hostname = window.location.hostname; // e.g., '13.212.235.9', 'localhost'
+    const port = window.location.port;
+    
+    // On production (HTTPS with IP), use HTTPS with same host
+    if (protocol === 'https:') {
+      const hostPart = port ? `${hostname}:${port}` : hostname;
+      return `https://${hostPart}/api`;
+    }
+    
+    // On localhost, use HTTP on port 3000
+    if (hostname === 'localhost' || hostname === '127.0.0.1') {
+      return 'http://localhost:3000/api';
+    }
+    
+    // Fallback: use current protocol
+    const hostPart = port ? `${hostname}:${port}` : hostname;
+    return `${protocol}//${hostPart}/api`;
+  }
+  
+  // Fallback for non-browser environments
+  return 'http://localhost:3000/api';
+};
+
+const API_BASE_URL = getApiBaseUrl();
 
 export const apiClient = axios.create({
   baseURL: API_BASE_URL,
