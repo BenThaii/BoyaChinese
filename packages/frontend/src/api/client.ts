@@ -9,8 +9,7 @@ const getApiBaseUrl = (): string => {
   }
   
   // For production, use current protocol and host
-  // If running on HTTPS, use HTTPS for API calls
-  // If running on HTTP (localhost dev), use HTTP
+  // IMPORTANT: Always use the same host and protocol to avoid CORS/loopback blocking
   if (typeof window !== 'undefined') {
     const protocol = window.location.protocol; // 'https:' or 'http:'
     const hostname = window.location.hostname; // e.g., '13.212.235.9', 'localhost'
@@ -19,25 +18,14 @@ const getApiBaseUrl = (): string => {
     // Log for debugging
     console.log(`[API Config] Protocol: ${protocol}, Hostname: ${hostname}, Port: ${port}`);
     
-    // On production (HTTPS with IP), use HTTPS with same host
-    if (protocol === 'https:') {
-      const hostPart = port ? `${hostname}:${port}` : hostname;
-      const url = `https://${hostPart}/api`;
-      console.log(`[API Config] Using HTTPS URL: ${url}`);
-      return url;
-    }
-    
-    // On localhost, use HTTP on port 3000
-    if (hostname === 'localhost' || hostname === '127.0.0.1') {
-      const url = 'http://localhost:3000/api';
-      console.log(`[API Config] Using localhost URL: ${url}`);
-      return url;
-    }
-    
-    // Fallback: use current protocol
+    // RULE: Always use the same host the page loaded from
+    // This avoids CORS issues and browser security restrictions like:
+    // - HTTPS pages cannot access http://localhost (loopback blocking)
+    // - HTTPS pages cannot access http://127.0.0.1 (loopback blocking)
     const hostPart = port ? `${hostname}:${port}` : hostname;
     const url = `${protocol}//${hostPart}/api`;
-    console.log(`[API Config] Using fallback URL: ${url}`);
+    
+    console.log(`[API Config] Using URL: ${url} (same as page origin)`);
     return url;
   }
   
