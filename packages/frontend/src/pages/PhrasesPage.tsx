@@ -326,8 +326,12 @@ export default function PhrasesPage() {
 
   const handleToggleFavorite = async (character: string, currentFavoriteStatus: boolean) => {
     if (showEditProtection('favorite')) return;
+    if (!user?.username) {
+      alert('Not authenticated');
+      return;
+    }
     try {
-      await apiClient.post(`/user1/vocabulary/toggle-favorite`, {
+      await apiClient.post(`/${user.username}/vocabulary/toggle-favorite`, {
         chineseCharacter: character
       });
 
@@ -353,10 +357,14 @@ export default function PhrasesPage() {
 
   const handleSaveCharacter = async () => {
     if (!editedCharacterData || !editingCharacter) return;
+    if (!user?.username) {
+      alert('Not authenticated');
+      return;
+    }
 
     try {
       // Get the vocabulary entry by character to find the ID
-      const entriesResponse = await apiClient.get(`/user1/vocabulary`);
+      const entriesResponse = await apiClient.get(`/${user.username}/vocabulary`);
       const entry = entriesResponse.data.find((e: any) => e.chineseCharacter === editingCharacter);
       
       if (!entry) {
@@ -365,7 +373,7 @@ export default function PhrasesPage() {
       }
 
       // Update using the actual ID
-      await apiClient.put(`/user1/vocabulary/${entry.id}`, {
+      await apiClient.put(`/${user.username}/vocabulary/${entry.id}`, {
         pinyin: editedCharacterData.pinyin,
         hanVietnamese: editedCharacterData.hanVietnamese,
         modernVietnamese: editedCharacterData.modernVietnamese,
