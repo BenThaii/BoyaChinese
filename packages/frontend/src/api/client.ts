@@ -15,20 +15,29 @@ const getApiBaseUrl = (): string => {
     const hostname = window.location.hostname; // e.g., '13.212.235.9', 'localhost'
     const port = window.location.port;
     
+    // Log for debugging
+    console.log(`[API Config] Protocol: ${protocol}, Hostname: ${hostname}, Port: ${port}`);
+    
     // On production (HTTPS with IP), use HTTPS with same host
     if (protocol === 'https:') {
       const hostPart = port ? `${hostname}:${port}` : hostname;
-      return `https://${hostPart}/api`;
+      const url = `https://${hostPart}/api`;
+      console.log(`[API Config] Using HTTPS URL: ${url}`);
+      return url;
     }
     
     // On localhost, use HTTP on port 3000
     if (hostname === 'localhost' || hostname === '127.0.0.1') {
-      return 'http://localhost:3000/api';
+      const url = 'http://localhost:3000/api';
+      console.log(`[API Config] Using localhost URL: ${url}`);
+      return url;
     }
     
     // Fallback: use current protocol
     const hostPart = port ? `${hostname}:${port}` : hostname;
-    return `${protocol}//${hostPart}/api`;
+    const url = `${protocol}//${hostPart}/api`;
+    console.log(`[API Config] Using fallback URL: ${url}`);
+    return url;
   }
   
   // Fallback for non-browser environments
