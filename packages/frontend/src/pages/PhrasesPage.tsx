@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { apiClient } from '../api/client';
 import { useChildEditProtection } from '../hooks/useChildEditProtection';
 import { useAuth } from '../context/AuthContext';
@@ -62,6 +62,22 @@ export default function PhrasesPage() {
   const [editingModel, setEditingModel] = useState(false);
   const [modelInput, setModelInput] = useState('');
   const [modelHistory, setModelHistory] = useState<string[]>([]);
+
+  // Refs for input fields when editing character
+  const pinyinInputRef = useRef<HTMLInputElement>(null);
+  const hanVietInputRef = useRef<HTMLInputElement>(null);
+  const modVietInputRef = useRef<HTMLInputElement>(null);
+  const englishInputRef = useRef<HTMLInputElement>(null);
+
+  // Focus first input when entering edit mode (for mobile)
+  useEffect(() => {
+    if (editingCharacter && pinyinInputRef.current) {
+      setTimeout(() => {
+        pinyinInputRef.current?.focus();
+        pinyinInputRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }, 0);
+    }
+  }, [editingCharacter]);
 
   // Fetch vocab groups on mount
   useEffect(() => {
@@ -826,6 +842,7 @@ export default function PhrasesPage() {
               backgroundColor: 'white',
               borderRadius: '16px 16px 0 0',
               padding: '16px',
+              paddingBottom: '32px',
               width: '100%',
               maxWidth: '900px',
               maxHeight: '92dvh',
@@ -963,6 +980,8 @@ export default function PhrasesPage() {
                             <>
                               <td style={{ padding: '6px', border: '1px solid #dee2e6' }}>
                                 <input
+                                  ref={pinyinInputRef}
+                                  autoFocus
                                   type="text"
                                   value={editedCharacterData?.pinyin || ''}
                                   onChange={(e) => setEditedCharacterData(editedCharacterData ? { ...editedCharacterData, pinyin: e.target.value } : null)}
@@ -971,6 +990,7 @@ export default function PhrasesPage() {
                               </td>
                               <td style={{ padding: '6px', border: '1px solid #dee2e6' }}>
                                 <input
+                                  ref={hanVietInputRef}
                                   type="text"
                                   value={editedCharacterData?.hanVietnamese || ''}
                                   onChange={(e) => setEditedCharacterData(editedCharacterData ? { ...editedCharacterData, hanVietnamese: e.target.value } : null)}
@@ -979,6 +999,7 @@ export default function PhrasesPage() {
                               </td>
                               <td style={{ padding: '6px', border: '1px solid #dee2e6' }}>
                                 <input
+                                  ref={modVietInputRef}
                                   type="text"
                                   value={editedCharacterData?.modernVietnamese || ''}
                                   onChange={(e) => setEditedCharacterData(editedCharacterData ? { ...editedCharacterData, modernVietnamese: e.target.value } : null)}
@@ -987,6 +1008,7 @@ export default function PhrasesPage() {
                               </td>
                               <td style={{ padding: '6px', border: '1px solid #dee2e6' }}>
                                 <input
+                                  ref={englishInputRef}
                                   type="text"
                                   value={editedCharacterData?.englishMeaning || ''}
                                   onChange={(e) => setEditedCharacterData(editedCharacterData ? { ...editedCharacterData, englishMeaning: e.target.value } : null)}
