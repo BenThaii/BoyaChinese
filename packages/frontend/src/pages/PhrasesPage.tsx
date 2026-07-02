@@ -820,8 +820,185 @@ export default function PhrasesPage() {
         ))}
       </div>
 
+      {/* Character Edit Modal (Mobile-friendly) */}
+      {editingCharacter && selectedSentence && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+            display: 'flex',
+            alignItems: 'flex-end',
+            justifyContent: 'center',
+            zIndex: 1001,
+          }}
+          onClick={handleCancelEdit}
+        >
+          <div
+            style={{
+              backgroundColor: 'white',
+              borderRadius: '16px 16px 0 0',
+              padding: '16px',
+              paddingBottom: '32px',
+              width: '100%',
+              maxWidth: '600px',
+              overflow: 'auto',
+              WebkitOverflowScrolling: 'touch',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Handle bar */}
+            <div style={{ width: '40px', height: '4px', backgroundColor: '#dee2e6', borderRadius: '2px', margin: '0 auto 12px' }} />
+
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <h2 style={{ margin: 0, fontSize: 'clamp(16px, 4vw, 20px)' }}>Edit Character: {editingCharacter}</h2>
+              <button
+                onClick={handleCancelEdit}
+                style={{
+                  padding: '6px 14px',
+                  backgroundColor: '#dc3545',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '4px',
+                  cursor: 'pointer',
+                  fontSize: '14px'
+                }}
+              >
+                Close
+              </button>
+            </div>
+
+            {/* Edit Form */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div>
+                <label style={{ display: 'block', marginBottom: '6px', fontWeight: 'bold', fontSize: '14px', color: '#333' }}>
+                  Pinyin
+                </label>
+                <input
+                  ref={pinyinInputRef}
+                  autoFocus
+                  type="text"
+                  value={editedCharacterData?.pinyin || ''}
+                  onChange={(e) => setEditedCharacterData(editedCharacterData ? { ...editedCharacterData, pinyin: e.target.value } : null)}
+                  style={{
+                    width: '100%',
+                    padding: '10px',
+                    fontSize: '16px',
+                    border: '1px solid #dee2e6',
+                    borderRadius: '4px',
+                    boxSizing: 'border-box',
+                  }}
+                  placeholder="Enter pinyin"
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', marginBottom: '6px', fontWeight: 'bold', fontSize: '14px', color: '#333' }}>
+                  Han Vietnamese
+                </label>
+                <input
+                  ref={hanVietInputRef}
+                  type="text"
+                  value={editedCharacterData?.hanVietnamese || ''}
+                  onChange={(e) => setEditedCharacterData(editedCharacterData ? { ...editedCharacterData, hanVietnamese: e.target.value } : null)}
+                  style={{
+                    width: '100%',
+                    padding: '10px',
+                    fontSize: '16px',
+                    border: '1px solid #dee2e6',
+                    borderRadius: '4px',
+                    boxSizing: 'border-box',
+                  }}
+                  placeholder="Enter Han Vietnamese"
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', marginBottom: '6px', fontWeight: 'bold', fontSize: '14px', color: '#333' }}>
+                  Modern Vietnamese
+                </label>
+                <input
+                  ref={modVietInputRef}
+                  type="text"
+                  value={editedCharacterData?.modernVietnamese || ''}
+                  onChange={(e) => setEditedCharacterData(editedCharacterData ? { ...editedCharacterData, modernVietnamese: e.target.value } : null)}
+                  style={{
+                    width: '100%',
+                    padding: '10px',
+                    fontSize: '16px',
+                    border: '1px solid #dee2e6',
+                    borderRadius: '4px',
+                    boxSizing: 'border-box',
+                  }}
+                  placeholder="Enter modern Vietnamese"
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', marginBottom: '6px', fontWeight: 'bold', fontSize: '14px', color: '#333' }}>
+                  English Meaning
+                </label>
+                <input
+                  ref={englishInputRef}
+                  type="text"
+                  value={editedCharacterData?.englishMeaning || ''}
+                  onChange={(e) => setEditedCharacterData(editedCharacterData ? { ...editedCharacterData, englishMeaning: e.target.value } : null)}
+                  style={{
+                    width: '100%',
+                    padding: '10px',
+                    fontSize: '16px',
+                    border: '1px solid #dee2e6',
+                    borderRadius: '4px',
+                    boxSizing: 'border-box',
+                  }}
+                  placeholder="Enter English meaning"
+                />
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: '8px', marginTop: '20px' }}>
+              <button
+                onClick={handleSaveCharacter}
+                style={{
+                  flex: 1,
+                  padding: '12px',
+                  backgroundColor: '#28a745',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '4px',
+                  cursor: 'pointer',
+                  fontSize: '16px',
+                  fontWeight: 'bold',
+                }}
+              >
+                Save
+              </button>
+              <button
+                onClick={handleCancelEdit}
+                style={{
+                  flex: 1,
+                  padding: '12px',
+                  backgroundColor: '#6c757d',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '4px',
+                  cursor: 'pointer',
+                  fontSize: '16px',
+                  fontWeight: 'bold',
+                }}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Character Detail Modal */}
-      {selectedSentence && (
+      {selectedSentence && !editingCharacter && (
         <div
           style={{
             position: 'fixed',
@@ -976,69 +1153,23 @@ export default function PhrasesPage() {
                           <td style={{ padding: '8px 6px', border: '1px solid #dee2e6', fontSize: '18px' }}>
                             {char.chineseCharacter}
                           </td>
-                          {editingCharacter === char.chineseCharacter ? (
-                            <>
-                              <td style={{ padding: '6px', border: '1px solid #dee2e6' }}>
-                                <input
-                                  ref={pinyinInputRef}
-                                  autoFocus
-                                  type="text"
-                                  value={editedCharacterData?.pinyin || ''}
-                                  onChange={(e) => setEditedCharacterData(editedCharacterData ? { ...editedCharacterData, pinyin: e.target.value } : null)}
-                                  style={{ width: '100%', padding: '4px', fontSize: '13px', border: '1px solid #dee2e6', borderRadius: '4px' }}
-                                />
-                              </td>
-                              <td style={{ padding: '6px', border: '1px solid #dee2e6' }}>
-                                <input
-                                  ref={hanVietInputRef}
-                                  type="text"
-                                  value={editedCharacterData?.hanVietnamese || ''}
-                                  onChange={(e) => setEditedCharacterData(editedCharacterData ? { ...editedCharacterData, hanVietnamese: e.target.value } : null)}
-                                  style={{ width: '100%', padding: '4px', fontSize: '13px', border: '1px solid #dee2e6', borderRadius: '4px' }}
-                                />
-                              </td>
-                              <td style={{ padding: '6px', border: '1px solid #dee2e6' }}>
-                                <input
-                                  ref={modVietInputRef}
-                                  type="text"
-                                  value={editedCharacterData?.modernVietnamese || ''}
-                                  onChange={(e) => setEditedCharacterData(editedCharacterData ? { ...editedCharacterData, modernVietnamese: e.target.value } : null)}
-                                  style={{ width: '100%', padding: '4px', fontSize: '13px', border: '1px solid #dee2e6', borderRadius: '4px' }}
-                                />
-                              </td>
-                              <td style={{ padding: '6px', border: '1px solid #dee2e6' }}>
-                                <input
-                                  ref={englishInputRef}
-                                  type="text"
-                                  value={editedCharacterData?.englishMeaning || ''}
-                                  onChange={(e) => setEditedCharacterData(editedCharacterData ? { ...editedCharacterData, englishMeaning: e.target.value } : null)}
-                                  style={{ width: '100%', padding: '4px', fontSize: '13px', border: '1px solid #dee2e6', borderRadius: '4px' }}
-                                />
-                              </td>
-                            </>
-                          ) : (
-                            <>
-                              <td style={{ padding: '8px 6px', border: '1px solid #dee2e6' }}>{char.pinyin || 'N/A'}</td>
-                              <td style={{ padding: '8px 6px', border: '1px solid #dee2e6' }}>{char.hanVietnamese || 'N/A'}</td>
-                              <td style={{ padding: '8px 6px', border: '1px solid #dee2e6' }}>{char.modernVietnamese || 'N/A'}</td>
-                              <td style={{ padding: '8px 6px', border: '1px solid #dee2e6' }}>{char.englishMeaning || 'N/A'}</td>
-                            </>
-                          )}
+                          <td style={{ padding: '8px 6px', border: '1px solid #dee2e6' }}>{char.pinyin || 'N/A'}</td>
+                          <td style={{ padding: '8px 6px', border: '1px solid #dee2e6' }}>{char.hanVietnamese || 'N/A'}</td>
+                          <td style={{ padding: '8px 6px', border: '1px solid #dee2e6' }}>{char.modernVietnamese || 'N/A'}</td>
+                          <td style={{ padding: '8px 6px', border: '1px solid #dee2e6' }}>{char.englishMeaning || 'N/A'}</td>
                           <td style={{ padding: '8px 6px', border: '1px solid #dee2e6', textAlign: 'center', fontSize: '12px', color: '#666' }}>
                             {char.chapter ?? '—'}
                           </td>
                           <td style={{ padding: '8px 6px', border: '1px solid #dee2e6', textAlign: 'center' }}>
                             <button
                               onClick={() => handleToggleFavorite(char.chineseCharacter, char.isFavorite || false)}
-                              disabled={editingCharacter === char.chineseCharacter}
                               style={{
                                 padding: '4px 8px',
                                 backgroundColor: 'transparent',
                                 color: char.isFavorite ? '#ffc107' : '#ccc',
                                 border: 'none',
-                                cursor: editingCharacter === char.chineseCharacter ? 'not-allowed' : 'pointer',
+                                cursor: 'pointer',
                                 fontSize: '18px',
-                                opacity: editingCharacter === char.chineseCharacter ? 0.5 : 1
                               }}
                             >
                               {char.isFavorite ? '★' : '☆'}
@@ -1047,30 +1178,22 @@ export default function PhrasesPage() {
                           <td style={{ padding: '8px 6px', border: '1px solid #dee2e6', textAlign: 'center' }}>
                             <button
                               onClick={() => handlePronounceCharacter(char.chineseCharacter)}
-                              disabled={playingCharacter === char.chineseCharacter || editingCharacter === char.chineseCharacter}
+                              disabled={playingCharacter === char.chineseCharacter}
                               style={{
                                 padding: '4px 8px',
                                 backgroundColor: playingCharacter === char.chineseCharacter ? '#ccc' : '#007bff',
                                 color: 'white',
                                 border: 'none',
                                 borderRadius: '4px',
-                                cursor: (playingCharacter === char.chineseCharacter || editingCharacter === char.chineseCharacter) ? 'not-allowed' : 'pointer',
+                                cursor: playingCharacter === char.chineseCharacter ? 'not-allowed' : 'pointer',
                                 fontSize: '14px',
-                                opacity: editingCharacter === char.chineseCharacter ? 0.5 : 1
                               }}
                             >
                               {playingCharacter === char.chineseCharacter ? '🔊' : '🔉'}
                             </button>
                           </td>
                           <td style={{ padding: '8px 6px', border: '1px solid #dee2e6', textAlign: 'center' }}>
-                            {editingCharacter === char.chineseCharacter ? (
-                              <div style={{ display: 'flex', gap: '4px', justifyContent: 'center' }}>
-                                <button onClick={handleSaveCharacter} style={{ padding: '4px 8px', backgroundColor: '#28a745', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '12px' }}>Save</button>
-                                <button onClick={handleCancelEdit} style={{ padding: '4px 8px', backgroundColor: '#6c757d', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '12px' }}>Cancel</button>
-                              </div>
-                            ) : (
-                              <button onClick={() => handleEditCharacter(char)} style={{ padding: '4px 8px', backgroundColor: '#007bff', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '14px' }}>✏️</button>
-                            )}
+                            <button onClick={() => handleEditCharacter(char)} style={{ padding: '4px 8px', backgroundColor: '#007bff', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '14px' }}>✏️</button>
                           </td>
                         </tr>
                       ))}
